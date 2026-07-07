@@ -1395,6 +1395,8 @@ function App() {
   const [editEmp, setEditEmp] = useState(null);
   const [empFilter, setEmpFilter] = useState('eigen');
   const [empDept, setEmpDept] = useState('alle');
+  const [vakAfd, setVakAfd] = useState('alle');
+  const [vakFunctie, setVakFunctie] = useState('alle');
   const [empTab, setEmpTab] = useState('basis');
   const [skills, setSkills] = useState(() => lsGet('bl_skills_v4', SKILL_OPTIONS));
   const [verlof, setVerlof] = useState(() => lsGet('bl_verlof_v4', []));
@@ -4093,7 +4095,8 @@ function App() {
     });
     const mStart = new Date(vJaar, vMaand, 1),
       mEnd = new Date(vJaar, vMaand, dim);
-    const emps = employees.filter(e => verlof.some(v => v.naam === e.naam && new Date(v.tot) >= mStart && new Date(v.van) <= mEnd));
+    const emps = employees.filter(e => verlof.some(v => v.naam === e.naam && new Date(v.tot) >= mStart && new Date(v.van) <= mEnd) && (vakAfd === 'alle' || (e.afd || '') === vakAfd) && (vakFunctie === 'alle' || (e.functie || e.rol || '') === vakFunctie));
+    const functieOpts = Array.from(new Set(employees.map(function (e) { return e.functie || e.rol; }).filter(Boolean))).sort();
     const prevM = () => {
       if (vMaand <= 0) {
         setVMaand(11);
@@ -4219,7 +4222,7 @@ function App() {
           border: "1px solid #efdcae"
         }
       }, f.naam + " " + f.datum.slice(8) + "-" + f.datum.slice(5, 7));
-    }))), emps.length === 0 ? React.createElement("div", {
+    }))), React.createElement("div", { className: "card", style: { padding: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' } }, React.createElement("span", { style: { fontSize: 12, color: '#5b6070', fontWeight: 600 } }, "Filter:"), React.createElement("select", { className: "cin", style: { width: 'auto', minWidth: 150 }, value: vakAfd, onChange: e => setVakAfd(e.target.value) }, [React.createElement("option", { key: 'alle', value: 'alle' }, 'Alle afdelingen')].concat(Object.keys(cfg).map(function (dn) { return React.createElement("option", { key: dn, value: dn }, dn); }))), React.createElement("select", { className: "cin", style: { width: 'auto', minWidth: 150 }, value: vakFunctie, onChange: e => setVakFunctie(e.target.value) }, [React.createElement("option", { key: 'alle', value: 'alle' }, 'Alle functies')].concat(functieOpts.map(function (fn) { return React.createElement("option", { key: fn, value: fn }, fn); })))), emps.length === 0 ? React.createElement("div", {
       className: "card note"
     }, "Geen verlof in " + mnd[vMaand] + " " + vJaar + ". Importeer een UKG-ptorequest JSON of voeg handmatig toe.") : React.createElement("div", {
       className: "card grid-card"
