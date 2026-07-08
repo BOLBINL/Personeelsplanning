@@ -1423,6 +1423,7 @@ function App() {
   const [sel, setSel] = useState(null);
   const [zoek, setZoek] = useState('');
   const [tempFor, setTempFor] = useState(null);
+  const [uitzModal, setUitzModal] = useState(null);
   const [toast, setToast] = useState(null);
   useEffect(() => {
     try {
@@ -2022,11 +2023,18 @@ function App() {
       cel: k
     });
   };
-  const reqTemp = (k, ag) => {
+  const defTijd = k => {
+    var parts = k.split('|');
+    var sh = SHIFTS.find(function (s) { return s.id === parts[2]; });
+    var st = sh && sh.tijd ? sh.tijd.split('-')[0].trim() : '07:00';
+    var netto = '7:12',
+      pauze = '1:03';
+    return { start: st, netto: netto, pauze: pauze, eind: berekenEindtijd(st, netto, pauze) };
+  };
+  const askUitzend = (k, ag) => {
     const parts = k.split('|');
     const line = (cfg[parts[0]] || []).find(l => l.lijn === parts[1]);
-    var _kp = k.split('|');
-    var _rnT = resolveNorm(line, _kp[4], isoFor(_kp[4]));
+    var _rnT = resolveNorm(line, parts[4], isoFor(parts[4]));
     if (_rnT.runs === false) {
       ping(line.lijn + ' draait niet op deze dag', 'warn');
       setTempFor(null);
@@ -2037,6 +2045,11 @@ function App() {
       setTempFor(null);
       return;
     }
+    var t = defTijd(k);
+    setUitzModal({ key: k, bureau: ag, start: t.start, netto: t.netto, pauze: t.pauze, eind: t.eind });
+    setTempFor(null);
+  };
+  const reqTemp = (k, ag, start, eind) => {
     setPlan(p => {
       const n = Object.assign({}, p);
       n[k] = (p[k] || []).concat([{
@@ -2044,6 +2057,8 @@ function App() {
         empId: null,
         type: 'uitzend',
         bureau: ag,
+        start: start || null,
+        eind: eind || null,
         ziek: false,
         door: user,
         ts: new Date().toISOString()
@@ -2054,8 +2069,7 @@ function App() {
       bureau: ag,
       cel: k
     });
-    setTempFor(null);
-    ping('Uitzendaanvraag → ' + ag);
+    ping('Uitzendaanvraag \u2192 ' + ag);
   };
   const publish = () => {
     const was = !!pub[dept + '|' + wkKey];
@@ -2322,7 +2336,7 @@ function App() {
         if (planned[(e.id || '') + '|' + iso]) return;
         var timeOff = '';
         var v = verlof.find(x => x.naam === e.naam && iso >= x.van && iso <= x.tot);
-        if (v) timeOff = matchVerlofType(v.reden, verlofTypes).label;else if (e.status === 'Ziek') timeOff = 'Ziekte';else return;
+        if (v) { var _vt = matchVerlofType(v.reden, verlofTypes); timeOff = _vt.timeOff || _vt.label; } else if (e.status === 'Ziek') { var _vz = matchVerlofType('ziekte', verlofTypes); timeOff = _vz && (_vz.timeOff || _vz.label) || 'Ziekte'; } else return;
         var wt = getWerktijden(e, dk, week, templates);
         if (!wt) return;
         rows.push(mkRow({
@@ -2343,21 +2357,90 @@ function App() {
     });
     return rows;
   }, [plan, cfg, days, wkKey, jaar, week, employees, verlof, templates, verlofTypes]);
-  const downloadUKG = () => {
-    var aoa = [UKG_HEADERS].concat(ukgRows.map(function (r) {
+  const downloadUKGDept = dep => {
+    var rows = ukgRows.filter(function (r) {
+      return (String(r['Schedule Name'] || '').replace(/^BL\s+/, '').trim() || 'Overig') === dep;
+    });
+    if (!rows.length) {
+      ping('Geen regels voor ' + dep, 'warn');
+      return;
+    }
+    var aoa = [UKG_HEADERS].concat(rows.map(function (r) {
       return UKG_HEADERS.map(function (h) {
         return r[h];
       });
     }));
-    var ws = XLSX.utils.aoa_to_sheet(aoa);
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Schedule');
-    XLSX.writeFile(wb, 'UKG_Schedule_W' + week + '_' + jaar + '.xlsx');
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    XLSX.utils.book_append_sheet(wb, ws, dep.replace(/[:\\/?*\[\]]/g, ' ').slice(0, 28));
+    XLSX.writeFile(wb, 'UKG_' + dep.replace(/[^A-Za-z0-9]/g, '_') + '_W' + week + '_' + jaar + '.xlsx');
     logAction('UKG_EXPORT', {
-      regels: ukgRows.length
+      afdeling: dep,
+      regels: rows.length
     });
-    ping('UKG-export gedownload (' + ukgRows.length + ' regels, Excel)');
+    ping('UKG-export ' + dep + ': ' + rows.length + ' regels');
   };
+  const downloadUKG = () => {
+    var deps = Array.from(new Set(ukgRows.map(function (r) {
+      return String(r['Schedule Name'] || '').replace(/^BL\s+/, '').trim() || 'Overig';
+    })));
+    if (!deps.length) {
+      ping('Geen regels om te exporteren', 'warn');
+      return;
+    }
+    deps.forEach(function (dep) {
+      downloadUKGDept(dep);
+    });
+  };
+  const aanvraagRijenBureau = bureau => {
+    var rows = [];
+    Object.keys(plan).forEach(function (k) {
+      var pt = k.split('|');
+      if (pt[3] !== wkKey) return;
+      (plan[k] || []).forEach(function (a) {
+        if (a.type === 'uitzend' && (a.bureau || 'Onbekend') === bureau) {
+          rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: 'EXTRA', start: a.start, eind: a.eind, netto: '7:12' });
+        } else if (a.type === 'vast' && a.empId) {
+          var e = employees.find(function (x) { return x.id === a.empId; });
+          if (e && e.isUitzend && (e.bureau || 'Onbekend') === bureau) rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: e.naam, start: a.start, eind: a.eind, netto: e.netto || '7:12' });
+        }
+      });
+    });
+    return rows.sort(function (x, y) { return DAG_K.indexOf(x.dag) - DAG_K.indexOf(y.dag); });
+  };
+  const downloadAanvraagBureau = bureau => {
+    var rows = aanvraagRijenBureau(bureau);
+    if (!rows.length) { ping('Geen regels voor ' + bureau, 'warn'); return; }
+    var mon = isoMonday(jaar, week);
+    var datumVoor = function (dag) { var idx = DAG_K.indexOf(dag); var dt = new Date(mon.getTime()); dt.setUTCDate(mon.getUTCDate() + (idx < 0 ? 0 : idx)); return String(dt.getUTCDate()).padStart(2, '0') + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0') + '-' + dt.getUTCFullYear(); };
+    var startingDay = function (start, eind) { var sh = parseInt(String(start || '').split(':')[0], 10); return sh >= 20 || start && eind && hhmmMin(eind) < hhmmMin(start) ? 'Vorige dag' : ''; };
+    var aoa = [['Aanvraag ' + bureau + ' \u2014 Week ' + week + ' ' + jaar], ['Datum', 'Dag', 'Starting day', 'Volledige naam', 'Start-Stop', 'Totaal standaarduren', 'Lijn / Positie']];
+    rows.forEach(function (r) {
+      aoa.push([datumVoor(r.dag), DAG_L[DAG_K.indexOf(r.dag)] || r.dag, startingDay(r.start, r.eind), r.naam || '', (r.start || '?') + ' - ' + (r.eind || '?'), r.netto || '7:12', r.lijn]);
+    });
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+    ws['!cols'] = [{ wch: 12 }, { wch: 6 }, { wch: 12 }, { wch: 24 }, { wch: 15 }, { wch: 20 }, { wch: 16 }];
+    ws['!autofilter'] = { ref: 'A2:G' + (2 + rows.length) };
+    XLSX.utils.book_append_sheet(wb, ws, bureau.replace(/[:\/?*\[\]]/g, ' ').slice(0, 28));
+    XLSX.writeFile(wb, 'Aanvraag_' + bureau.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase() + '_Wk' + week + '_' + jaar + '.xlsx');
+    logAction('AANVRAAG_EXPORT', { bureau: bureau, regels: rows.length });
+    ping('Aanvraag ' + bureau + ': ' + rows.length + ' regels');
+  };
+  const downloadAanvraag = () => {
+    var bs = {};
+    Object.keys(plan).forEach(function (k) {
+      var pt = k.split('|');
+      if (pt[3] !== wkKey) return;
+      (plan[k] || []).forEach(function (a) {
+        if (a.type === 'uitzend') bs[a.bureau || 'Onbekend'] = 1;else if (a.type === 'vast' && a.empId) { var e = employees.find(function (x) { return x.id === a.empId; }); if (e && e.isUitzend) bs[e.bureau || 'Onbekend'] = 1; }
+      });
+    });
+    var bureaus = Object.keys(bs);
+    if (!bureaus.length) { ping('Geen uitzend-regels om te exporteren', 'warn'); return; }
+    bureaus.forEach(function (b) { downloadAanvraagBureau(b); });
+  };;
   const updLine = (d, i, f, v) => setCfg(c => {
     const n = Object.assign({}, c);
     n[d] = n[d].map((l, j) => j === i ? Object.assign({}, l, {
@@ -2421,7 +2504,7 @@ function App() {
     } else if (m.kind === 'temp') {
       setPlan(p => {
         const n = Object.assign({}, p);
-        n[m.key] = (p[m.key] || []).concat([{ id: uid(), empId: null, type: 'uitzend', bureau: m.bureau, ziek: false, overReason: r, door: user, ts: new Date().toISOString() }]);
+        var _dt = defTijd(m.key); n[m.key] = (p[m.key] || []).concat([{ id: uid(), empId: null, type: 'uitzend', bureau: m.bureau, start: _dt.start, eind: _dt.eind, ziek: false, overReason: r, door: user, ts: new Date().toISOString() }]);
         return n;
       });
       logAction('OVER_MAX_UITZEND', { bureau: m.bureau, cel: m.key, reden: r });
@@ -2430,10 +2513,10 @@ function App() {
     }
   };
   const reasonsCard = () => React.createElement("div", { className: "card", style: { padding: 16 } }, React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } }, React.createElement("h3", { style: { margin: 0 } }, "Over-max redenen"), React.createElement("button", { className: "btn gold", onClick: addReden }, React.createElement(I, { n: "add" }), "Reden")), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 10 } }, "Deze redenen verschijnen bij het toevoegen boven het MR-max. Vaste lijst = later optelbaar op het dashboard."), redenen.map((r, i) => React.createElement("div", { key: i, style: { display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' } }, React.createElement("input", { className: "cin", style: { flex: 1 }, value: r, onChange: e => updReden(i, e.target.value) }), React.createElement("button", { className: "del", onClick: () => delReden(i) }, React.createElement(I, { n: "delete" })))));
-  const addVT = () => setVerlofTypes(a => a.concat([{ label: 'Nieuw type', kleur: '#78909c', kw: [] }]));
+  const addVT = () => setVerlofTypes(a => a.concat([{ label: 'Nieuw type', timeOff: '', kleur: '#78909c', kw: [] }]));
   const updVT = (i, f, v) => setVerlofTypes(a => a.map((x, j) => j === i ? Object.assign({}, x, { [f]: v }) : x));
   const delVT = i => setVerlofTypes(a => a.filter((x, j) => j !== i));
-  const verlofTypesCard = () => React.createElement("div", { className: "card", style: { padding: 16 } }, React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } }, React.createElement("h3", { style: { margin: 0 } }, "Verlof-types"), React.createElement("button", { className: "btn gold", onClick: addVT }, React.createElement(I, { n: "add" }), "Type")), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 10 } }, "Categorie\u00ebn voor het verlof-overzicht (legenda + celkleuren). Trefwoorden koppelen ge\u00efmporteerde UKG-verloftypes aan de juiste categorie. Let op: het label gaat 1-op-1 mee als Time Off in de UKG-export."), verlofTypes.map(function (t, i) { return React.createElement("div", { key: i, style: { display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' } }, React.createElement("input", { type: "color", value: t.kleur || '#78909c', onChange: e => updVT(i, 'kleur', e.target.value), style: { width: 30, height: 26, border: 'none', background: 'none', padding: 0 } }), React.createElement("input", { className: "cin", style: { width: 140 }, value: t.label, onChange: e => updVT(i, 'label', e.target.value) }), React.createElement("input", { className: "cin", style: { flex: 1 }, placeholder: "trefwoorden, komma-gescheiden", value: (t.kw || []).join(', '), onChange: e => updVT(i, 'kw', e.target.value.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean)) }), React.createElement("button", { className: "del", onClick: () => delVT(i) }, React.createElement(I, { n: "delete" }))); }));
+  const verlofTypesCard = () => React.createElement("div", { className: "card", style: { padding: 16 } }, React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } }, React.createElement("h3", { style: { margin: 0 } }, "Verlof-types"), React.createElement("button", { className: "btn gold", onClick: addVT }, React.createElement(I, { n: "add" }), "Type")), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 10 } }, "Categorie\u00ebn voor het verlof-overzicht (legenda + celkleuren). 'Time Off (UKG)' is de exacte waarde in de UKG-export (leeg = gebruik het label). Trefwoorden koppelen ge\u00efmporteerde UKG-verloftypes aan de juiste categorie \u2014 komma-gescheiden, wordt opgeslagen zodra je het veld verlaat."), verlofTypes.map(function (t, i) { return React.createElement("div", { key: i, style: { display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' } }, React.createElement("input", { type: "color", value: t.kleur || '#78909c', onChange: e => updVT(i, 'kleur', e.target.value), style: { width: 30, height: 26, border: 'none', background: 'none', padding: 0 } }), React.createElement("input", { className: "cin", style: { width: 140 }, value: t.label, onChange: e => updVT(i, 'label', e.target.value) }), React.createElement("input", { className: "cin", style: { width: 130 }, placeholder: "Time Off (UKG)", value: t.timeOff !== undefined ? t.timeOff : '', onChange: e => updVT(i, 'timeOff', e.target.value) }), React.createElement("input", { className: "cin", style: { flex: 1 }, placeholder: "trefwoorden, komma-gescheiden", defaultValue: (t.kw || []).join(', '), onBlur: e => updVT(i, 'kw', e.target.value.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean)) }), React.createElement("button", { className: "del", onClick: () => delVT(i) }, React.createElement(I, { n: "delete" }))); }));
   const weekdagCard = () => React.createElement(React.Fragment, null, Object.keys(cfg).map(dep => React.createElement("div", { key: 'wd' + dep, className: "card", style: { padding: 16 } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, dep + " \u2014 MR per weekdag"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Vul alleen dagen die draaien. Leeg = lijn draait niet op die dag (geen MR, grijs in de planning). Klik + dag om een draaidag toe te voegen."), (cfg[dep] || []).map((l, i) => React.createElement("div", { key: i, style: { marginBottom: 14, borderTop: '1px solid #eee', paddingTop: 10 } }, React.createElement("div", { style: { fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 } }, React.createElement("span", { className: "cdot", style: { background: l.kleur, display: 'inline-block' } }), l.lijn, React.createElement("span", { className: "sap", style: { marginLeft: 4 } }, l.sap), React.createElement("span", { style: { marginLeft: 'auto', fontSize: 11, color: '#8a8f9c' } }, "std " + l.basis + "/" + l.max + " \u00b7 " + (l.ploegen || l.shiften || 2) + "plg"), React.createElement("button", { className: "btn", style: { fontSize: 10, padding: "2px 8px", marginLeft: 8 }, onClick: () => vulWerkweek(dep, i) }, "Ma-Vr")), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, DAG_K.map((dk, di) => {
     var ov = (l.dagNorm || {})[dk];
     if (!ov) return React.createElement("button", { key: dk, className: "chipbtn", style: { fontSize: 11, opacity: .7 }, onClick: () => setDagNorm(dep, i, dk, { basis: +l.basis || 0, max: +l.max || 0, ploegen: +(l.ploegen || l.shiften || 2) }) }, "+ " + DAG_L[di]);
@@ -2925,7 +3008,7 @@ function App() {
         onClick: ev => ev.stopPropagation()
       }, agencies.map(ag => React.createElement("button", {
         key: ag,
-        onClick: () => reqTemp(c.key, ag)
+        onClick: () => askUitzend(c.key, ag)
       }, ag))) : React.createElement("button", {
         className: "tempbtn",
         onClick: ev => {
@@ -3539,23 +3622,24 @@ function App() {
     var ensure = function (b) { return perBureau[b] = perBureau[b] || { open: [], planned: [] }; };
     var shiftNaam = function (sid) { var s = SHIFTS.find(function (x) { return x.id === sid; }); return s ? s.naam : sid; };
     var dagLbl = function (dk) { var idx = DAG_K.indexOf(dk); return idx >= 0 ? DAG_L[idx] : dk; };
+    var tijd = function (a) { return a.start ? a.start + '\u2013' + (a.eind || '?') : ''; };
     Object.keys(plan).forEach(function (k) {
       var pt = k.split('|');
       if (pt[3] !== wkKey) return;
       (plan[k] || []).forEach(function (a) {
         if (a.type === 'uitzend') {
-          ensure(a.bureau || 'Onbekend').open.push({ dept: pt[0], lijn: pt[1], shift: pt[2], dag: pt[4], reden: a.overReason });
+          ensure(a.bureau || 'Onbekend').open.push({ dept: pt[0], lijn: pt[1], shift: pt[2], dag: pt[4], reden: a.overReason, start: a.start, eind: a.eind });
         } else if (a.type === 'vast' && a.empId) {
           var e = employees.find(function (x) { return x.id === a.empId; });
-          if (e && e.isUitzend) ensure(e.bureau || 'Onbekend').planned.push({ naam: e.naam, dept: pt[0], lijn: pt[1], shift: pt[2], dag: pt[4] });
+          if (e && e.isUitzend) ensure(e.bureau || 'Onbekend').planned.push({ naam: e.naam, dept: pt[0], lijn: pt[1], shift: pt[2], dag: pt[4], start: a.start, eind: a.eind });
         }
       });
     });
     var bureaus = Object.keys(perBureau).sort();
     var totOpen = bureaus.reduce(function (s, b) { return s + perBureau[b].open.length; }, 0);
-    return React.createElement("div", { className: "stack" }, React.createElement("div", { className: "topbar" }, React.createElement("h2", null, "Uitzend \u2014 Aanvraagrapport week " + week), React.createElement("span", { className: "pill" }, totOpen + " open aanvragen")), bureaus.length === 0 ? React.createElement("div", { className: "card", style: { padding: 16 } }, "Geen uitzend-aanvragen of ingeplande uitzendkrachten in week " + week + ".") : bureaus.map(function (b) {
+    return React.createElement("div", { className: "stack" }, React.createElement("div", { className: "topbar" }, React.createElement("h2", null, "Uitzend \u2014 Aanvraagrapport week " + week), React.createElement("div", { style: { display: 'flex', gap: 8, alignItems: 'center' } }, React.createElement("span", { className: "pill" }, totOpen + " open aanvragen"), React.createElement("button", { className: "btn gold", onClick: downloadAanvraag }, React.createElement(I, { n: "download" }), "Exporteer aanvragen (alle bureaus)"))), bureaus.length === 0 ? React.createElement("div", { className: "card", style: { padding: 16 } }, "Geen uitzend-aanvragen of ingeplande uitzendkrachten in week " + week + ".") : bureaus.map(function (b) {
       var grp = perBureau[b];
-      return React.createElement("div", { key: b, className: "card", style: { padding: 16, marginBottom: 12 } }, React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 } }, React.createElement("div", { className: "av agv" }, b.slice(0, 2).toUpperCase()), React.createElement("h3", { style: { margin: 0 } }, b), React.createElement("span", { className: "pill", style: { marginLeft: 'auto' } }, grp.open.length + " aanvraag \u00b7 " + grp.planned.length + " ingepland")), React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#b02a37', margin: '6px 0 4px' } }, "Aan te vragen bij bureau (niet in UKG)"), grp.open.length === 0 ? React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c' } }, "\u2014") : grp.open.map(function (o, i) { return React.createElement("div", { key: 'o' + i, style: { fontSize: 13, padding: '2px 0' } }, dagLbl(o.dag) + " \u00b7 " + o.dept + " " + o.lijn + " \u00b7 " + shiftNaam(o.shift) + (o.reden ? " \u00b7 " + o.reden : "")); }), React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#2e7d32', margin: '10px 0 4px' } }, "Ingepland (gaat mee in UKG-export)"), grp.planned.length === 0 ? React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c' } }, "\u2014") : grp.planned.map(function (p, i) { return React.createElement("div", { key: 'p' + i, style: { fontSize: 13, padding: '2px 0' } }, dagLbl(p.dag) + " \u00b7 " + p.naam + " \u00b7 " + p.dept + " " + p.lijn + " \u00b7 " + shiftNaam(p.shift)); }));
+      return React.createElement("div", { key: b, className: "card", style: { padding: 16, marginBottom: 12 } }, React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 } }, React.createElement("div", { className: "av agv" }, b.slice(0, 2).toUpperCase()), React.createElement("h3", { style: { margin: 0 } }, b), React.createElement("span", { className: "pill", style: { marginLeft: 'auto' } }, grp.open.length + " aanvraag \u00b7 " + grp.planned.length + " ingepland"), React.createElement("button", { className: "btn", style: { padding: '4px 10px' }, onClick: () => downloadAanvraagBureau(b) }, React.createElement(I, { n: "download" }), "Excel")), React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#b02a37', margin: '6px 0 4px' } }, "Aan te vragen bij bureau (niet in UKG)"), grp.open.length === 0 ? React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c' } }, "\u2014") : grp.open.map(function (o, i) { return React.createElement("div", { key: 'o' + i, style: { fontSize: 13, padding: '2px 0' } }, dagLbl(o.dag) + " \u00b7 " + (tijd(o) ? tijd(o) + " \u00b7 " : "") + o.dept + " " + o.lijn + " \u00b7 " + shiftNaam(o.shift) + (o.reden ? " \u00b7 " + o.reden : "")); }), React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#2e7d32', margin: '10px 0 4px' } }, "Ingepland (gaat mee in UKG-export)"), grp.planned.length === 0 ? React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c' } }, "\u2014") : grp.planned.map(function (p, i) { return React.createElement("div", { key: 'p' + i, style: { fontSize: 13, padding: '2px 0' } }, dagLbl(p.dag) + " \u00b7 " + (tijd(p) ? tijd(p) + " \u00b7 " : "") + p.naam + " \u00b7 " + p.dept + " " + p.lijn + " \u00b7 " + shiftNaam(p.shift)); }));
     }));
   }
   function configView() {
@@ -4021,7 +4105,13 @@ function App() {
     }, "Wijzigingen worden direct opgeslagen en sturen de MR-blokkering in de planning. Let op: Packaging Lijn 1 max stond op 50 — zet dit op de echte lijncapaciteit zodat het maximum ook blokkeert."));
   }
   function ukgView() {
-    const preview = ukgRows;
+    var groups = {};
+    ukgRows.forEach(function (r) {
+      var dep = String(r['Schedule Name'] || '').replace(/^BL\s+/, '').trim() || 'Overig';
+      (groups[dep] = groups[dep] || []).push(r);
+    });
+    var deps = Object.keys(groups);
+    var cols = ['Schedule Name', 'Date', 'Start', 'End', 'Employee Id', 'EIN Name', 'Cost Center 1', 'Time Off', 'Std. Uren', 'Skill'];
     return React.createElement("div", {
       className: "stack"
     }, React.createElement("div", {
@@ -4031,47 +4121,80 @@ function App() {
       onClick: downloadUKG
     }, React.createElement(I, {
       n: "download"
-    }), "Download Excel")), React.createElement("div", {
+    }), "Download alle afdelingen (" + deps.length + " bestanden)")), React.createElement("div", {
       className: "card note"
-    }, "48-koloms UKG WorkforceReady schema. " + ukgRows.length + " schedule-regels voor week " + week + ", " + jaar + " (beide afdelingen, alleen vaste medewerkers). Datum als YYYY-MM-DD — controleer of dit matcht met jullie UKG-import."), React.createElement("div", {
-      className: "card grid-card"
-    }, React.createElement("div", {
-      className: "grid-scroll"
-    }, React.createElement("table", {
-      className: "tbl",
-      style: {
-        minWidth: 760
-      }
-    }, React.createElement("thead", null, React.createElement("tr", null, ['Schedule Name', 'Date', 'Start', 'End', 'Employee Id', 'EIN Name', 'Cost Center 1', 'Time Off', 'Std. Uren', 'Skill'].map(h => React.createElement("th", {
-      key: h
-    }, h)))), React.createElement("tbody", null, preview.map((r, i) => React.createElement("tr", {
-      key: i
-    }, React.createElement("td", null, r['Schedule Name']), React.createElement("td", {
-      className: "mono"
-    }, r['Date']), React.createElement("td", {
-      className: "mono"
-    }, r['Start Time']), React.createElement("td", {
-      className: "mono"
-    }, r['End Time']), React.createElement("td", {
-      className: "mono"
-    }, r['Employee Id']), React.createElement("td", {
-      style: {
-        fontSize: 11
-      }
-    }, r['EIN Name']), React.createElement("td", {
-      style: {
-        fontSize: 11
-      }
-    }, r['Cost Center 1']), React.createElement("td", {
-      style: {
-        fontSize: 11,
-        color: '#c15400'
-      }
-    }, r['Time Off']), React.createElement("td", {
-      className: "mono"
-    }, r['Standard Total Hours']), React.createElement("td", null, r['Skill']))))))), ukgRows.length > 8 ? React.createElement("div", {
-      className: "hint"
-    }, "Volledige lijst — " + ukgRows.length + " regels (scroll).") : null);
+    }, "48-koloms UKG WorkforceReady schema. Per afdeling een aparte lijst \u00e9n een apart Excel-bestand (alleen vaste medewerkers). " + ukgRows.length + " regels totaal voor week " + week + ", " + jaar + "."), deps.length === 0 ? React.createElement("div", {
+      className: "card"
+    }, "Geen regels voor deze week.") : deps.map(function (dep) {
+      var rows = groups[dep];
+      return React.createElement("div", {
+        key: dep,
+        className: "card grid-card",
+        style: {
+          marginBottom: 12
+        }
+      }, React.createElement("div", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          marginBottom: 8,
+          padding: '0 2px'
+        }
+      }, React.createElement("h3", {
+        style: {
+          margin: 0
+        }
+      }, dep), React.createElement("span", {
+        className: "pill"
+      }, rows.length + " regels"), React.createElement("button", {
+        className: "btn",
+        style: {
+          marginLeft: 'auto'
+        },
+        onClick: () => downloadUKGDept(dep)
+      }, React.createElement(I, {
+        n: "download"
+      }), "Download " + dep)), React.createElement("div", {
+        className: "grid-scroll"
+      }, React.createElement("table", {
+        className: "tbl",
+        style: {
+          minWidth: 760
+        }
+      }, React.createElement("thead", null, React.createElement("tr", null, cols.map(function (h) {
+        return React.createElement("th", {
+          key: h
+        }, h);
+      }))), React.createElement("tbody", null, rows.map(function (r, i) {
+        return React.createElement("tr", {
+          key: i
+        }, React.createElement("td", null, r['Schedule Name']), React.createElement("td", {
+          className: "mono"
+        }, r['Date']), React.createElement("td", {
+          className: "mono"
+        }, r['Start Time']), React.createElement("td", {
+          className: "mono"
+        }, r['End Time']), React.createElement("td", {
+          className: "mono"
+        }, r['Employee Id']), React.createElement("td", {
+          style: {
+            fontSize: 11
+          }
+        }, r['EIN Name']), React.createElement("td", {
+          style: {
+            fontSize: 11
+          }
+        }, r['Cost Center 1']), React.createElement("td", {
+          style: {
+            fontSize: 11,
+            color: '#c15400'
+          }
+        }, r['Time Off']), React.createElement("td", {
+          className: "mono"
+        }, r['Standard Total Hours']), React.createElement("td", null, r['Skill']));
+      })))));
+    }));
   }
   function vakantieView() {
     const mnd = ['Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni', 'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'];
@@ -4428,7 +4551,7 @@ function App() {
       importJSON(e.target.files[0]);
       e.target.value = '';
     }
-  }), importPending ? React.createElement("div", { onClick: () => setImportPending(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 400, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 6px' } }, "Import \u2014 afdeling bevestigen"), React.createElement("div", { style: { fontSize: 13, marginBottom: 8 } }, importPending.length + " medewerkers gevonden."), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Gedetecteerd uit UKG-pad: " + function () { var c = {}; importPending.forEach(function (u) { c[u.afd] = (c[u.afd] || 0) + 1; }); return Object.keys(c).map(function (k) { return k + ' (' + c[k] + ')'; }).join(', '); }()), React.createElement("label", { className: "efld", style: { marginBottom: 12, display: 'block' } }, "Forceer alle naar afdeling (optioneel)", React.createElement("select", { className: "cin", value: importForceDept, onChange: e => setImportForceDept(e.target.value) }, [React.createElement("option", { key: '', value: '' }, '\u2014 gebruik gedetecteerde \u2014')].concat(Object.keys(cfg).map(function (dn) { return React.createElement("option", { key: dn, value: dn }, dn); })))), React.createElement("div", { style: { display: 'flex', gap: 8 } }, React.createElement("button", { className: "btn gold", style: { flex: 1 }, onClick: () => commitImport(importPending, importForceDept) }, "Importeer " + importPending.length), React.createElement("button", { className: "btn", onClick: () => setImportPending(null) }, "Annuleren")))) : null, redenModal ? React.createElement("div", { onClick: () => setRedenModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 340, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Boven MR-max toevoegen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Max (" + redenModal.max + ") bereikt. Kies een reden \u2014 deze wordt vastgelegd bij de dienst en in het logboek."), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, (redenen || []).map(r => React.createElement("button", { key: r, className: "btn", style: { justifyContent: 'flex-start', textAlign: 'left' }, onClick: () => confirmReden(r) }, r))), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setRedenModal(null) }, "Annuleren"))) : null, timeModal ? React.createElement("div", {
+  }), uitzModal ? React.createElement("div", { onClick: () => setUitzModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 360, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Uitzendaanvraag \u2014 " + uitzModal.bureau), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Kies de starttijd; eindtijd wordt berekend (aanpasbaar)."), React.createElement("label", { className: "efld" }, "Starttijd", React.createElement("input", { className: "cin", value: uitzModal.start, onChange: e => { var st = e.target.value; setUitzModal(Object.assign({}, uitzModal, { start: st, eind: berekenEindtijd(st, uitzModal.netto, uitzModal.pauze) })); } })), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Eindtijd", React.createElement("input", { className: "cin", value: uitzModal.eind, onChange: e => setUitzModal(Object.assign({}, uitzModal, { eind: e.target.value })) })), React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 14 } }, React.createElement("button", { className: "btn gold", style: { flex: 1, justifyContent: 'center' }, onClick: () => { reqTemp(uitzModal.key, uitzModal.bureau, uitzModal.start, uitzModal.eind); setUitzModal(null); } }, "Aanvragen"), React.createElement("button", { className: "btn", onClick: () => setUitzModal(null) }, "Annuleren")))) : null, importPending ? React.createElement("div", { onClick: () => setImportPending(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 400, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 6px' } }, "Import \u2014 afdeling bevestigen"), React.createElement("div", { style: { fontSize: 13, marginBottom: 8 } }, importPending.length + " medewerkers gevonden."), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Gedetecteerd uit UKG-pad: " + function () { var c = {}; importPending.forEach(function (u) { c[u.afd] = (c[u.afd] || 0) + 1; }); return Object.keys(c).map(function (k) { return k + ' (' + c[k] + ')'; }).join(', '); }()), React.createElement("label", { className: "efld", style: { marginBottom: 12, display: 'block' } }, "Forceer alle naar afdeling (optioneel)", React.createElement("select", { className: "cin", value: importForceDept, onChange: e => setImportForceDept(e.target.value) }, [React.createElement("option", { key: '', value: '' }, '\u2014 gebruik gedetecteerde \u2014')].concat(Object.keys(cfg).map(function (dn) { return React.createElement("option", { key: dn, value: dn }, dn); })))), React.createElement("div", { style: { display: 'flex', gap: 8 } }, React.createElement("button", { className: "btn gold", style: { flex: 1 }, onClick: () => commitImport(importPending, importForceDept) }, "Importeer " + importPending.length), React.createElement("button", { className: "btn", onClick: () => setImportPending(null) }, "Annuleren")))) : null, redenModal ? React.createElement("div", { onClick: () => setRedenModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 340, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Boven MR-max toevoegen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Max (" + redenModal.max + ") bereikt. Kies een reden \u2014 deze wordt vastgelegd bij de dienst en in het logboek."), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, (redenen || []).map(r => React.createElement("button", { key: r, className: "btn", style: { justifyContent: 'flex-start', textAlign: 'left' }, onClick: () => confirmReden(r) }, r))), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setRedenModal(null) }, "Annuleren"))) : null, timeModal ? React.createElement("div", {
     className: "modal-bg",
     onClick: () => setTimeModal(null)
   }, React.createElement("div", {
