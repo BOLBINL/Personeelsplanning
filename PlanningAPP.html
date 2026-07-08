@@ -1683,12 +1683,12 @@ function App() {
       auditLog: auditLog
     }
   });
-  const saveState = () => {
+  const saveState = overrideBlob => {
     if (!flow.save) {
       ping('Geen SAVE-flow URL ingesteld', 'warn');
       return;
     }
-    var body = buildBlob();
+    var body = overrideBlob || buildBlob();
     fetch(flow.save, {
       method: 'POST',
       headers: {
@@ -2073,17 +2073,20 @@ function App() {
   };
   const publish = () => {
     const was = !!pub[dept + '|' + wkKey];
-    setPub(p => {
-      const n = Object.assign({}, p);
-      n[dept + '|' + wkKey] = !was;
-      return n;
-    });
+    const newPub = Object.assign({}, pub, { [dept + '|' + wkKey]: !was });
+    setPub(newPub);
     logAction(was ? 'PUBLICATIE_INGETROKKEN' : 'GEPUBLICEERD', {
       afd: dept,
       week: week,
       jaar: jaar
     });
     ping(was ? 'Publicatie ingetrokken' : 'Rooster gepubliceerd — week ' + week);
+    if (flow.save) {
+      var _blob = buildBlob();
+      _blob.data.pub = newPub;
+      saveState(_blob);
+      ping('Opslaan naar SharePoint gestart…');
+    }
   };
   const isPub = !!pub[dept + '|' + wkKey];
   const prevKey = () => {
@@ -2673,7 +2676,7 @@ function App() {
     n: "precision_manufacturing"
   })), React.createElement("h1", null, "Biscuit International"), React.createElement("div", {
     className: "cap"
-  }, "INDUSTRIAL PLANNING")), React.createElement("nav", null, NAV.map(it => React.createElement("button", {
+  }, "PERSONEEL PLANNING")), React.createElement("nav", null, NAV.map(it => React.createElement("button", {
     key: it[2],
     className: view === it[2] ? "on" : "",
     onClick: () => {
@@ -3003,21 +3006,7 @@ function App() {
         }, React.createElement(I, {
           n: "close"
         }))));
-      }), c.tekort > 0 ? tempFor === c.key ? React.createElement("div", {
-        className: "pop",
-        onClick: ev => ev.stopPropagation()
-      }, agencies.map(ag => React.createElement("button", {
-        key: ag,
-        onClick: () => askUitzend(c.key, ag)
-      }, ag))) : React.createElement("button", {
-        className: "tempbtn",
-        onClick: ev => {
-          ev.stopPropagation();
-          setTempFor(c.key);
-        }
-      }, React.createElement(I, {
-        n: "add"
-      }), c.tekort + " open · uitzend") : null);
+      }), null);
     })))))))), React.createElement("div", {
       className: "card staff"
     }, React.createElement("h3", null, "Beschikbaar"), React.createElement("div", {
@@ -3030,7 +3019,7 @@ function App() {
       placeholder: "Zoek naam of vaardigheid…"
     })), React.createElement("label", { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5b6070', margin: '6px 0 2px', cursor: 'pointer' } }, React.createElement("input", { type: "checkbox", checked: beschAlleenAfd, onChange: e => setBeschAlleenAfd(e.target.checked) }), "Alleen " + dept), React.createElement("div", {
       className: "hint"
-    }, sel ? 'Gekozen: ' + sel.split('|')[1] + ' · ' + (sel.split('|')[2] === 'O' ? 'Ochtend' : 'Middag') + ' — klik iemand' : 'Kies eerst een cel in het rooster'), staff.map(e => React.createElement("div", {
+    }, sel ? 'Gekozen: ' + sel.split('|')[1] + ' · ' + (sel.split('|')[2] === 'O' ? 'Ochtend' : 'Middag') + ' — klik iemand' : 'Kies eerst een cel in het rooster'), sel ? React.createElement("div", { style: { margin: '4px 0 10px', padding: '8px', background: '#fff8ec', border: '1px solid #f0d9a8', borderRadius: 8 } }, tempFor === sel ? React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' } }, React.createElement("span", { style: { fontSize: 11, color: '#8a6d1f', width: '100%', marginBottom: 4 } }, "Kies bureau:"), agencies.map(function (ag) { return React.createElement("button", { key: ag, className: "btn", style: { padding: '3px 8px', fontSize: 12 }, onClick: () => askUitzend(sel, ag) }, ag); }), React.createElement("button", { className: "btn", style: { padding: '3px 8px', fontSize: 12 }, onClick: () => setTempFor(null) }, "\u2715")) : React.createElement("button", { className: "btn gold", style: { width: '100%', justifyContent: 'center' }, onClick: () => setTempFor(sel) }, React.createElement(I, { n: "add" }), "Extra uitzendkracht aanvragen")) : null, staff.map(e => React.createElement("div", {
       key: e.id,
       className: "srow-item",
       draggable: true,
