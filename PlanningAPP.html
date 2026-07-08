@@ -996,49 +996,49 @@ function initials(n) {
 function afdFromPath(pad) {
   return /processing/i.test(pad || '') ? 'Processing' : 'Packaging';
 }
+function hoursToHM(h) {
+  var m = Math.round(h * 60);
+  return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
+}
 /* ported 1:1 from parseUKGWorkbook() in de oude file */
 function parseUKGRows(rows) {
   var headerIdx = -1;
   for (var i = 0; i < Math.min(rows.length, 30); i++) {
     var r = rows[i] || [];
-    if (r.some(function (cl) {
-      return String(cl).trim().toLowerCase() === 'employee id';
-    })) {
-      headerIdx = i;
-      break;
-    }
+    if (r.some(function (cl) { return String(cl).trim().toLowerCase() === 'employee id'; })) { headerIdx = i; break; }
   }
   if (headerIdx < 0) return null;
-  var headers = (rows[headerIdx] || []).map(function (h) {
-    return String(h).trim();
-  });
+  var headers = (rows[headerIdx] || []).map(function (h) { return String(h).trim(); });
   var col = function (naam) {
-    for (var k = 0; k < headers.length; k++) {
-      if (headers[k].toLowerCase().indexOf(naam.toLowerCase()) >= 0) return k;
-    }
+    for (var k = 0; k < headers.length; k++) { if (headers[k].toLowerCase().indexOf(naam.toLowerCase()) >= 0) return k; }
     return -1;
   };
-  var cId = col('Employee Id'),
-    cNaam = col('Employee Name'),
-    cStatus = col('Employee Status'),
-    cPad = col('Full Path'),
-    cSkill = col('Skill');
-  var byId = {},
-    order = [];
+  var cId = col('Employee Id'), cNaam = col('Employee Name'), cVoor = col('First Name'), cAchter = col('Last Name'), cStatus = col('Employee Status'), cPad = col('Full Path'), cSkill = col('Skill'), cUren = col('Weekly Hours'), cDag = col('Daily Hours'), cType = col('Type medewerk'), cContract = col('Contract Type');
+  var byId = {}, order = [];
   for (var j = headerIdx + 1; j < rows.length; j++) {
     var row = rows[j] || [];
     var id = String(cId >= 0 && row[cId] != null ? row[cId] : '').trim();
-    var naam = String(cNaam >= 0 && row[cNaam] != null ? row[cNaam] : '').trim();
+    var naam = cNaam >= 0 ? String(row[cNaam] || '').trim() : '';
+    if (!naam && (cVoor >= 0 || cAchter >= 0)) naam = ((cVoor >= 0 ? String(row[cVoor] || '').trim() : '') + ' ' + (cAchter >= 0 ? String(row[cAchter] || '').trim() : '')).trim();
     if (!id && !naam) continue;
     if (cStatus >= 0 && String(row[cStatus]).trim().toLowerCase() !== 'active') continue;
     var key = id || naam;
     if (!byId[key]) {
       var pad = cPad >= 0 ? String(row[cPad] || '').trim() : '';
+      var urenN = cUren >= 0 ? parseFloat(String(row[cUren]).replace(',', '.')) : NaN;
+      var dagN = cDag >= 0 ? parseFloat(String(row[cDag]).replace(',', '.')) : NaN;
+      var typ = cType >= 0 ? String(row[cType] || '').trim() : '';
+      var con = cContract >= 0 ? String(row[cContract] || '').trim() : '';
       byId[key] = {
         id: 'e' + (id || key),
         naam: naam,
         ini: initials(naam),
         afd: afdFromPath(pad),
+        kostplaats: pad,
+        uren: isNaN(urenN) ? undefined : Math.round(urenN),
+        netto: isNaN(dagN) ? undefined : hoursToHM(dagN),
+        status: 'Actief',
+        isUitzend: /uitzend|flex|payroll/i.test(pad + ' ' + typ + ' ' + con),
         skills: []
       };
       order.push(key);
@@ -1046,11 +1046,7 @@ function parseUKGRows(rows) {
     var skill = cSkill >= 0 ? String(row[cSkill] || '').trim() : '';
     if (skill && byId[key].skills.indexOf(skill) < 0) byId[key].skills.push(skill);
   }
-  return order.map(function (k) {
-    var e = byId[k];
-    e.rol = e.skills[0] || 'Medewerker';
-    return e;
-  });
+  return order.map(function (k) { var e = byId[k]; e.rol = e.skills[0] || 'Medewerker'; return e; });
 }
 const SHIFTS = [{
   id: 'O',
@@ -1395,6 +1391,8 @@ function App() {
   const [editEmp, setEditEmp] = useState(null);
   const [empFilter, setEmpFilter] = useState('eigen');
   const [empDept, setEmpDept] = useState('alle');
+  const [importPending, setImportPending] = useState(null);
+  const [importForceDept, setImportForceDept] = useState('');
   const [vakAfd, setVakAfd] = useState('alle');
   const [vakFunctie, setVakFunctie] = useState('alle');
   const [empTab, setEmpTab] = useState('basis');
@@ -1530,39 +1528,11 @@ function App() {
         }
         var imported = parseUKGRows(rows);
         if (!imported || !imported.length) {
-          alert('Geen UKG "Employee Information" gegevens gevonden (kolommen: Employee Id, Employee Name, Full Path, Skill).');
+          alert('Geen UKG "Employee Information" gegevens gevonden (kolommen: Employee Id, First/Last Name of Employee Name, Full Path, Skill).');
           return;
         }
-        var nw = imported.filter(function (u) {
-          return !employees.some(function (x) {
-            return x.id === u.id || x.naam.toLowerCase() === u.naam.toLowerCase();
-          });
-        }).length;
-        setEmployees(prev => {
-          var out = prev.slice();
-          imported.forEach(function (u) {
-            var idx = out.findIndex(function (x) {
-              return x.id === u.id || x.naam.toLowerCase() === u.naam.toLowerCase();
-            });
-            if (idx >= 0) out[idx] = Object.assign({}, out[idx], {
-              skills: u.skills,
-              rol: u.rol,
-              afd: u.afd
-            });else out.push(u);
-          });
-          return out;
-        });
-        logAction('UKG_IMPORT', {
-          aantal: imported.length,
-          nieuw: nw
-        });
-        setToast({
-          m: imported.length + ' medewerkers verwerkt (' + nw + ' nieuw)',
-          k: 'ok'
-        });
-        setTimeout(function () {
-          setToast(null);
-        }, 2600);
+        setImportForceDept('');
+        setImportPending(imported);
       } catch (err) {
         alert('Fout bij verwerken bestand: ' + err.message);
       }
@@ -1803,6 +1773,26 @@ function App() {
     });
     setEditEmp(null);
     ping('Medewerker opgeslagen');
+  };
+  const commitImport = (imported, forceDept) => {
+    var list = forceDept ? imported.map(function (u) { return Object.assign({}, u, { afd: forceDept }); }) : imported;
+    var nw = list.filter(function (u) { return !employees.some(function (x) { return x.id === u.id || u.naam && (x.naam || '').toLowerCase() === u.naam.toLowerCase(); }); }).length;
+    setEmployees(function (prev) {
+      var out = prev.slice();
+      list.forEach(function (u) {
+        var idx = out.findIndex(function (x) { return x.id === u.id || u.naam && (x.naam || '').toLowerCase() === u.naam.toLowerCase(); });
+        if (idx >= 0) {
+          var clean = {};
+          Object.keys(u).forEach(function (k) { if (u[k] !== undefined && k !== 'status') clean[k] = u[k]; });
+          out[idx] = Object.assign({}, out[idx], clean);
+        } else out.push(u);
+      });
+      return out;
+    });
+    logAction('UKG_IMPORT', { aantal: list.length, nieuw: nw });
+    setToast({ m: list.length + ' medewerkers verwerkt (' + nw + ' nieuw)', k: 'ok' });
+    setTimeout(function () { setToast(null); }, 2600);
+    setImportPending(null);
   };
   const newEmp = () => setEditEmp({
     id: 'm' + Date.now(),
@@ -4437,7 +4427,7 @@ function App() {
       importJSON(e.target.files[0]);
       e.target.value = '';
     }
-  }), redenModal ? React.createElement("div", { onClick: () => setRedenModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 340, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Boven MR-max toevoegen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Max (" + redenModal.max + ") bereikt. Kies een reden \u2014 deze wordt vastgelegd bij de dienst en in het logboek."), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, (redenen || []).map(r => React.createElement("button", { key: r, className: "btn", style: { justifyContent: 'flex-start', textAlign: 'left' }, onClick: () => confirmReden(r) }, r))), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setRedenModal(null) }, "Annuleren"))) : null, timeModal ? React.createElement("div", {
+  }), importPending ? React.createElement("div", { onClick: () => setImportPending(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 400, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 6px' } }, "Import \u2014 afdeling bevestigen"), React.createElement("div", { style: { fontSize: 13, marginBottom: 8 } }, importPending.length + " medewerkers gevonden."), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Gedetecteerd uit UKG-pad: " + function () { var c = {}; importPending.forEach(function (u) { c[u.afd] = (c[u.afd] || 0) + 1; }); return Object.keys(c).map(function (k) { return k + ' (' + c[k] + ')'; }).join(', '); }()), React.createElement("label", { className: "efld", style: { marginBottom: 12, display: 'block' } }, "Forceer alle naar afdeling (optioneel)", React.createElement("select", { className: "cin", value: importForceDept, onChange: e => setImportForceDept(e.target.value) }, [React.createElement("option", { key: '', value: '' }, '\u2014 gebruik gedetecteerde \u2014')].concat(Object.keys(cfg).map(function (dn) { return React.createElement("option", { key: dn, value: dn }, dn); })))), React.createElement("div", { style: { display: 'flex', gap: 8 } }, React.createElement("button", { className: "btn gold", style: { flex: 1 }, onClick: () => commitImport(importPending, importForceDept) }, "Importeer " + importPending.length), React.createElement("button", { className: "btn", onClick: () => setImportPending(null) }, "Annuleren")))) : null, redenModal ? React.createElement("div", { onClick: () => setRedenModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 340, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Boven MR-max toevoegen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Max (" + redenModal.max + ") bereikt. Kies een reden \u2014 deze wordt vastgelegd bij de dienst en in het logboek."), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, (redenen || []).map(r => React.createElement("button", { key: r, className: "btn", style: { justifyContent: 'flex-start', textAlign: 'left' }, onClick: () => confirmReden(r) }, r))), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setRedenModal(null) }, "Annuleren"))) : null, timeModal ? React.createElement("div", {
     className: "modal-bg",
     onClick: () => setTimeModal(null)
   }, React.createElement("div", {
