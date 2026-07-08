@@ -1378,6 +1378,7 @@ function getNLFeestdagen(y) {
 function App() {
   const [view, setView] = useState('planning');
   const [dept, setDept] = useState('Packaging');
+  const [beschAlleenAfd, setBeschAlleenAfd] = useState(true);
   const [week, setWeek] = useState(() => NOW_WK.week);
   const [jaar, setJaar] = useState(() => NOW_WK.jaar);
   const [cfg, setCfg] = useState(() => normCfg(lsGet(LS_CFG, DEFAULT_CFG)));
@@ -2555,7 +2556,7 @@ function App() {
       return true;
     });
   };
-  const staff = employees.filter(e => e.actief !== false && (e.naam + ' ' + e.rol).toLowerCase().indexOf(zoek.toLowerCase()) >= 0 && !(selISO && (isOpVerlof(e.naam, selISO) || e.status === 'Ziek')) && heeftOpenDag(e));
+  const staff = employees.filter(e => e.actief !== false && (e.naam + ' ' + e.rol).toLowerCase().indexOf(zoek.toLowerCase()) >= 0 && !(selISO && (isOpVerlof(e.naam, selISO) || e.status === 'Ziek')) && (!beschAlleenAfd || (e.afd || '') === dept) && heeftOpenDag(e));
   const openTemp = useMemo(() => {
     let n = 0;
     Object.keys(plan).forEach(k => {
@@ -2944,7 +2945,7 @@ function App() {
       value: zoek,
       onChange: e => setZoek(e.target.value),
       placeholder: "Zoek naam of vaardigheid…"
-    })), React.createElement("div", {
+    })), React.createElement("label", { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5b6070', margin: '6px 0 2px', cursor: 'pointer' } }, React.createElement("input", { type: "checkbox", checked: beschAlleenAfd, onChange: e => setBeschAlleenAfd(e.target.checked) }), "Alleen " + dept), React.createElement("div", {
       className: "hint"
     }, sel ? 'Gekozen: ' + sel.split('|')[1] + ' · ' + (sel.split('|')[2] === 'O' ? 'Ochtend' : 'Middag') + ' — klik iemand' : 'Kies eerst een cel in het rooster'), staff.map(e => React.createElement("div", {
       key: e.id,
