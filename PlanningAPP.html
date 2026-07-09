@@ -988,6 +988,12 @@ const DEFAULT_EMP = [{
   "skills": ["Medewerk inpak"]
 }];
 const DEFAULT_AGENCIES = ["Randstad", "Manpower", "Adecco", "Tempo-Team", "Start People"];
+const DEFAULT_KP = Object.keys(DEFAULT_CFG).reduce(function (acc, dd) {
+  (DEFAULT_CFG[dd] || []).forEach(function (l) {
+    if (l.kostplaats && acc.indexOf(l.kostplaats) < 0) acc.push(l.kostplaats);
+  });
+  return acc;
+}, []);
 const DEFAULT_REDENEN = ["Extra order", "Inwerken/opleiden", "Ziektevervanging", "Kwaliteitscontrole", "Opstart/ombouw"];
 function initials(n) {
   var p = (n || '').trim().split(/\s+/);
@@ -1094,6 +1100,7 @@ const LS_PLAN = 'bl_plan_v4',
   LS_PUB = 'bl_pub_v4',
   LS_EMP = 'bl_emp_v4',
   LS_RED = 'bl_red_v4',
+  LS_KP = 'bl_kp_v4',
   LS_VT = 'bl_vt_v4';
 function lsGet(k, f) {
   try {
@@ -1384,6 +1391,7 @@ function App() {
   const [cfg, setCfg] = useState(() => normCfg(lsGet(LS_CFG, DEFAULT_CFG)));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
   const [redenen, setRedenen] = useState(() => lsGet(LS_RED, DEFAULT_REDENEN));
+  const [kostplaatsen, setKostplaatsen] = useState(() => lsGet(LS_KP, DEFAULT_KP));
   const [verlofTypes, setVerlofTypes] = useState(() => lsGet(LS_VT, VERLOF_TYPES));
   const [redenModal, setRedenModal] = useState(null);
   const [employees, setEmployees] = useState(() => lsGet(LS_EMP, DEFAULT_EMP));
@@ -1450,6 +1458,11 @@ function App() {
       localStorage.setItem(LS_VT, JSON.stringify(verlofTypes));
     } catch (e) {}
   }, [verlofTypes]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_KP, JSON.stringify(kostplaatsen));
+    } catch (e) {}
+  }, [kostplaatsen]);
   useEffect(() => {
     try {
       localStorage.setItem(LS_EMP, JSON.stringify(employees));
@@ -1675,6 +1688,7 @@ function App() {
       cfg: cfg,
       agencies: agencies,
       redenen: redenen,
+      kostplaatsen: kostplaatsen,
       verlofTypes: verlofTypes,
       employees: employees,
       verlof: verlof,
@@ -1736,6 +1750,7 @@ function App() {
       if (dat.cfg) setCfg(normCfg(dat.cfg));
       if (dat.agencies) setAgencies(dat.agencies);
       if (dat.redenen) setRedenen(dat.redenen);
+      if (dat.kostplaatsen) setKostplaatsen(dat.kostplaatsen);
       if (dat.verlofTypes) setVerlofTypes(dat.verlofTypes);
       if (dat.employees) setEmployees(dat.employees);
       if (dat.verlof) setVerlof(dat.verlof);
@@ -1936,7 +1951,7 @@ function App() {
       var _wtO = getWerktijden(emp, parts[4], week, templates) || {};
       var _stO = _wtO.start || emp.starttijd || '07:00';
       var _eiO = _wtO.eind || emp.eindtijd || berekenEindtijd(_stO, emp.netto || '7:12', emp.pauze || '1:03');
-      setRedenModal({ kind: 'assign', key: cellKey, empId: empId, naam: emp.naam, max: _rnA.max, start: _stO, netto: emp.netto || '7:12', pauze: emp.pauze || '1:03', eind: _eiO });
+      setRedenModal({ kind: 'assign', key: cellKey, empId: empId, naam: emp.naam, max: _rnA.max, start: _stO, netto: emp.netto || '7:12', pauze: emp.pauze || '1:03', eind: _eiO, kostplaats: line.kostplaats || '' });
       return;
     }
     var wt = getWerktijden(emp, parts[4], week, templates) || {};
@@ -1950,7 +1965,8 @@ function App() {
       start: st,
       netto: emp.netto || '7:12',
       pauze: emp.pauze || '1:03',
-      eind: eind
+      eind: eind,
+      kostplaats: line.kostplaats || ''
     });
   };
   const doAssign = m => {
@@ -1965,6 +1981,7 @@ function App() {
         start: m.start,
         eind: m.eind,
         overReason: m.overReason || null,
+        kostplaats: m.kostplaats || null,
         door: user,
         ts: new Date().toISOString()
       }]);
@@ -1987,6 +2004,7 @@ function App() {
     setPlan(p => {
       const n = Object.assign({}, p);
       n[m.key] = (p[m.key] || []).map(a => a.id === m.id ? Object.assign({}, a, {
+        kostplaats: m.kostplaats || null,
         start: m.start,
         eind: m.eind
       }) : a);
@@ -2040,13 +2058,9 @@ function App() {
       setTempFor(null);
       return;
     }
-    if ((plan[k] || []).filter(a => !a.ziek).length >= _rnT.max) {
-      setRedenModal({ kind: 'temp', key: k, bureau: ag, max: _rnT.max });
-      setTempFor(null);
-      return;
-    }
+    var _over = (plan[k] || []).filter(a => !a.ziek).length >= _rnT.max;
     var t = defTijd(k);
-    setUitzModal({ key: k, bureau: ag, start: t.start, netto: t.netto, pauze: t.pauze, eind: t.eind });
+    setUitzModal({ key: k, bureau: ag, start: t.start, netto: t.netto, pauze: t.pauze, eind: t.eind, over: _over, max: _rnT.max });
     setTempFor(null);
   };
   const reqTemp = (k, ag, start, eind) => {
@@ -2223,6 +2237,7 @@ function App() {
         cfg: cfg,
         agencies: agencies,
         redenen: redenen,
+      kostplaatsen: kostplaatsen,
       verlofTypes: verlofTypes,
         employees: employees,
         verlof: verlof,
@@ -2258,6 +2273,7 @@ function App() {
         if (dat.cfg) setCfg(normCfg(dat.cfg));
         if (dat.agencies) setAgencies(dat.agencies);
       if (dat.redenen) setRedenen(dat.redenen);
+      if (dat.kostplaatsen) setKostplaatsen(dat.kostplaatsen);
       if (dat.verlofTypes) setVerlofTypes(dat.verlofTypes);
         if (dat.employees) setEmployees(dat.employees);
         if (dat.verlof) setVerlof(dat.verlof);
@@ -2321,7 +2337,7 @@ function App() {
                 'End Time': eind,
                 'Employee Id': (e.id || '').replace(/^e/, ''),
                 'EIN Name': e.naam,
-                'Cost Center 1': line.kostplaats || '',
+                'Cost Center 1': a.kostplaats || line.kostplaats || '',
                 'Standard Total Hours': e.netto || '7:12',
                 'Skill': e.skills && e.skills[0] || e.rol || '',
                 'Day Type': (e.pauze || '1:03') + ' Pauze',
@@ -2502,12 +2518,12 @@ function App() {
     const m = redenModal;
     if (!m) return;
     if (m.kind === 'assign') {
-      setTimeModal({ mode: 'add', key: m.key, empId: m.empId, naam: m.naam, start: m.start, netto: m.netto, pauze: m.pauze, eind: m.eind, overReason: r });
+      setTimeModal({ mode: 'add', key: m.key, empId: m.empId, naam: m.naam, start: m.start, netto: m.netto, pauze: m.pauze, eind: m.eind, overReason: r, kostplaats: m.kostplaats || '' });
       setRedenModal(null);
     } else if (m.kind === 'temp') {
       setPlan(p => {
         const n = Object.assign({}, p);
-        var _dt = defTijd(m.key); n[m.key] = (p[m.key] || []).concat([{ id: uid(), empId: null, type: 'uitzend', bureau: m.bureau, start: _dt.start, eind: _dt.eind, ziek: false, overReason: r, door: user, ts: new Date().toISOString() }]);
+        var _dt = defTijd(m.key); n[m.key] = (p[m.key] || []).concat([{ id: uid(), empId: null, type: 'uitzend', bureau: m.bureau, start: m.start || _dt.start, eind: m.eind || _dt.eind, ziek: false, overReason: r, door: user, ts: new Date().toISOString() }]);
         return n;
       });
       logAction('OVER_MAX_UITZEND', { bureau: m.bureau, cel: m.key, reden: r });
@@ -2515,6 +2531,10 @@ function App() {
       setRedenModal(null);
     }
   };
+  const addKP = () => setKostplaatsen(a => a.concat(['Nieuwe kostenplaats']));
+  const updKP = (i, v) => setKostplaatsen(a => a.map((x, j) => j === i ? v : x));
+  const delKP = i => setKostplaatsen(a => a.filter((x, j) => j !== i));
+  const kpCard = () => React.createElement("div", { className: "card", style: { padding: 16 } }, React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } }, React.createElement("h3", { style: { margin: 0 } }, "Kostenplaatsen (UKG)"), React.createElement("button", { className: "btn gold", onClick: addKP }, React.createElement(I, { n: "add" }), "Kostenplaats")), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 10 } }, "Deze waarden vullen de kolom Cost Center 1 in de UKG-export. Koppel een kostenplaats aan een lijn hierboven; in de planning kun je per dienst een afwijkende kostenplaats kiezen."), kostplaatsen.map(function (kp, i) { return React.createElement("div", { key: i, style: { display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' } }, React.createElement("input", { className: "cin", style: { flex: 1 }, value: kp, onChange: e => updKP(i, e.target.value) }), React.createElement("button", { className: "del", onClick: () => delKP(i) }, React.createElement(I, { n: "delete" }))); }));
   const reasonsCard = () => React.createElement("div", { className: "card", style: { padding: 16 } }, React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } }, React.createElement("h3", { style: { margin: 0 } }, "Over-max redenen"), React.createElement("button", { className: "btn gold", onClick: addReden }, React.createElement(I, { n: "add" }), "Reden")), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 10 } }, "Deze redenen verschijnen bij het toevoegen boven het MR-max. Vaste lijst = later optelbaar op het dashboard."), redenen.map((r, i) => React.createElement("div", { key: i, style: { display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' } }, React.createElement("input", { className: "cin", style: { flex: 1 }, value: r, onChange: e => updReden(i, e.target.value) }), React.createElement("button", { className: "del", onClick: () => delReden(i) }, React.createElement(I, { n: "delete" })))));
   const addVT = () => setVerlofTypes(a => a.concat([{ label: 'Nieuw type', timeOff: '', kleur: '#78909c', kw: [] }]));
   const updVT = (i, f, v) => setVerlofTypes(a => a.map((x, j) => j === i ? Object.assign({}, x, { [f]: v }) : x));
@@ -2676,7 +2696,7 @@ function App() {
     n: "precision_manufacturing"
   })), React.createElement("h1", null, "Biscuit International"), React.createElement("div", {
     className: "cap"
-  }, "PERSONEEL PLANNING")), React.createElement("nav", null, NAV.map(it => React.createElement("button", {
+  }, "INDUSTRIAL PLANNING")), React.createElement("nav", null, NAV.map(it => React.createElement("button", {
     key: it[2],
     className: view === it[2] ? "on" : "",
     onClick: () => {
@@ -2980,7 +3000,8 @@ function App() {
               id: a.id,
               naam: e ? e.naam : '',
               start: a.start || '06:00',
-              eind: a.eind || ''
+              eind: a.eind || '',
+              kostplaats: a.kostplaats || ''
             });
           }
         }, lbl + (a.start ? " " + a.start : "") + (a.type === 'uitzend' ? ' ·uz' : '')), React.createElement("span", {
@@ -3643,6 +3664,7 @@ function App() {
           setCfg(DEFAULT_CFG);
           setAgencies(DEFAULT_AGENCIES);
     setRedenen(DEFAULT_REDENEN);
+    setKostplaatsen(DEFAULT_KP);
     setVerlofTypes(VERLOF_TYPES);
           ping('Standaard hersteld');
         }
@@ -3770,7 +3792,7 @@ function App() {
       n: "add"
     }), "Lijn")), React.createElement("table", {
       className: "tbl cfgtbl"
-    }, React.createElement("thead", null, React.createElement("tr", null, ['Kleur', 'Lijn', 'SAP', 'MR (min)', 'Max', ''].map((h, i) => React.createElement("th", {
+    }, React.createElement("thead", null, React.createElement("tr", null, ['Kleur', 'Lijn', 'SAP', 'Kostenplaats', ''].map((h, i) => React.createElement("th", {
       key: i
     }, h)))), React.createElement("tbody", null, (cfg[d] || []).map((l, i) => React.createElement("tr", {
       key: i
@@ -3794,19 +3816,19 @@ function App() {
       value: l.sap,
       maxLength: 2,
       onChange: e => updLine(d, i, 'sap', e.target.value.toUpperCase())
-    })), React.createElement("td", null, React.createElement("input", {
-      className: "cin numin",
-      type: "number",
-      min: 0,
-      value: l.basis,
-      onChange: e => updLine(d, i, 'basis', +e.target.value)
-    })), React.createElement("td", null, React.createElement("input", {
-      className: "cin numin",
-      type: "number",
-      min: 0,
-      value: l.max,
-      onChange: e => updLine(d, i, 'max', +e.target.value)
-    })), React.createElement("td", null, React.createElement("button", {
+    })), React.createElement("td", null, React.createElement("select", {
+      className: "cin",
+      value: l.kostplaats || '',
+      onChange: e => updLine(d, i, 'kostplaats', e.target.value)
+    }, [React.createElement("option", {
+      key: '_leeg',
+      value: ''
+    }, '\u2014 geen \u2014')].concat((l.kostplaats && kostplaatsen.indexOf(l.kostplaats) < 0 ? [l.kostplaats] : []).concat(kostplaatsen).map(function (kp) {
+      return React.createElement("option", {
+        key: kp,
+        value: kp
+      }, kp);
+    })))), React.createElement("td", null, React.createElement("button", {
       className: "del",
       onClick: () => delLine(d, i),
       title: "Verwijder lijn"
@@ -3853,7 +3875,7 @@ function App() {
       onClick: () => delAg(i)
     }, React.createElement(I, {
       n: "delete"
-    }))))), reasonsCard(), verlofTypesCard(), React.createElement("div", {
+    }))))), kpCard(), reasonsCard(), verlofTypesCard(), React.createElement("div", {
       className: "card",
       style: {
         padding: 16
@@ -4540,7 +4562,7 @@ function App() {
       importJSON(e.target.files[0]);
       e.target.value = '';
     }
-  }), uitzModal ? React.createElement("div", { onClick: () => setUitzModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 360, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Uitzendaanvraag \u2014 " + uitzModal.bureau), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Kies de starttijd; eindtijd wordt berekend (aanpasbaar)."), React.createElement("label", { className: "efld" }, "Starttijd", React.createElement("input", { className: "cin", value: uitzModal.start, onChange: e => { var st = e.target.value; setUitzModal(Object.assign({}, uitzModal, { start: st, eind: berekenEindtijd(st, uitzModal.netto, uitzModal.pauze) })); } })), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Eindtijd", React.createElement("input", { className: "cin", value: uitzModal.eind, onChange: e => setUitzModal(Object.assign({}, uitzModal, { eind: e.target.value })) })), React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 14 } }, React.createElement("button", { className: "btn gold", style: { flex: 1, justifyContent: 'center' }, onClick: () => { reqTemp(uitzModal.key, uitzModal.bureau, uitzModal.start, uitzModal.eind); setUitzModal(null); } }, "Aanvragen"), React.createElement("button", { className: "btn", onClick: () => setUitzModal(null) }, "Annuleren")))) : null, importPending ? React.createElement("div", { onClick: () => setImportPending(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 400, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 6px' } }, "Import \u2014 afdeling bevestigen"), React.createElement("div", { style: { fontSize: 13, marginBottom: 8 } }, importPending.length + " medewerkers gevonden."), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Gedetecteerd uit UKG-pad: " + function () { var c = {}; importPending.forEach(function (u) { c[u.afd] = (c[u.afd] || 0) + 1; }); return Object.keys(c).map(function (k) { return k + ' (' + c[k] + ')'; }).join(', '); }()), React.createElement("label", { className: "efld", style: { marginBottom: 12, display: 'block' } }, "Forceer alle naar afdeling (optioneel)", React.createElement("select", { className: "cin", value: importForceDept, onChange: e => setImportForceDept(e.target.value) }, [React.createElement("option", { key: '', value: '' }, '\u2014 gebruik gedetecteerde \u2014')].concat(Object.keys(cfg).map(function (dn) { return React.createElement("option", { key: dn, value: dn }, dn); })))), React.createElement("div", { style: { display: 'flex', gap: 8 } }, React.createElement("button", { className: "btn gold", style: { flex: 1 }, onClick: () => commitImport(importPending, importForceDept) }, "Importeer " + importPending.length), React.createElement("button", { className: "btn", onClick: () => setImportPending(null) }, "Annuleren")))) : null, redenModal ? React.createElement("div", { onClick: () => setRedenModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 340, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Boven MR-max toevoegen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Max (" + redenModal.max + ") bereikt. Kies een reden \u2014 deze wordt vastgelegd bij de dienst en in het logboek."), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, (redenen || []).map(r => React.createElement("button", { key: r, className: "btn", style: { justifyContent: 'flex-start', textAlign: 'left' }, onClick: () => confirmReden(r) }, r))), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setRedenModal(null) }, "Annuleren"))) : null, timeModal ? React.createElement("div", {
+  }), uitzModal ? React.createElement("div", { onClick: () => setUitzModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 360, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Uitzendaanvraag \u2014 " + uitzModal.bureau), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, uitzModal.over ? "Let op: max (" + uitzModal.max + ") bereikt \u2014 na de tijd vragen we een reden." : "Kies de starttijd; eindtijd wordt berekend (aanpasbaar)."), React.createElement("label", { className: "efld" }, "Starttijd", React.createElement("input", { className: "cin", value: uitzModal.start, onChange: e => { var st = e.target.value; setUitzModal(Object.assign({}, uitzModal, { start: st, eind: berekenEindtijd(st, uitzModal.netto, uitzModal.pauze) })); } })), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Eindtijd", React.createElement("input", { className: "cin", value: uitzModal.eind, onChange: e => setUitzModal(Object.assign({}, uitzModal, { eind: e.target.value })) })), React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 14 } }, React.createElement("button", { className: "btn gold", style: { flex: 1, justifyContent: 'center' }, onClick: () => { if (uitzModal.over) { setRedenModal({ kind: 'temp', key: uitzModal.key, bureau: uitzModal.bureau, max: uitzModal.max, start: uitzModal.start, eind: uitzModal.eind }); } else { reqTemp(uitzModal.key, uitzModal.bureau, uitzModal.start, uitzModal.eind); } setUitzModal(null); } }, uitzModal.over ? "Verder (boven max)" : "Aanvragen"), React.createElement("button", { className: "btn", onClick: () => setUitzModal(null) }, "Annuleren")))) : null, importPending ? React.createElement("div", { onClick: () => setImportPending(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 400, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 6px' } }, "Import \u2014 afdeling bevestigen"), React.createElement("div", { style: { fontSize: 13, marginBottom: 8 } }, importPending.length + " medewerkers gevonden."), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Gedetecteerd uit UKG-pad: " + function () { var c = {}; importPending.forEach(function (u) { c[u.afd] = (c[u.afd] || 0) + 1; }); return Object.keys(c).map(function (k) { return k + ' (' + c[k] + ')'; }).join(', '); }()), React.createElement("label", { className: "efld", style: { marginBottom: 12, display: 'block' } }, "Forceer alle naar afdeling (optioneel)", React.createElement("select", { className: "cin", value: importForceDept, onChange: e => setImportForceDept(e.target.value) }, [React.createElement("option", { key: '', value: '' }, '\u2014 gebruik gedetecteerde \u2014')].concat(Object.keys(cfg).map(function (dn) { return React.createElement("option", { key: dn, value: dn }, dn); })))), React.createElement("div", { style: { display: 'flex', gap: 8 } }, React.createElement("button", { className: "btn gold", style: { flex: 1 }, onClick: () => commitImport(importPending, importForceDept) }, "Importeer " + importPending.length), React.createElement("button", { className: "btn", onClick: () => setImportPending(null) }, "Annuleren")))) : null, redenModal ? React.createElement("div", { onClick: () => setRedenModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 340, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Boven MR-max toevoegen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Max (" + redenModal.max + ") bereikt. Kies een reden \u2014 deze wordt vastgelegd bij de dienst en in het logboek."), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, (redenen || []).map(r => React.createElement("button", { key: r, className: "btn", style: { justifyContent: 'flex-start', textAlign: 'left' }, onClick: () => confirmReden(r) }, r))), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setRedenModal(null) }, "Annuleren"))) : null, timeModal ? React.createElement("div", {
     className: "modal-bg",
     onClick: () => setTimeModal(null)
   }, React.createElement("div", {
@@ -4590,7 +4612,7 @@ function App() {
     onChange: ev => setTimeModal(Object.assign({}, timeModal, {
       eind: ev.target.value
     }))
-  }))), React.createElement("div", {
+  })), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Kostenplaats (afwijkend \u2014 leeg = van de lijn)", React.createElement("select", { className: "cin", value: timeModal.kostplaats || '', onChange: ev => setTimeModal(Object.assign({}, timeModal, { kostplaats: ev.target.value })) }, [React.createElement("option", { key: '_leeg', value: '' }, '\u2014 van de lijn \u2014')].concat((timeModal.kostplaats && kostplaatsen.indexOf(timeModal.kostplaats) < 0 ? [timeModal.kostplaats] : []).concat(kostplaatsen).map(function (kp) { return React.createElement("option", { key: kp, value: kp }, kp); }))))), React.createElement("div", {
     className: "modal-ft"
   }, React.createElement("button", {
     className: "btn gold",
