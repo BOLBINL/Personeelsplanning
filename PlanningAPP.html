@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>BINL - Broek op Langedijk — Planning Dashboard</title>
+<title>Biscuit International — Planning Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&display=swap" rel="stylesheet"/>
 <style>
@@ -1575,6 +1575,16 @@ function App() {
       var van = item.from_date || '';
       var tot = item.to_date || van;
       var reden = item.time_off && item.time_off.name || 'Vakantie';
+      var pd = item.pto_details || {};
+      var hhmm2u = function (s) { s = String(s || '').trim(); if (!s) return null; var mt = s.match(/^(\d{1,2}):(\d{2})$/); if (mt) return +mt[1] + (+mt[2]) / 60; var f = parseFloat(s); return isFinite(f) ? f : null; };
+      var _unit = String(pd.duration_unit || '').toUpperCase();
+      var _reqTime = pd.requested_time != null ? pd.requested_time : null;
+      var uren = _unit.indexOf('HOUR') >= 0 ? hhmm2u(_reqTime) : null;
+      if (uren == null && item.from_time && item.to_time) { var a = hhmm2u(item.from_time), b = hhmm2u(item.to_time); if (a != null && b != null) uren = Math.round((b - a) * 100) / 100; }
+      if (uren != null && (!isFinite(uren) || uren <= 0)) uren = null;
+      var _isPartial = String(pd.request_type || '').toLowerCase().indexOf('partial') >= 0;
+      var vanT = item.from_time || null;
+      var totT = item.to_time || null;
       var stateRaw = String(item.pto_details && item.pto_details.request_state || '').toLowerCase();
       if (!van || !naam && !id) return;
       var m = id ? employees.find(function (e) {
@@ -1586,13 +1596,20 @@ function App() {
       if (!m) return;
       var status = stateRaw.indexOf('approved') >= 0 && stateRaw.indexOf('deleted') < 0 ? 'Approved' : stateRaw.indexOf('reject') >= 0 || stateRaw.indexOf('deleted') >= 0 ? 'Rejected' : stateRaw.indexOf('pend') >= 0 || stateRaw.indexOf('submit') >= 0 ? 'Pending' : 'New';
       if (status === 'Rejected') return;
+      var _vanD = String(van).slice(0, 10);
+      var _totD = String(tot).slice(0, 10);
+      var _dagdeel = _vanD === _totD && (_isPartial || uren != null && uren > 0 && uren < 7.2 || !!(vanT && totT));
       out.push({
         naam: m.naam,
         id: m.id,
-        van: String(van).slice(0, 10),
-        tot: String(tot).slice(0, 10),
+        van: _vanD,
+        tot: _totD,
         reden: reden,
-        status: status
+        status: status,
+        uren: uren,
+        dagdeel: _dagdeel,
+        vanT: _dagdeel ? vanT : null,
+        totT: _dagdeel ? totT : null
       });
     });
     return out;
@@ -1679,6 +1696,7 @@ function App() {
     r.readAsText(file);
   };
   const isOpVerlof = (naam, ds) => verlof.find(v => v.naam === naam && ds >= v.van && ds <= v.tot);
+  const heleDagVrij = (naam, ds) => verlof.find(v => v.naam === naam && ds >= v.van && ds <= v.tot && !v.dagdeel);
   const buildBlob = () => ({
     version: lsGet('bl_ver_v4', 0),
     savedAt: new Date().toISOString(),
@@ -2658,11 +2676,11 @@ function App() {
       if (e.status === 'Ziek' || e.status === 'Verlof') return false;
       var idx = DAG_K.indexOf(dk);
       var iso = (days[idx] || {}).iso;
-      if (isOpVerlof(e.naam, iso)) return false;
+      if (heleDagVrij(e.naam, iso)) return false;
       return true;
     });
   };
-  const staff = employees.filter(e => e.actief !== false && (e.naam + ' ' + e.rol).toLowerCase().indexOf(zoek.toLowerCase()) >= 0 && !(selISO && (isOpVerlof(e.naam, selISO) || e.status === 'Ziek')) && (!beschAlleenAfd || (e.afd || '') === dept) && heeftOpenDag(e));
+  const staff = employees.filter(e => e.actief !== false && (e.naam + ' ' + e.rol).toLowerCase().indexOf(zoek.toLowerCase()) >= 0 && !(selISO && (heleDagVrij(e.naam, selISO) || e.status === 'Ziek')) && (!beschAlleenAfd || (e.afd || '') === dept) && heeftOpenDag(e));
   const openTemp = useMemo(() => {
     let n = 0;
     Object.keys(plan).forEach(k => {
@@ -2696,7 +2714,7 @@ function App() {
     n: "precision_manufacturing"
   })), React.createElement("h1", null, "Biscuit International"), React.createElement("div", {
     className: "cap"
-  }, "PERSONEEL PLANNING")), React.createElement("nav", null, NAV.map(it => React.createElement("button", {
+  }, "INDUSTRIAL PLANNING")), React.createElement("nav", null, NAV.map(it => React.createElement("button", {
     key: it[2],
     className: view === it[2] ? "on" : "",
     onClick: () => {
@@ -3081,8 +3099,9 @@ function App() {
       if (_wd.indexOf(DAG_K[di]) < 0) return null;
       var _iso = (days[di] || {}).iso;
       var _planned = !!(plannedByEmp[e.id] || {})[DAG_K[di]];
-      var _leave = e.status === 'Ziek' || e.status === 'Verlof' || isOpVerlof(e.naam, _iso);
-      var _st = _planned ? 'g' : _leave ? 'v' : 'r';
+      var _leave = e.status === 'Ziek' || e.status === 'Verlof' || heleDagVrij(e.naam, _iso);
+      var _partial = !_leave && isOpVerlof(e.naam, _iso);
+      var _st = _planned ? 'g' : _leave ? 'v' : _partial ? 'p' : 'r';
       return React.createElement("span", {
         key: di,
         style: {
@@ -3090,8 +3109,8 @@ function App() {
           fontWeight: 700,
           padding: "1px 3px",
           borderRadius: 3,
-          background: _st === 'g' ? "#e8f5e9" : _st === 'v' ? "#eceff3" : "#fdecea",
-          color: _st === 'g' ? "#2e7d32" : _st === 'v' ? "#9aa0ac" : "#c62828"
+          background: _st === 'g' ? "#e8f5e9" : _st === 'v' ? "#eceff3" : _st === 'p' ? "#fff3e0" : "#fdecea",
+          color: _st === 'g' ? "#2e7d32" : _st === 'v' ? "#9aa0ac" : _st === 'p' ? "#b26a00" : "#c62828"
         }
       }, dl);
     })))), React.createElement(I, {
@@ -4381,18 +4400,20 @@ function App() {
       var t = v ? matchVerlofType(v.reden, verlofTypes) : null;
       return React.createElement("td", {
         key: d,
-        title: v ? v.reden + ' (' + v.status + ')' : '',
+        title: v ? v.reden + (v.dagdeel ? ' \u00b7 ' + (v.vanT && v.totT ? v.vanT + '\u2013' + v.totT : (v.uren || '') + 'u') + ' (deeldag)' : '') + ' (' + v.status + ')' : '',
         style: {
           padding: 0,
           textAlign: 'center',
-          background: t ? v.status === 'Pending' ? '#fff9c4' : t.kleur : 'transparent',
-          color: '#fff',
+          background: t ? v.status === 'Pending' ? '#fff9c4' : v.dagdeel ? 'transparent' : t.kleur : 'transparent',
+          backgroundImage: t && v.dagdeel && v.status !== 'Pending' ? 'linear-gradient(135deg, ' + t.kleur + ' 0 50%, #eef0f4 50% 100%)' : 'none',
+          color: t && v.dagdeel ? '#1f2430' : '#fff',
           fontSize: 9,
+          fontWeight: 700,
           borderLeft: '1px solid #eef0f4',
           minWidth: 16,
           height: 26
         }
-      }, t ? v.status === 'Pending' ? '?' : t.label[0] : '');
+      }, t ? v.status === 'Pending' ? '?' : v.dagdeel ? (v.uren != null ? (Number.isInteger(v.uren) ? v.uren : v.uren.toFixed(1).replace('.0', '')) + 'u' : '\u00bd') : t.label[0] : '');
     })))))))));
   }
   function dashboardView() {
