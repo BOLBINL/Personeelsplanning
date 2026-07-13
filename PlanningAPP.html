@@ -1614,6 +1614,19 @@ function App() {
     });
     return out;
   };
+  const mergeVerlof = (prev, recs) => {
+    var pers = function (r) { return r.id || r.naam; };
+    var key = function (r) { return pers(r) + '|' + r.van + '|' + r.tot + '|' + r.reden; };
+    var overlap = function (a, b) { return pers(a) === pers(b) && a.van <= b.tot && b.van <= a.tot; };
+    // Drop a stored record only if the fetch returned a record for the SAME person whose
+    // date-range overlaps it. Records the fetch didn't touch (other people, other periods,
+    // non-overlapping leave) are kept. Then add the fresh records, de-duplicated.
+    var kept = prev.filter(function (old) { return !recs.some(function (nw) { return overlap(old, nw); }); });
+    var seen = {};
+    kept.forEach(function (r) { seen[key(r)] = 1; });
+    recs.forEach(function (r) { var k = key(r); if (!seen[k]) { seen[k] = 1; kept.push(r); } });
+    return kept;
+  };
   const haalVerlofOp = () => {
     if (!flow.verlof) {
       ping('Geen verlof-flow URL ingesteld (Configuratie)', 'warn');
@@ -1660,7 +1673,7 @@ function App() {
         return;
       }
       setVerlof(function (prev) {
-        return prev.concat(recs);
+        return mergeVerlof(prev, recs);
       });
       logAction('VERLOF_OPGEHAALD', {
         aantal: recs.length
@@ -1672,6 +1685,20 @@ function App() {
       setSyncInfo('');
     });
   };
+  const opschonenVerlof = () => {
+    setVerlof(function (prev) {
+      var byKey = {};
+      prev.forEach(function (r) {
+        var k = (r.id || r.naam) + '|' + r.van + '|' + r.tot + '|' + r.reden;
+        var cur = byKey[k];
+        if (!cur || r.dagdeel && !cur.dagdeel || r.uren != null && cur.uren == null) byKey[k] = r;
+      });
+      var out = Object.keys(byKey).map(function (k) { return byKey[k]; });
+      logAction('VERLOF_OPGESCHOOND', { van: prev.length, naar: out.length });
+      ping('Verlof opgeschoond: ' + prev.length + ' \u2192 ' + out.length + ' records');
+      return out;
+    });
+  };
   const importVerlof = file => {
     if (!file) return;
     var r = new FileReader();
@@ -1681,7 +1708,7 @@ function App() {
         alert('Geen gekoppelde verlof-records gevonden (UKG ptorequest JSON). Controleer namen/ID.');
         return;
       }
-      setVerlof(prev => prev.concat(recs));
+      setVerlof(prev => mergeVerlof(prev, recs));
       logAction('VERLOF_IMPORT', {
         aantal: recs.length
       });
@@ -1695,7 +1722,7 @@ function App() {
     };
     r.readAsText(file);
   };
-  const isOpVerlof = (naam, ds) => verlof.find(v => v.naam === naam && ds >= v.van && ds <= v.tot);
+  const isOpVerlof = (naam, ds) => { var hits = verlof.filter(v => v.naam === naam && ds >= v.van && ds <= v.tot); if (!hits.length) return undefined; var p = hits.find(v => v.dagdeel); return p || hits[0]; };
   const heleDagVrij = (naam, ds) => verlof.find(v => v.naam === naam && ds >= v.van && ds <= v.tot && !v.dagdeel);
   const buildBlob = () => ({
     version: lsGet('bl_ver_v4', 0),
@@ -4291,6 +4318,12 @@ function App() {
     }, React.createElement(I, {
       n: "add"
     }), "Verlof"), React.createElement("button", {
+      className: "btn",
+      onClick: opschonenVerlof,
+      title: "Verwijder dubbele verlofregels (houdt deeldag-versie)"
+    }, React.createElement(I, {
+      n: "cleaning_services"
+    }), "Opschonen"), React.createElement("button", {
       className: "btn gold",
       onClick: haalVerlofOp
     }, React.createElement(I, {
