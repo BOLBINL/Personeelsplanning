@@ -1594,7 +1594,8 @@ function App() {
         return e.naam.toLowerCase() === naam.toLowerCase();
       });
       if (!m) return;
-      var status = stateRaw.indexOf('approved') >= 0 && stateRaw.indexOf('deleted') < 0 ? 'Approved' : stateRaw.indexOf('reject') >= 0 || stateRaw.indexOf('deleted') >= 0 ? 'Rejected' : stateRaw.indexOf('pend') >= 0 || stateRaw.indexOf('submit') >= 0 ? 'Pending' : 'New';
+      var _has = function (arr) { return arr.some(function (w) { return stateRaw.indexOf(w) >= 0; }); };
+      var status = _has(['reject', 'afgekeur', 'declin', 'denied', 'cancel', 'geannuleer', 'withdraw', 'ingetrokken', 'delete', 'verwijder']) ? 'Rejected' : _has(['approv', 'goedgekeur', 'accept']) ? 'Approved' : _has(['pend', 'submit', 'aangevraag', 'ingedien', 'new', 'nieuw', 'open']) ? 'Pending' : 'Rejected';
       if (status === 'Rejected') return;
       var _vanD = String(van).slice(0, 10);
       var _totD = String(tot).slice(0, 10);
@@ -1627,7 +1628,7 @@ function App() {
     recs.forEach(function (r) { var k = key(r); if (!seen[k]) { seen[k] = 1; kept.push(r); } });
     return kept;
   };
-  const haalVerlofOp = () => {
+  const haalVerlofOp = (vervang) => {
     if (!flow.verlof) {
       ping('Geen verlof-flow URL ingesteld (Configuratie)', 'warn');
       return;
@@ -1673,7 +1674,7 @@ function App() {
         return;
       }
       setVerlof(function (prev) {
-        return mergeVerlof(prev, recs);
+        return vervang ? recs : mergeVerlof(prev, recs);
       });
       logAction('VERLOF_OPGEHAALD', {
         aantal: recs.length
@@ -4325,7 +4326,12 @@ function App() {
       n: "cleaning_services"
     }), "Opschonen"), React.createElement("button", {
       className: "btn gold",
-      onClick: haalVerlofOp
+      onClick: function (ev) {
+        if (ev && (ev.shiftKey || ev.altKey)) {
+          if (window.confirm('Alle verlof vervangen door een verse ophaal? Bestaande records (incl. afgekeurde restanten) worden gewist en opnieuw opgebouwd.')) haalVerlofOp(true);
+        } else haalVerlofOp(false);
+      },
+      title: "Klik: veilig samenvoegen. Shift+klik: alles vervangen (wist oude/afgekeurde restanten)."
     }, React.createElement(I, {
       n: "cloud_download"
     }), "Verlof ophalen"), React.createElement("button", {
