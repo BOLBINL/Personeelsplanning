@@ -2131,6 +2131,98 @@ function App() {
     });
     ping('Uitzendaanvraag \u2192 ' + ag);
   };
+  const printRooster = () => {
+    var isoMon = isoMonday(jaar, week);
+    var einde = new Date(isoMon.getTime() + 4 * 86400000);
+    var fmtD = function (dt) { return dt.getUTCDate() + ' ' + MND[dt.getUTCMonth()]; };
+    var vandaag = new Date();
+    var afgedrukt = String(vandaag.getDate()).padStart(2, '0') + '-' + String(vandaag.getMonth() + 1).padStart(2, '0') + '-' + vandaag.getFullYear();
+    var werkdagen = days.slice(0, 5);
+    var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+    var empById = {};
+    employees.forEach(function (e) { empById[e.id] = e; });
+
+    // Verzamel per shift: rij per persoon, kolom per werkdag -> starttijd of markering
+    var shiftBlokken = SHIFTS.slice(0, 2).map(function (sh) {
+      var perPersoon = {};
+      (cfg[dept] || []).forEach(function (line) {
+        werkdagen.forEach(function (day) {
+          var lijst = plan[cellK(dept, line.lijn, sh.id, wkKey, day.k)] || [];
+          lijst.forEach(function (a) {
+            if (a.type !== 'vast' || !a.empId) return;
+            var e = empById[a.empId];
+            if (!e) return;
+            var wt = getWerktijden(e, day.k, week, templates) || {};
+            var start = a.start || wt.start || e.starttijd || '';
+            var rec = perPersoon[a.empId] || (perPersoon[a.empId] = { naam: e.naam, cellen: {} });
+            rec.cellen[day.k] = { start: start, lijn: line.lijn };
+          });
+        });
+      });
+      return { sh: sh, rijen: Object.keys(perPersoon).map(function (id) { return perPersoon[id]; }).sort(function (a, b) { return a.naam.localeCompare(b.naam); }) };
+    });
+
+    var cellHtml = function (rec, day) {
+      var c = rec.cellen[day.k];
+      var vl = isOpVerlof(rec.naam, day.iso);
+      if (c) {
+        var extra = '';
+        if (vl && vl.dagdeel) extra = '<div class="sub part">' + (vl.vanT && vl.totT ? esc(vl.vanT + '-' + vl.totT) : esc((vl.uren || '') + 'u')) + ' vrij</div>';
+        var lijnHtml = c.lijn ? '<div class="lijn">' + esc(c.lijn) + '</div>' : '';
+        return '<td class="on"><div class="tijd">' + esc(c.start || '\u2014') + '</div>' + lijnHtml + extra + '</td>';
+      }
+      if (vl && vl.dagdeel) return '<td class="part"><div class="sub">' + esc((vl.uren || '') + 'u') + '</div><div class="mini">deels vrij</div></td>';
+      if (vl && !vl.dagdeel) { var t = matchVerlofType(vl.reden, verlofTypes); return '<td class="vrij"><div class="mini">' + esc(t ? t.label : 'Vrij') + '</div></td>'; }
+      return '<td class="leeg">\u2014</td>';
+    };
+
+    var blokHtml = shiftBlokken.map(function (blk) {
+      if (!blk.rijen.length) return '';
+      var head = '<th class="nm">Naam</th>' + werkdagen.map(function (d) { return '<th>' + esc(d.lbl) + '<span class="dt">' + esc(d.dt) + '</span></th>'; }).join('');
+      var body = blk.rijen.map(function (rec) {
+        return '<tr><td class="nm">' + esc(rec.naam) + '</td>' + werkdagen.map(function (d) { return cellHtml(rec, d); }).join('') + '</tr>';
+      }).join('');
+      return '<div class="blok"><div class="blok-h">' + esc(blk.sh.naam.toUpperCase()) + '</div>' +
+        '<table class="rt"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    }).join('');
+
+    if (!blokHtml) { ping('Geen ingeplande diensten om af te drukken', 'warn'); return; }
+
+    var css = '@page{size:A4 landscape;margin:12mm}' +
+      '*{box-sizing:border-box}body{font-family:Segoe UI,Arial,sans-serif;color:#1f2430;margin:0}' +
+      '.hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1f2430;padding-bottom:6px;margin-bottom:12px}' +
+      '.hd h1{font-size:20px;margin:0}.hd .wk{font-size:13px;color:#444;margin-top:2px}.hd .rt2{text-align:right;font-size:11px;color:#666}' +
+      '.blok{margin-bottom:14px;break-inside:avoid}.blok-h{background:#1f2430;color:#fff;font-size:12px;font-weight:700;letter-spacing:.5px;padding:4px 8px;border-radius:4px 4px 0 0}' +
+      'table.rt{width:100%;border-collapse:collapse;font-size:12px}' +
+      '.rt th,.rt td{border:1px solid #d5d9e0;padding:4px 6px;text-align:center;vertical-align:middle}' +
+      '.rt thead th{background:#eef1f6;font-weight:700}.rt th.nm,.rt td.nm{text-align:left;width:180px;font-weight:600}' +
+      '.rt th .dt{display:block;font-weight:400;color:#888;font-size:10px}' +
+      '.rt td.on{background:#e8f5e9}.rt td.on .tijd{font-weight:700;color:#1b5e20}.rt td.on .lijn{font-size:10px;color:#2d6a4f;font-weight:600;margin-top:1px}' +
+      '.rt td.part{background:#fff3e0}.rt td.vrij{background:#eef0f4;color:#8a8f9c}' +
+      '.rt td.leeg{color:#c9ccd4}.sub{font-size:10px;color:#b26a00}.sub.part{color:#b26a00}.mini{font-size:10px}' +
+      '.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;margin:8px 0 4px}.legend span{display:inline-flex;align-items:center;gap:5px}' +
+      '.sw{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid #ccc}' +
+      '.ft{margin-top:10px;border-top:1px solid #ccc;padding-top:5px;font-size:10px;color:#888;display:flex;justify-content:space-between}' +
+      '.noprint{margin:10px 0}.noprint button{font:inherit;padding:8px 16px;border-radius:6px;border:1px solid #1f2430;background:#1f2430;color:#fff;cursor:pointer}@media print{.noprint{display:none}}';
+
+    var html = '<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Weekplanning ' + esc(dept) + ' W' + week + '</title><style>' + css + '</style></head><body>' +
+      '<div class="noprint"><button onclick="window.print()">Afdrukken / Opslaan als PDF</button></div>' +
+      '<div class="hd"><div><h1>Weekplanning \u2014 ' + esc(dept) + '</h1><div class="wk">Week ' + week + '  \u00b7  ' + fmtD(isoMon) + ' \u2013 ' + fmtD(einde) + ' ' + jaar + '</div></div>' +
+      '<div class="rt2">Afgedrukt op ' + afgedrukt + '<br>Gepubliceerd rooster</div></div>' +
+      '<div class="legend"><span><i class="sw" style="background:#e8f5e9"></i>Ingepland \u2014 starttijd</span>' +
+      '<span><i class="sw" style="background:#fff3e0"></i>Gedeeltelijk vrij (uren)</span>' +
+      '<span><i class="sw" style="background:#eef0f4"></i>Vrij / verlof</span></div>' +
+      blokHtml +
+      '<div class="ft"><span>' + esc(dept) + '  \u00b7  Week ' + week + ' / ' + jaar + '</span><span>Niet voor extern gebruik</span></div>' +
+      '</body></html>';
+
+    var w = window.open('', '_blank');
+    if (!w) { ping('Pop-up geblokkeerd \u2014 sta pop-ups toe om af te drukken', 'block'); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    logAction('ROOSTER_AFGEDRUKT', { afd: dept, week: week });
+  };
   const publish = () => {
     const was = !!pub[dept + '|' + wkKey];
     const newPub = Object.assign({}, pub, { [dept + '|' + wkKey]: !was });
@@ -2876,7 +2968,13 @@ function App() {
       onClick: publish
     }, React.createElement(I, {
       n: isPub ? 'lock_open' : 'publish'
-    }), isPub ? "Ingetrokken" : "Publiceer"))), showFilter ? React.createElement("div", {
+    }), isPub ? "Ingetrokken" : "Publiceer"), isPub ? React.createElement("button", {
+      className: "btn",
+      onClick: printRooster,
+      title: "Gepubliceerd rooster afdrukken / opslaan als PDF"
+    }, React.createElement(I, {
+      n: "print"
+    }), "Afdrukken") : null)), showFilter ? React.createElement("div", {
       className: "card",
       style: {
         padding: 14
