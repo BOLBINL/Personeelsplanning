@@ -69,6 +69,7 @@
   .chip.ok{border-color:#a5d6a7;background:#f4fbf4;}
   .chip.tmp{border-color:var(--warn);background:#fffdf6;}
   .chip.sick{opacity:.55;border-style:dashed;text-decoration:line-through;}
+  .chip.selc{border-color:var(--navy)!important;box-shadow:0 0 0 2px rgba(29,35,61,.30);}
   .chip .h{color:#c2c6d4;font-size:12px;cursor:grab;}
   .chip .acts{display:flex;gap:2px;align-items:center;}
   .chip .acts .ms{font-size:14px;color:#9aa0b4;}
@@ -1433,6 +1434,8 @@ function App() {
   const [tempFor, setTempFor] = useState(null);
   const [uitzModal, setUitzModal] = useState(null);
   const [toast, setToast] = useState(null);
+  const [selChips, setSelChips] = useState({});
+  const [klembord, setKlembord] = useState([]);
   useEffect(() => {
     try {
       localStorage.setItem(LS_PLAN, JSON.stringify(plan));
@@ -2310,6 +2313,28 @@ function App() {
     });
     ping(cnt ? 'Week ' + wkIn + ' gekopieerd (' + cnt + ' cellen, ' + skip + ' verlof/ziek overgeslagen)' : 'Week ' + wkIn + ' is leeg');
   };
+  const chipSelKey = (cellKey, did) => cellKey + '::' + did;
+  const toggleChipSel = (cellKey, did) => setSelChips(s => {
+    const k = cellKey + '::' + did;
+    const n = Object.assign({}, s);
+    if (n[k]) delete n[k]; else n[k] = true;
+    return n;
+  });
+  const selN = Object.keys(selChips).length;
+  const kopieerSelectie = () => {
+    const keys = Object.keys(selChips);
+    if (!keys.length) { ping('Niets geselecteerd \u2014 Ctrl+klik een dienst.'); return; }
+    const items = [];
+    keys.forEach(k => {
+      const i = k.lastIndexOf('::');
+      const ckey = k.slice(0, i), did = k.slice(i + 2);
+      const a = (plan[ckey] || []).find(x => x.id === did);
+      if (a) items.push({ srcKey: ckey, dienst: { empId: a.empId, type: a.type, start: a.start, eind: a.eind, kostplaats: a.kostplaats, ziek: a.ziek, bureau: a.bureau } });
+    });
+    setKlembord(items);
+    setSelChips({});
+    ping(items.length + ' dienst' + (items.length === 1 ? '' : 'en') + ' gekopieerd naar klembord');
+  };
   const kopieerMaandag = () => {
     let cnt = 0,
       skip = 0;
@@ -2983,6 +3008,15 @@ function App() {
     }, React.createElement(I, {
       n: "bolt"
     }), "Auto-rooster"), React.createElement("button", {
+      className: "btn" + (selN ? " gold" : ""),
+      onClick: kopieerSelectie,
+      title: "Ctrl+klik diensten en kopieer ze"
+    }, React.createElement(I, { n: "content_copy" }), "Kopieer selectie" + (selN ? " (" + selN + ")" : "")), klembord.length ? React.createElement("button", {
+      className: "btn",
+      onClick: () => setKlembord([]),
+      title: "Klembord legen",
+      style: { color: '#2e7d32', borderColor: '#a5d6a7' }
+    }, "Klembord: " + klembord.length + " \u2715") : null, React.createElement("button", {
       className: "btn",
       onClick: clearWeek,
       title: "Week leegmaken"
@@ -3150,8 +3184,8 @@ function App() {
         const lbl = a.type === 'uitzend' ? a.bureau ? a.bureau.slice(0, 2).toUpperCase() : 'UZ' : e ? e.naam.split(' ')[0] : '?';
         return React.createElement("div", {
           key: a.id,
-          className: "chip " + (a.ziek ? 'sick' : a.type === 'uitzend' ? 'tmp' : 'ok'),
-          onClick: ev => ev.stopPropagation(),
+          className: "chip " + (a.ziek ? 'sick' : a.type === 'uitzend' ? 'tmp' : 'ok') + (selChips[chipSelKey(c.key, a.id)] ? ' selc' : ''),
+          onClick: ev => { ev.stopPropagation(); if ((ev.ctrlKey || ev.metaKey) && a.type === 'vast') toggleChipSel(c.key, a.id); },
           title: e ? e.naam : a.bureau || ''
         }, React.createElement("span", {
           className: "h"
@@ -3163,6 +3197,7 @@ function App() {
           },
           onClick: ev => {
             ev.stopPropagation();
+            if ((ev.ctrlKey || ev.metaKey) && a.type === 'vast') { toggleChipSel(c.key, a.id); return; }
             if (a.type === 'vast') setTimeModal({
               mode: 'edit',
               key: c.key,
