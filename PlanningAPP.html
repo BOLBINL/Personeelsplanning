@@ -70,6 +70,8 @@
   .chip.tmp{border-color:var(--warn);background:#fffdf6;}
   .chip.sick{opacity:.55;border-style:dashed;text-decoration:line-through;}
   .chip.selc{border-color:var(--navy)!important;box-shadow:0 0 0 2px rgba(29,35,61,.30);}
+  .plakbtn{display:block;width:100%;margin-top:3px;padding:3px 6px;border:1px dashed var(--gold);background:#fffdf6;color:#8a6d1f;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;}
+  .plakbtn:hover{background:#fff4dd;}
   .chip .h{color:#c2c6d4;font-size:12px;cursor:grab;}
   .chip .acts{display:flex;gap:2px;align-items:center;}
   .chip .acts .ms{font-size:14px;color:#9aa0b4;}
@@ -2335,6 +2337,33 @@ function App() {
     setSelChips({});
     ping(items.length + ' dienst' + (items.length === 1 ? '' : 'en') + ' gekopieerd naar klembord');
   };
+  const plakOpCel = (targetKey) => {
+    const tp = targetKey.split('|');
+    const tDag = tp[4], tDept = tp[0], tWk = tp[3];
+    const items = klembord.filter(it => { const sp = it.srcKey.split('|'); return sp[0] === tp[0] && sp[1] === tp[1] && sp[2] === tp[2] && sp[3] === tp[3] && sp[4] !== tDag; });
+    if (!items.length) { ping('Niets op klembord voor deze lijn/shift.'); return; }
+    const iso = isoOfDay(tDag);
+    const dagBezet = {};
+    Object.keys(plan).forEach(k => { const p = k.split('|'); if (p[0] === tDept && p[3] === tWk && p[4] === tDag) { (plan[k] || []).forEach(a => { if (a.empId) dagBezet[a.empId] = 1; }); } });
+    const list = (plan[targetKey] || []).slice();
+    let placed = 0; const skip = [];
+    items.forEach(it => {
+      const d = it.dienst;
+      if (d.type !== 'vast' || !d.empId) return;
+      const emp = employees.find(x => x.id === d.empId);
+      const nm = emp ? emp.naam.split(' ')[0] : '?';
+      if (emp && (isOpVerlof(emp.naam, iso) || emp.status === 'Ziek')) { skip.push(nm + ' (verlof/ziek)'); return; }
+      if (emp && !getWerktijden(emp, tDag, week, templates)) { skip.push(nm + ' (geen werkdag)'); return; }
+      if (dagBezet[d.empId] || list.some(a => a.empId === d.empId)) { skip.push(nm + ' (al gepland die dag)'); return; }
+      list.push({ id: uid(), empId: d.empId, type: 'vast', ziek: false, start: d.start, eind: d.eind, kostplaats: d.kostplaats, door: user, ts: new Date().toISOString() });
+      dagBezet[d.empId] = 1; placed++;
+    });
+    if (placed) setPlan(prev => Object.assign({}, prev, { [targetKey]: list }));
+    logAction('PLAK', { dag: tDag, geplaatst: placed, overgeslagen: skip.length });
+    var msg = placed + ' geplakt op ' + tDag;
+    if (skip.length) msg += ' \u2014 ' + skip.length + ' overgeslagen: ' + skip.join(', ');
+    ping(msg);
+  };
   const kopieerMaandag = () => {
     let cnt = 0,
       skip = 0;
@@ -3231,7 +3260,7 @@ function App() {
         }, React.createElement(I, {
           n: "close"
         }))));
-      }), null);
+      }), klembord.length && klembord.some(it => { const sp = it.srcKey.split('|'), tp = c.key.split('|'); return sp[0] === tp[0] && sp[1] === tp[1] && sp[2] === tp[2] && sp[3] === tp[3] && sp[4] !== tp[4]; }) ? React.createElement("button", { key: 'plak', className: "plakbtn", title: "Plak gekopieerde dienst(en) op deze dag", onClick: ev => { ev.stopPropagation(); plakOpCel(c.key); } }, "\u21E9 Plak") : null);
     })))))))), React.createElement("div", {
       className: "card staff"
     }, React.createElement("h3", null, "Beschikbaar"), React.createElement("div", {
