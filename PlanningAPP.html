@@ -2200,7 +2200,7 @@ function App() {
 
     if (!blokHtml) { ping('Geen ingeplande diensten om af te drukken', 'warn'); return; }
 
-    var css = '@page{size:A4 landscape;margin:12mm}' +
+    var css = '' +
       '*{box-sizing:border-box}body{font-family:Segoe UI,Arial,sans-serif;color:#1f2430;margin:0}' +
       '.hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1f2430;padding-bottom:6px;margin-bottom:12px}' +
       '.hd h1{font-size:20px;margin:0}.hd .wk{font-size:13px;color:#444;margin-top:2px}.hd .rt2{text-align:right;font-size:11px;color:#666}' +
@@ -2215,10 +2215,21 @@ function App() {
       '.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;margin:8px 0 4px}.legend span{display:inline-flex;align-items:center;gap:5px}' +
       '.sw{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid #ccc}' +
       '.ft{margin-top:10px;border-top:1px solid #ccc;padding-top:5px;font-size:10px;color:#888;display:flex;justify-content:space-between}' +
-      '.noprint{margin:10px 0}.noprint button{font:inherit;padding:8px 16px;border-radius:6px;border:1px solid #1f2430;background:#1f2430;color:#fff;cursor:pointer}@media print{.noprint{display:none}}';
+      '.noprint{margin:10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.noprint button{font:inherit;padding:8px 16px;border-radius:6px;border:1px solid #1f2430;background:#1f2430;color:#fff;cursor:pointer}.noprint .fmt{border:1px solid #1f2430;background:#fff;color:#1f2430;padding:6px 12px}.noprint .fmt.act{background:#1f2430;color:#fff}.noprint .sp{color:#888;font-size:12px}@media print{.noprint{display:none}}' +
+      'body.big{font-size:118%}body.big .hd h1{font-size:27px}body.big .hd .wk{font-size:16px}body.big .hd .rt2{font-size:13px}' +
+      'body.big table.rt{font-size:16px}body.big .rt th,body.big .rt td{padding:7px 9px}body.big .rt th.nm,body.big .rt td.nm{width:240px}' +
+      'body.big .blok{margin-bottom:20px}body.big .blok-h{font-size:15px;padding:7px 12px}body.big .rt tr.lijnrow td.lijn-h{font-size:14px;padding:5px 10px}' +
+      'body.big .rt td.on .tijd{font-size:16px}body.big .kpbadge{font-size:11px;padding:2px 7px}body.big .mini,body.big .sub{font-size:12px}body.big .legend{font-size:13px}';
 
-    var html = '<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Weekplanning ' + esc(dept) + ' W' + week + '</title><style>' + css + '</style></head><body>' +
-      '<div class="noprint"><button onclick="window.print()">Afdrukken / Opslaan als PDF</button></div>' +
+    var pageCss = '@page{size:A4 landscape;margin:10mm}';
+    var toggleJs = 'function setFmt(f){var s=document.getElementById(\'ps\');s.textContent=\'@page{size:\'+f+\' landscape;margin:10mm}\';document.body.classList.toggle(\'big\',f===\'A3\');var b=document.querySelectorAll(\'.fmt\');for(var i=0;i<b.length;i++){b[i].className=\'fmt\'+(b[i].getAttribute(\'data-f\')===f?\' act\':\'\');}}';
+    var scriptTag = '<scr' + 'ipt>' + toggleJs + '</scr' + 'ipt>';
+    var html = '<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>Weekplanning ' + esc(dept) + ' W' + week + '</title>' +
+      '<style id="ps">' + pageCss + '</style><style>' + css + '</style>' + scriptTag + '</head><body>' +
+      '<div class="noprint"><button onclick="window.print()">Afdrukken / Opslaan als PDF</button>' +
+      '<button class="fmt act" data-f="A4" onclick="setFmt(&#39;A4&#39;)">A4</button>' +
+      '<button class="fmt" data-f="A3" onclick="setFmt(&#39;A3&#39;)">A3 (volledig)</button>' +
+      '<span class="sp">Kies A3 voor een volledige, grotere afdruk</span></div>' +
       '<div class="hd"><div><h1>Weekplanning \u2014 ' + esc(dept) + '</h1><div class="wk">Week ' + week + '  \u00b7  ' + fmtD(isoMon) + ' \u2013 ' + fmtD(einde) + ' ' + jaar + '</div></div>' +
       '<div class="rt2">Afgedrukt op ' + afgedrukt + '<br>Gepubliceerd rooster</div></div>' +
       '<div class="legend"><span><i class="sw" style="background:#e8f5e9"></i>Ingepland \u2014 starttijd</span>' +
