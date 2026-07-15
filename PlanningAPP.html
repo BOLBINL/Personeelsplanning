@@ -2142,10 +2142,10 @@ function App() {
     var empById = {};
     employees.forEach(function (e) { empById[e.id] = e; });
 
-    // Verzamel per shift: rij per persoon, kolom per werkdag -> starttijd of markering
+    // Verzamel per shift -> per lijn -> rij per persoon (kolom = werkdag)
     var shiftBlokken = SHIFTS.slice(0, 2).map(function (sh) {
-      var perPersoon = {};
-      (cfg[dept] || []).forEach(function (line) {
+      var lijnGroepen = (cfg[dept] || []).map(function (line) {
+        var perPersoon = {};
         werkdagen.forEach(function (day) {
           var lijst = plan[cellK(dept, line.lijn, sh.id, wkKey, day.k)] || [];
           lijst.forEach(function (a) {
@@ -2158,8 +2158,9 @@ function App() {
             rec.cellen[day.k] = { start: start, lijn: line.lijn };
           });
         });
-      });
-      return { sh: sh, rijen: Object.keys(perPersoon).map(function (id) { return perPersoon[id]; }).sort(function (a, b) { return a.naam.localeCompare(b.naam); }) };
+        return { line: line, kleur: line.kleur || '', rijen: Object.keys(perPersoon).map(function (id) { return perPersoon[id]; }).sort(function (a, b) { return a.naam.localeCompare(b.naam); }) };
+      }).filter(function (g) { return g.rijen.length; });
+      return { sh: sh, groepen: lijnGroepen };
     });
 
     var cellHtml = function (rec, day) {
@@ -2168,22 +2169,27 @@ function App() {
       if (c) {
         var extra = '';
         if (vl && vl.dagdeel) extra = '<div class="sub part">' + (vl.vanT && vl.totT ? esc(vl.vanT + '-' + vl.totT) : esc((vl.uren || '') + 'u')) + ' vrij</div>';
-        var lijnHtml = c.lijn ? '<div class="lijn">' + esc(c.lijn) + '</div>' : '';
-        return '<td class="on"><div class="tijd">' + esc(c.start || '\u2014') + '</div>' + lijnHtml + extra + '</td>';
+        return '<td class="on"><div class="tijd">' + esc(c.start || '\u2014') + '</div>' + extra + '</td>';
       }
       if (vl && vl.dagdeel) return '<td class="part"><div class="sub">' + esc((vl.uren || '') + 'u') + '</div><div class="mini">deels vrij</div></td>';
       if (vl && !vl.dagdeel) { var t = matchVerlofType(vl.reden, verlofTypes); return '<td class="vrij"><div class="mini">' + esc(t ? t.label : 'Vrij') + '</div></td>'; }
       return '<td class="leeg">\u2014</td>';
     };
 
-    var blokHtml = shiftBlokken.map(function (blk) {
-      if (!blk.rijen.length) return '';
-      var head = '<th class="nm">Naam</th>' + werkdagen.map(function (d) { return '<th>' + esc(d.lbl) + '<span class="dt">' + esc(d.dt) + '</span></th>'; }).join('');
-      var body = blk.rijen.map(function (rec) {
-        return '<tr><td class="nm">' + esc(rec.naam) + '</td>' + werkdagen.map(function (d) { return cellHtml(rec, d); }).join('') + '</tr>';
+    var head = '<th class="nm">Naam</th>' + werkdagen.map(function (d) { return '<th>' + esc(d.lbl) + '<span class="dt">' + esc(d.dt) + '</span></th>'; }).join('');
+    var blokHtml = shiftBlokken.map(function (blk, si) {
+      if (!blk.groepen.length) return '';
+      var bannerKlas = blk.sh.id === 'O' ? 'ochtend' : 'avond';
+      var groepenHtml = blk.groepen.map(function (g) {
+        var dot = g.kleur ? '<span class="ldot" style="background:' + esc(g.kleur) + '"></span>' : '';
+        var lijnRow = '<tr class="lijnrow"><td class="lijn-h" colspan="' + (werkdagen.length + 1) + '">' + dot + esc(g.line.lijn) + '</td></tr>';
+        var body = g.rijen.map(function (rec) {
+          return '<tr><td class="nm">' + esc(rec.naam) + '</td>' + werkdagen.map(function (d) { return cellHtml(rec, d); }).join('') + '</tr>';
+        }).join('');
+        return lijnRow + body;
       }).join('');
-      return '<div class="blok"><div class="blok-h">' + esc(blk.sh.naam.toUpperCase()) + '</div>' +
-        '<table class="rt"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+      return '<div class="blok"><div class="blok-h ' + bannerKlas + '">' + esc(blk.sh.naam.toUpperCase()) + ' \u2014 ' + esc(dept) + '</div>' +
+        '<table class="rt"><thead><tr>' + head + '</tr></thead><tbody>' + groepenHtml + '</tbody></table></div>';
     }).join('');
 
     if (!blokHtml) { ping('Geen ingeplande diensten om af te drukken', 'warn'); return; }
@@ -2192,7 +2198,7 @@ function App() {
       '*{box-sizing:border-box}body{font-family:Segoe UI,Arial,sans-serif;color:#1f2430;margin:0}' +
       '.hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1f2430;padding-bottom:6px;margin-bottom:12px}' +
       '.hd h1{font-size:20px;margin:0}.hd .wk{font-size:13px;color:#444;margin-top:2px}.hd .rt2{text-align:right;font-size:11px;color:#666}' +
-      '.blok{margin-bottom:14px;break-inside:avoid}.blok-h{background:#1f2430;color:#fff;font-size:12px;font-weight:700;letter-spacing:.5px;padding:4px 8px;border-radius:4px 4px 0 0}' +
+      '.blok{margin-bottom:14px;break-inside:avoid}.blok-h{background:#1f2430;color:#fff;font-size:12px;font-weight:700;letter-spacing:.5px;padding:5px 10px;border-radius:4px 4px 0 0}.blok-h.ochtend{background:#2f6db0}.blok-h.avond{background:#d05a45}.rt tr.lijnrow td.lijn-h{background:#f1f4f9;text-align:left;font-weight:700;font-size:11px;color:#334;letter-spacing:.3px;padding:3px 8px}.rt .ldot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;border:1px solid #0002}' +
       'table.rt{width:100%;border-collapse:collapse;font-size:12px}' +
       '.rt th,.rt td{border:1px solid #d5d9e0;padding:4px 6px;text-align:center;vertical-align:middle}' +
       '.rt thead th{background:#eef1f6;font-weight:700}.rt th.nm,.rt td.nm{text-align:left;width:180px;font-weight:600}' +
