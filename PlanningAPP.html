@@ -158,8 +158,8 @@
   .seg2 button.on{border-color:#4caf50;background:#e8f5e9;color:#2e7d32;}
   .planrow{display:flex;gap:14px;align-items:flex-start;}
   .planrow .grid-card{flex:1;min-width:0;}
-  .planrow .staff{width:340px;flex-shrink:0;max-height:82vh;overflow:auto;}
-  @media(max-width:900px){.planrow{flex-direction:column;}.planrow .staff{width:100%;}}
+  .planrow .staff{width:340px;flex-shrink:0;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;}
+  @media(max-width:900px){.planrow{flex-direction:column;}.planrow .staff{width:100%;position:static;max-height:none;}}
 </style>
 </head>
 <body>
@@ -2154,9 +2154,19 @@ function App() {
     var shiftBlokken = SHIFTS.slice(0, 2).map(function (sh) {
       var lijnGroepen = (cfg[dept] || []).map(function (line) {
         var perPersoon = {};
+        var perUitzend = {};
         werkdagen.forEach(function (day) {
           var lijst = plan[cellK(dept, line.lijn, sh.id, wkKey, day.k)] || [];
           lijst.forEach(function (a) {
+            if (a.type === 'uitzend') {
+              var bur = a.bureau || 'Uitzend';
+              var ur = perUitzend[bur] || (perUitzend[bur] = { naam: bur, uz: true, cellen: {} });
+              var uc = ur.cellen[day.k];
+              var ust = a.start || '';
+              if (uc) { if (ust && uc.starts.indexOf(ust) < 0) uc.starts.push(ust); }
+              else ur.cellen[day.k] = { starts: ust ? [ust] : [], kp: a.kostplaats || null, lijnKp: line.kostplaats || null };
+              return;
+            }
             if (a.type !== 'vast' || !a.empId) return;
             var e = empById[a.empId];
             if (!e) return;
@@ -2166,7 +2176,13 @@ function App() {
             rec.cellen[day.k] = { start: start, lijn: line.lijn, kp: a.kostplaats || null, lijnKp: line.kostplaats || null };
           });
         });
-        return { line: line, kleur: line.kleur || '', rijen: Object.keys(perPersoon).map(function (id) { return perPersoon[id]; }).sort(function (a, b) { return a.naam.localeCompare(b.naam); }) };
+        var vasteRijen = Object.keys(perPersoon).map(function (id) { return perPersoon[id]; }).sort(function (a, b) { return a.naam.localeCompare(b.naam); });
+        var uzRijen = Object.keys(perUitzend).sort().map(function (bur) {
+          var src = perUitzend[bur]; var cellen = {};
+          Object.keys(src.cellen).forEach(function (dk) { var cc = src.cellen[dk]; cellen[dk] = { start: (cc.starts && cc.starts.length ? cc.starts.join(' · ') : '—'), uz: true, lijn: line.lijn, kp: cc.kp, lijnKp: cc.lijnKp }; });
+          return { naam: 'Uitzend · ' + bur, uz: true, cellen: cellen };
+        });
+        return { line: line, kleur: line.kleur || '', rijen: vasteRijen.concat(uzRijen) };
       }).filter(function (g) { return g.rijen.length; });
       return { sh: sh, groepen: lijnGroepen };
     });
@@ -2180,10 +2196,12 @@ function App() {
       var c = rec.cellen[day.k];
       var vl = isOpVerlof(rec.naam, day.iso);
       if (c) {
+        var uzcls = c.uz ? ' uz' : '';
+        var uzlab = c.uz ? '<div class="uzlbl">uitzend</div>' : '';
         var extra = '';
         if (vl && vl.dagdeel) extra = '<div class="sub part">' + (vl.vanT && vl.totT ? esc(vl.vanT + '-' + vl.totT) : esc((vl.uren || '') + 'u')) + ' vrij</div>';
         var kpAfw = c.kp && c.kp !== c.lijnKp ? '<div class="kpbadge">\u2192 ' + esc(kpLabel(c.kp)) + '</div>' : '';
-        return '<td class="on"><div class="tijd">' + esc(c.start || '\u2014') + '</div>' + kpAfw + extra + '</td>';
+        return '<td class="on' + uzcls + '"><div class="tijd">' + esc(c.start || '\u2014') + '</div>' + kpAfw + uzlab + extra + '</td>';
       }
       if (vl && vl.dagdeel) return '<td class="part"><div class="sub">' + esc((vl.uren || '') + 'u') + '</div><div class="mini">deels vrij</div></td>';
       if (vl && !vl.dagdeel) { var t = matchVerlofType(vl.reden, verlofTypes); var lab = t ? t.label : 'Vrij'; var isVak = /vakantie|vacation/i.test(lab); return '<td class="' + (isVak ? 'vak' : 'vrij') + '"><div class="mini">' + esc(lab) + '</div></td>'; }
@@ -2198,7 +2216,7 @@ function App() {
         var dot = g.kleur ? '<span class="ldot" style="background:' + esc(g.kleur) + '"></span>' : '';
         var lijnRow = '<tr class="lijnrow"><td class="lijn-h" colspan="' + (werkdagen.length + 1) + '">' + dot + esc(g.line.lijn) + '</td></tr>';
         var body = g.rijen.map(function (rec) {
-          return '<tr><td class="nm">' + esc(rec.naam) + '</td>' + werkdagen.map(function (d) { return cellHtml(rec, d); }).join('') + '</tr>';
+          return '<tr' + (rec.uz ? ' class="uzrow"' : '') + '><td class="nm">' + esc(rec.naam) + '</td>' + werkdagen.map(function (d) { return cellHtml(rec, d); }).join('') + '</tr>';
         }).join('');
         return lijnRow + body;
       }).join('');
@@ -2219,7 +2237,7 @@ function App() {
       '.rt th .dt{display:block;font-weight:400;color:#888;font-size:10px}' +
       '.rt td.on{background:#e8f5e9}.rt td.on .tijd{font-weight:700;color:#1b5e20}.rt td.on .lijn{font-size:10px;color:#2d6a4f;font-weight:600;margin-top:1px}' +
       '.rt td.part{background:#fff3e0}.rt td.vrij{background:#eef0f4;color:#8a8f9c}.rt td.vak{background:#fdecec;color:#c0392b}.rt td.vak .mini{font-weight:700}.kpbadge{display:inline-block;margin-top:2px;background:#2f6db0;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;letter-spacing:.3px}' +
-      '.rt td.leeg{color:#c9ccd4}.sub{font-size:10px;color:#b26a00}.sub.part{color:#b26a00}.mini{font-size:10px}' +
+      '.rt td.on.uz{background:#fffdf6}.rt td.on.uz .tijd{color:#8a6d1f}.uzlbl{font-size:9px;color:#b26a00;font-weight:700;margin-top:1px}.uzrow td.nm{color:#8a6d1f;font-style:italic}.rt td.leeg{color:#c9ccd4}.sub{font-size:10px;color:#b26a00}.sub.part{color:#b26a00}.mini{font-size:10px}' +
       '.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;margin:8px 0 4px}.legend span{display:inline-flex;align-items:center;gap:5px}' +
       '.sw{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid #ccc}' +
       '.ft{margin-top:10px;border-top:1px solid #ccc;padding-top:5px;font-size:10px;color:#888;display:flex;justify-content:space-between}' +
@@ -2244,7 +2262,8 @@ function App() {
       '<span><i class="sw" style="background:#fff3e0"></i>Gedeeltelijk vrij (uren)</span>' +
       '<span><i class="sw" style="background:#eef0f4"></i>Vrij / verlof</span>' +
       '<span><i class="sw" style="background:#fdecec;border-color:#c0392b"></i>Vakantie</span>' +
-      '<span><i class="sw" style="background:#2f6db0"></i>Afwijkende kostenplaats</span></div>' +
+      '<span><i class="sw" style="background:#2f6db0"></i>Afwijkende kostenplaats</span>' +
+      '<span><i class="sw" style="background:#fffdf6;border-color:#c9a45c"></i>Uitzendkracht</span></div>' +
       blokHtml +
       '<div class="ft"><span>' + esc(dept) + '  \u00b7  Week ' + week + ' / ' + jaar + '</span><span>Niet voor extern gebruik</span></div>' +
       '</body></html>';
