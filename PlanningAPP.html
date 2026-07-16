@@ -72,6 +72,8 @@
   .chip.selc{border-color:var(--navy)!important;box-shadow:0 0 0 2px rgba(29,35,61,.30);}
   .plakbtn{display:block;width:100%;margin-top:3px;padding:3px 6px;border:1px dashed var(--gold);background:#fffdf6;color:#8a6d1f;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;}
   .plakbtn:hover{background:#fff4dd;}
+  .selbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 0;padding:8px 12px;background:#f3f4fb;border:1px solid var(--navy);border-radius:10px;}
+  .selbar-n{font-weight:800;color:var(--navy);font-size:13px;margin-right:4px;}
   .chip .h{color:#c2c6d4;font-size:12px;cursor:grab;}
   .chip .acts{display:flex;gap:2px;align-items:center;}
   .chip .acts .ms{font-size:14px;color:#9aa0b4;}
@@ -2365,6 +2367,21 @@ function App() {
     if (skip.length) msg += ' \u2014 ' + skip.length + ' overgeslagen: ' + skip.join(', ');
     ping(msg);
   };
+  const verwijderSelectie = () => {
+    const keys = Object.keys(selChips);
+    if (!keys.length) return;
+    const byCell = {};
+    keys.forEach(k => { const i = k.lastIndexOf('::'); const ck = k.slice(0, i), id = k.slice(i + 2); (byCell[ck] = byCell[ck] || []).push(id); });
+    setPlan(prev => {
+      const n = Object.assign({}, prev);
+      Object.keys(byCell).forEach(ck => { if (n[ck]) n[ck] = n[ck].filter(a => byCell[ck].indexOf(a.id) < 0); });
+      return n;
+    });
+    const cnt = keys.length;
+    setSelChips({});
+    logAction('VERWIJDER_SEL', { aantal: cnt });
+    ping(cnt + ' dienst' + (cnt === 1 ? '' : 'en') + ' verwijderd');
+  };
   const kopieerMaandag = () => {
     let cnt = 0,
       skip = 0;
@@ -3037,11 +3054,7 @@ function App() {
       title: "Vul tot MR-minimum"
     }, React.createElement(I, {
       n: "bolt"
-    }), "Auto-rooster"), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit \u2014 tik diensten om te (de)selecteren" }, selMode ? "Selecteer: aan" : "Selecteer"), React.createElement("button", {
-      className: "btn" + (selN ? " gold" : ""),
-      onClick: kopieerSelectie,
-      title: "Ctrl+klik diensten en kopieer ze"
-    }, React.createElement(I, { n: "content_copy" }), "Kopieer selectie" + (selN ? " (" + selN + ")" : "")), klembord.length ? React.createElement("button", {
+    }), "Auto-rooster"), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit \u2014 tik diensten om te (de)selecteren" }, selMode ? "Selecteer: aan" : "Selecteer"), klembord.length ? React.createElement("button", {
       className: "btn",
       onClick: () => setKlembord([]),
       title: "Klembord legen",
@@ -3063,7 +3076,7 @@ function App() {
       title: "Gepubliceerd rooster afdrukken / opslaan als PDF"
     }, React.createElement(I, {
       n: "print"
-    }), "Afdrukken") : null)), showFilter ? React.createElement("div", {
+    }), "Afdrukken") : null)), selN ? React.createElement("div", { className: "selbar" }, React.createElement("span", { className: "selbar-n" }, selN + " geselecteerd"), React.createElement("button", { className: "btn gold", onClick: kopieerSelectie }, React.createElement(I, { n: "content_copy" }), "Kopieer"), React.createElement("button", { className: "btn", style: { color: '#b02a37', borderColor: '#f3c2c8' }, onClick: verwijderSelectie }, React.createElement(I, { n: "delete_sweep" }), "Verwijderen"), React.createElement("button", { className: "btn", onClick: () => setSelChips({}) }, "Deselecteer")) : null, showFilter ? React.createElement("div", {
       className: "card",
       style: {
         padding: 14
