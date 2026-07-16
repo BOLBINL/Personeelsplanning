@@ -2209,10 +2209,10 @@ function App() {
     if (!blokHtml) { ping('Geen ingeplande diensten om af te drukken', 'warn'); return; }
 
     var css = '' +
-      '*{box-sizing:border-box}body{font-family:Segoe UI,Arial,sans-serif;color:#1f2430;margin:0}' +
+      '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Segoe UI,Arial,sans-serif;color:#1f2430;margin:0}' +
       '.hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1f2430;padding-bottom:6px;margin-bottom:12px}' +
       '.hd h1{font-size:20px;margin:0}.hd .wk{font-size:13px;color:#444;margin-top:2px}.hd .rt2{text-align:right;font-size:11px;color:#666}' +
-      '.blok{margin-bottom:14px;break-inside:avoid}.blok-h{background:#1f2430;color:#fff;font-size:12px;font-weight:700;letter-spacing:.5px;padding:5px 10px;border-radius:4px 4px 0 0}.blok-h.ochtend{background:#2f6db0}.blok-h.avond{background:#d05a45}.rt tr.lijnrow td.lijn-h{background:#f1f4f9;text-align:left;font-weight:700;font-size:11px;color:#334;letter-spacing:.3px;padding:3px 8px}.rt .ldot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;border:1px solid #0002}' +
+      '.blok{margin-bottom:14px}.rt tr{break-inside:avoid}.rt thead{display:table-header-group}.blok-h{break-after:avoid}.blok-h{background:#1f2430;color:#fff;font-size:12px;font-weight:700;letter-spacing:.5px;padding:5px 10px;border-radius:4px 4px 0 0}.blok-h.ochtend{background:#2f6db0}.blok-h.avond{background:#d05a45}.rt tr.lijnrow td.lijn-h{background:#f1f4f9;text-align:left;font-weight:700;font-size:11px;color:#334;letter-spacing:.3px;padding:3px 8px}.rt .ldot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;border:1px solid #0002}' +
       'table.rt{width:100%;border-collapse:collapse;font-size:12px}' +
       '.rt th,.rt td{border:1px solid #d5d9e0;padding:4px 6px;text-align:center;vertical-align:middle}' +
       '.rt thead th{background:#eef1f6;font-weight:700}.rt th.nm,.rt td.nm{text-align:left;width:180px;font-weight:600}' +
