@@ -1438,6 +1438,7 @@ function App() {
   const [toast, setToast] = useState(null);
   const [selChips, setSelChips] = useState({});
   const [klembord, setKlembord] = useState([]);
+  const [selMode, setSelMode] = useState(false);
   useEffect(() => {
     try {
       localStorage.setItem(LS_PLAN, JSON.stringify(plan));
@@ -3036,7 +3037,7 @@ function App() {
       title: "Vul tot MR-minimum"
     }, React.createElement(I, {
       n: "bolt"
-    }), "Auto-rooster"), React.createElement("button", {
+    }), "Auto-rooster"), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit \u2014 tik diensten om te (de)selecteren" }, selMode ? "Selecteer: aan" : "Selecteer"), React.createElement("button", {
       className: "btn" + (selN ? " gold" : ""),
       onClick: kopieerSelectie,
       title: "Ctrl+klik diensten en kopieer ze"
@@ -3214,7 +3215,7 @@ function App() {
         return React.createElement("div", {
           key: a.id,
           className: "chip " + (a.ziek ? 'sick' : a.type === 'uitzend' ? 'tmp' : 'ok') + (selChips[chipSelKey(c.key, a.id)] ? ' selc' : ''),
-          onClick: ev => { ev.stopPropagation(); if ((ev.ctrlKey || ev.metaKey) && a.type === 'vast') toggleChipSel(c.key, a.id); },
+          onClick: ev => { ev.stopPropagation(); if ((ev.ctrlKey || ev.metaKey || selMode) && a.type === 'vast') toggleChipSel(c.key, a.id); },
           title: e ? e.naam : a.bureau || ''
         }, React.createElement("span", {
           className: "h"
@@ -3226,7 +3227,7 @@ function App() {
           },
           onClick: ev => {
             ev.stopPropagation();
-            if ((ev.ctrlKey || ev.metaKey) && a.type === 'vast') { toggleChipSel(c.key, a.id); return; }
+            if ((ev.ctrlKey || ev.metaKey || selMode) && a.type === 'vast') { toggleChipSel(c.key, a.id); return; }
             if (a.type === 'vast') setTimeModal({
               mode: 'edit',
               key: c.key,
