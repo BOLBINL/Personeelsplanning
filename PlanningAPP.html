@@ -1788,7 +1788,7 @@ function App() {
       ping('Opslaan mislukt: ' + e.message, 'block');
     });
   };
-  const laadVanSharePoint = () => {
+  const laadVanSharePoint = (guard) => {
     if (!flow.load) {
       ping('Geen LOAD-flow URL ingesteld', 'warn');
       return;
@@ -1800,6 +1800,16 @@ function App() {
       var dat = j && j.data ? j.data : j;
       if (!dat) {
         ping('Lege respons', 'block');
+        return;
+      }
+      // BLOK 1 HARDENING — een lege/kleinere cloud-staat mag een gevulde lokale planning NOOIT overschrijven.
+      // Alleen actief bij de automatische opstart-load (guard=true); de handmatige refresh-knop laadt altijd.
+      var _cloudN = dat.plan ? Object.keys(dat.plan).length : 0;
+      var _localN = plan ? Object.keys(plan).length : 0;
+      if (guard && _cloudN < _localN) {
+        setSyncInfo('Lokale planning behouden (' + _localN + ' regels > cloud ' + _cloudN + ')');
+        ping('SharePoint bevat minder data dan je lokale planning \u2014 NIET overschreven. Klik Opslaan om je lokale versie te uploaden.', 'warn');
+        try { logAction('LAADGUARD_OVERGESLAGEN', { cloudN: _cloudN, localN: _localN }); } catch (e) {}
         return;
       }
       if (dat.plan) setPlan(dat.plan);
@@ -1826,6 +1836,30 @@ function App() {
       ping('Laden mislukt: ' + e.message, 'block');
     });
   };
+
+  // ─────────────────────────────────────────────────────────────
+  // BLOK 1 — Opstart-laadlaag (interim, via Power Automate flow)
+  // Bron van waarheid = SharePoint. De useState-defaults hebben bij
+  // render al localStorage-of-seed geladen; dit effect overschrijft
+  // die zodra de cloud-versie binnen is.
+  //   Precedentie:  SharePoint  →  localStorage (offline cache)  →  hardcoded seed
+  // laadVanSharePoint() wordt hergebruikt: het mapt cfg, employees,
+  // skills, redenen, kostplaatsen, agencies, verlofTypes, verlof, plan
+  // en pub uit j.data — geen gedupliceerde logica.
+  // ─────────────────────────────────────────────────────────────
+  const _booted = React.useRef(false);
+  useEffect(() => {
+    if (_booted.current) return;              // voorkomt dubbele fetch in React StrictMode
+    _booted.current = true;
+    if (flow && flow.load && flow.load.trim()) {
+      setSyncInfo('Laden vanuit SharePoint…');
+      laadVanSharePoint(true);                // guarded: overschrijft NIET als de cloud leger is dan lokaal
+    } else {
+      setSyncInfo('Lokale modus — geen LOAD-flow ingesteld');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const saveEmp = emp => {
     var st0 = emp.starttijd || '07:00',
       nt0 = emp.netto || '7:12',
@@ -2536,7 +2570,13 @@ function App() {
       try {
         var j = JSON.parse(ev.target.result);
         var dat = j.data || j;
-        if (!confirm('Backup terugzetten? Dit overschrijft de huidige data.')) return;
+        // Preview: laat zien WAT je terugzet vs. de huidige situatie, en maak eerst een veiligheids-backup.
+        var _bN = dat.plan ? Object.keys(dat.plan).length : 0;
+        var _bE = dat.employees ? dat.employees.length : 0;
+        var _bD = j.exportedAt || j.savedAt || '(onbekende datum)';
+        var _curN = plan ? Object.keys(plan).length : 0;
+        if (!confirm('Backup terugzetten?\n\nBackup bevat: ' + _bN + ' planningsregels, ' + _bE + ' medewerkers\nDatum backup: ' + _bD + '\nHuidige situatie: ' + _curN + ' planningsregels\n\nDe huidige situatie wordt eerst als veiligheids-backup gedownload.\nDoorgaan?')) return;
+        try { exportJSON(); } catch (e) {}
         if (dat.plan) setPlan(dat.plan);
         if (dat.cfg) setCfg(normCfg(dat.cfg));
         if (dat.agencies) setAgencies(dat.agencies);
@@ -2549,7 +2589,7 @@ function App() {
         if (dat.skills) setSkills(dat.skills);
         if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
         logAction('BACKUP_IMPORT', {});
-        ping('Backup teruggezet');
+        ping('Backup teruggezet \u2014 klik NU Opslaan om naar SharePoint te uploaden (anders laadt de cloud-versie bij verversen terug).', 'warn');
       } catch (e) {
         alert('Ongeldig backup-bestand: ' + e.message);
       }
@@ -2576,6 +2616,25 @@ function App() {
       const dt = new Date(mon.getTime() + idx * 86400000);
       return dt.getUTCFullYear() + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0') + '-' + String(dt.getUTCDate()).padStart(2, '0');
     };
+    // ── Lunch Start/End — 1-op-1 vertaling van de Excel-macro (kolom S = start, kolom T = eind) ──
+    // brk = pauzeduur (app: e.pauze, "H:MM"); B/C = start/eind (klok, minuten sinds middernacht).
+    var _hm = function (s) { var p = String(s || '').split(':'); return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0); };
+    var _mh = function (x) { x = ((Math.round(x) % 1440) + 1440) % 1440; var h = Math.floor(x / 60), m = x % 60; return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; };
+    var lunchWindow = function (startStr, eindStr, pauzeStr) {
+      var brk = _hm(pauzeStr);
+      if (!brk || !startStr || !eindStr) return { start: '', end: '' };   // = Template!X2<>"" guard
+      var B = _hm(startStr), C = _hm(eindStr);
+      var night = (B >= 20 * 60) || (B < 4 * 60);                          // start >=20:00 of <04:00
+      var dur = night ? (C < B ? C + 1440 - B : C - B) : (C - B);          // dienstduur
+      var Cadj = night ? (C < B ? C + 1440 : C) : C;                       // eind over middernacht
+      var mid = (B + dur / 2) % 1440;                                      // REST(B+dur/2;1) = midden dienst
+      var floor15 = function (x) { return Math.floor(x / 15) * 15; };      // AFRONDEN.BENEDEN(...;0:15)
+      var candidate = floor15(mid - brk / 2);                             // pauze rond het midden
+      var upper = Cadj - brk - 15;                                        // eind - pauze - 0:15
+      var lower = (B + 15) % 1440;                                        // start + 0:15
+      var ls = ((Math.max(Math.min(candidate, upper), lower) % 1440) + 1440) % 1440;
+      return { start: _mh(ls), end: _mh(ls + brk) };                      // eind = start + pauze
+    };
     const mkRow = o => {
       const r = {};
       UKG_HEADERS.forEach(h => r[h] = '');
@@ -2598,6 +2657,7 @@ function App() {
               const start = a.start || wt.start || e.starttijd || '07:00';
               const eind = a.eind || wt.eind || e.eindtijd || berekenEindtijd(start, e.netto || '7:12', e.pauze || '1:03');
               planned[(e.id || '') + '|' + iso] = 1;
+              var _lw = lunchWindow(start, eind, e.pauze || '1:03');
               rows.push(mkRow({
                 'Schedule Name': 'BL  ' + d,
                 'Date': iso,
@@ -2606,6 +2666,8 @@ function App() {
                 'Employee Id': (e.id || '').replace(/^e/, ''),
                 'EIN Name': e.naam,
                 'Cost Center 1': a.kostplaats || line.kostplaats || '',
+                'Lunch Start Time': _lw.start,
+                'Lunch End Time': _lw.end,
                 'Standard Total Hours': e.netto || '7:12',
                 'Skill': e.skills && e.skills[0] || e.rol || '',
                 'Day Type': (e.pauze || '1:03') + ' Pauze',
