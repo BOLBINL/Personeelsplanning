@@ -795,6 +795,17 @@ function resolveNorm(line, dagKey, iso) {
     runs: true
   };
 }
+function dagShiften(line, dagKey, iso) {
+  var rn = resolveNorm(line, dagKey, iso);
+  if (!rn.runs) return [];
+  var dt = iso ? (line.datumNorm || {})[iso] : null;
+  var wd = (line.dagNorm || {})[dagKey];
+  if (dt && Array.isArray(dt.shiften)) return dt.shiften;
+  if (wd && Array.isArray(wd.shiften)) return wd.shiften;
+  return SHIFTS.slice(0, rn.ploegen || 0).map(function (s) {
+    return { id: s.id, start: (SHIFT_TIMES[s.id] || {}).s || '' };
+  });
+}
 const NOW_WK = function () {
   var d = new Date();
   var t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -1454,6 +1465,66 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ────────────────────────────────────────────────────────────
+  // IDENTITEIT — leest de ingelogde SharePoint-gebruiker (patroon van het INK-dashboard).
+  //  1) ?user=... terug van een LoginPage/relay → gebruik dat.
+  //  2) _spPageContextInfo.userDisplayName — aanwezig als de app IN een SharePoint-pagina draait.
+  //  3) /_api/web/currentuser — same-origin op SharePoint.
+  //  4) Anders → "Gast-Teamleider (Lokaal)". Dat gebeurt in de OneDrive-preview, want daar
+  //     bestaat geen SharePoint-context; de echte naam verschijnt zodra de app op/in SharePoint draait.
+  // ────────────────────────────────────────────────────────────
+  const _idDone = React.useRef(false);
+  useEffect(() => {
+    if (_idDone.current) return;
+    _idDone.current = true;
+    function acceptUser(naam, email, verified) {
+      setUser(naam);
+      try {
+        localStorage.setItem('bl_user_v4', JSON.stringify(naam));
+        if (verified) localStorage.setItem('bl_user_verified_v4', '1');
+        else localStorage.removeItem('bl_user_verified_v4');
+        if (email) localStorage.setItem('bl_user_email_v4', JSON.stringify(email));
+      } catch (e) {}
+      setSyncInfo((verified ? '✓ Ingelogd als ' : '⚠ ') + naam + (email ? ' (' + email + ')' : ''));
+      if (verified) { try { logAction('IDENTITEIT_GEVERIFIEERD', { naam: naam, email: email }); } catch (e) {} }
+    }
+    // 1) Terug van LoginPage/relay
+    try {
+      var qp = new URLSearchParams(location.search);
+      var qUser = qp.get('user');
+      if (qUser) {
+        var qMail = qp.get('email') || '';
+        acceptUser(decodeURIComponent(qUser), qMail ? decodeURIComponent(qMail) : '', true);
+        try {
+          qp.delete('user'); qp.delete('email');
+          history.replaceState({}, '', location.pathname + (qp.toString() ? '?' + qp.toString() : '') + location.hash);
+        } catch (e) {}
+        return;
+      }
+    } catch (e) {}
+    // 2) SharePoint page-context (INK-methode A)
+    try {
+      if (typeof _spPageContextInfo !== 'undefined' && _spPageContextInfo && _spPageContextInfo.userDisplayName) {
+        acceptUser(_spPageContextInfo.userDisplayName, _spPageContextInfo.userEmail || '', true);
+        return;
+      }
+    } catch (e) {}
+    // 3) REST currentuser (INK-methode B, same-origin op SharePoint)
+    fetch('/_api/web/currentuser', { headers: { 'Accept': 'application/json;odata=nometadata' }, credentials: 'include' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) {
+        var naam = j && (j.Title || (j.d && j.d.Title) || j.LoginName);
+        var email = j && (j.Email || (j.d && j.d.Email) || '');
+        if (naam) { acceptUser(naam, email, true); return; }
+        throw new Error('geen naam');
+      })
+      .catch(function () {
+        // 4) Geen SharePoint-context -> gast (OneDrive-preview)
+        acceptUser('Gast-Teamleider (Lokaal)', '', false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const saveEmp = emp => {
     var st0 = emp.starttijd || '07:00',
       nt0 = emp.netto || '7:12',
@@ -1727,8 +1798,11 @@ function App() {
   };
   const defTijd = k => {
     var parts = k.split('|');
+    var line = (cfg[parts[0]] || []).find(function (l) { return l.lijn === parts[1]; });
+    var iso = isoFor(parts[4]);
+    var msh = line ? dagShiften(line, parts[4], iso).find(function (s) { return s.id === parts[2]; }) : null;
     var sh = SHIFTS.find(function (s) { return s.id === parts[2]; });
-    var st = sh && sh.tijd ? sh.tijd.split('-')[0].trim() : '07:00';
+    var st = (msh && msh.start) ? msh.start : (sh && sh.tijd ? sh.tijd.split('-')[0].trim() : '07:00');
     var netto = '7:12',
       pauze = '1:03';
     return { start: st, netto: netto, pauze: pauze, eind: berekenEindtijd(st, netto, pauze) };
@@ -1781,7 +1855,7 @@ function App() {
     employees.forEach(function (e) { empById[e.id] = e; });
 
     // Verzamel per shift -> per lijn -> rij per persoon (kolom = werkdag)
-    var shiftBlokken = SHIFTS.slice(0, 2).map(function (sh) {
+    var shiftBlokken = SHIFTS.filter(function (sh) { return (cfg[dept] || []).some(function (line) { return werkdagen.some(function (day) { return dagShiften(line, day.k, day.iso).some(function (s) { return s.id === sh.id; }); }); }); }).map(function (sh) {
       var lijnGroepen = (cfg[dept] || []).map(function (line) {
         var perPersoon = {};
         var perUitzend = {};
@@ -1948,6 +2022,8 @@ function App() {
         if (pt[0] === dept && pt[3] === srcWk) {
           const nk = [pt[0], pt[1], pt[2], wkKey, pt[4]].join('|');
           const iso = isoOfDay(pt[4]);
+          var _ln = (cfg[dept] || []).find(x => x.lijn === pt[1]);
+          if (_ln && !resolveNorm(_ln, pt[4], iso).runs) return; // draait die dag niet volgens MR
           n[nk] = (p[k] || []).filter(a => {
             if (a.type !== 'vast' || !a.empId) return true;
             var e = employees.find(x => x.id === a.empId);
@@ -1995,8 +2071,8 @@ function App() {
   const plakOpCel = (targetKey) => {
     const tp = targetKey.split('|');
     const tDag = tp[4], tDept = tp[0], tWk = tp[3];
-    const items = klembord.filter(it => { const sp = it.srcKey.split('|'); return sp[0] === tp[0] && sp[1] === tp[1] && sp[2] === tp[2] && sp[3] === tp[3] && sp[4] !== tDag; });
-    if (!items.length) { ping('Niets op klembord voor deze lijn/shift.'); return; }
+    const items = klembord.filter(it => { const sp = it.srcKey.split('|'); return sp[0] === tp[0] && sp[3] === tp[3] && it.srcKey !== targetKey; });
+    if (!items.length) { ping('Niets op klembord voor deze week.'); return; }
     const iso = isoOfDay(tDag);
     const dagBezet = {};
     Object.keys(plan).forEach(k => { const p = k.split('|'); if (p[0] === tDept && p[3] === tWk && p[4] === tDag) { (plan[k] || []).forEach(a => { if (a.empId) dagBezet[a.empId] = 1; }); } });
@@ -2049,10 +2125,11 @@ function App() {
     setPlan(p => {
       const n = Object.assign({}, p);
       (cfg[dept] || []).forEach(line => {
-        SHIFTS.slice(0, line.ploegen || line.shiften || 2).forEach(sh => {
+        SHIFTS.forEach(sh => {
           const src = p[cellK(dept, line.lijn, sh.id, wkKey, 'ma')] || [];
           ['di', 'wo', 'do', 'vr'].forEach(dag => {
             const iso = isoOfDay(dag);
+            if (!dagShiften(line, dag, iso).some(function (s) { return s.id === sh.id; })) return; // shift draait die dag niet volgens MR
             n[cellK(dept, line.lijn, sh.id, wkKey, dag)] = src.filter(a => {
               if (a.type !== 'vast' || !a.empId) return true;
               var e = employees.find(x => x.id === a.empId);
@@ -2080,11 +2157,12 @@ function App() {
     setPlan(p => {
       const n = Object.assign({}, p);
       (cfg[dept] || []).forEach(line => {
-        SHIFTS.slice(0, line.ploegen || line.shiften || 2).forEach(sh => {
+        SHIFTS.forEach(sh => {
           days.forEach(day => {
             var key = cellK(dept, line.lijn, sh.id, wkKey, day.k);
             var list = (n[key] || []).slice();
             var iso = isoOfDay(day.k);
+            if (!dagShiften(line, day.k, iso).some(function (s) { return s.id === sh.id; })) return; // shift draait die dag niet volgens MR
             var dagBezet = {};
             Object.keys(n).forEach(k => {
               var pt = k.split('|');
@@ -2238,8 +2316,9 @@ function App() {
     const planned = {};
     Object.keys(cfg).forEach(d => {
       (cfg[d] || []).forEach(line => {
-        SHIFTS.slice(0, line.ploegen || line.shiften || 2).forEach(sh => {
+        SHIFTS.forEach(sh => {
           days.forEach(day => {
+            if (!dagShiften(line, day.k, day.iso).some(function (s) { return s.id === sh.id; })) return;
             const key = cellK(d, line.lijn, sh.id, wkKey, day.k);
             const list = plan[key] || [];
             const iso = dayISO(day.k);
@@ -2467,7 +2546,7 @@ function App() {
   const weekdagCard = () => React.createElement(React.Fragment, null, Object.keys(cfg).map(dep => React.createElement("div", { key: 'wd' + dep, className: "card", style: { padding: 16 } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, dep + " \u2014 MR per weekdag"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Vul alleen dagen die draaien. Leeg = lijn draait niet op die dag (geen MR, grijs in de planning). Klik + dag om een draaidag toe te voegen."), (cfg[dep] || []).map((l, i) => React.createElement("div", { key: i, style: { marginBottom: 14, borderTop: '1px solid #eee', paddingTop: 10 } }, React.createElement("div", { style: { fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 } }, React.createElement("span", { className: "cdot", style: { background: l.kleur, display: 'inline-block' } }), l.lijn, React.createElement("span", { className: "sap", style: { marginLeft: 4 } }, l.sap), React.createElement("span", { style: { marginLeft: 'auto', fontSize: 11, color: '#8a8f9c' } }, "std " + l.basis + "/" + l.max + " \u00b7 " + (l.ploegen || l.shiften || 2) + "plg"), React.createElement("button", { className: "btn", style: { fontSize: 10, padding: "2px 8px", marginLeft: 8 }, onClick: () => vulWerkweek(dep, i) }, "Ma-Vr")), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, DAG_K.map((dk, di) => {
     var ov = (l.dagNorm || {})[dk];
     if (!ov) return React.createElement("button", { key: dk, className: "chipbtn", style: { fontSize: 11, opacity: .7 }, onClick: () => setDagNorm(dep, i, dk, { basis: +l.basis || 0, max: +l.max || 0, ploegen: +(l.ploegen || l.shiften || 2) }) }, "+ " + DAG_L[di]);
-    return React.createElement("div", { key: dk, style: { border: '1px solid #e5c98a', borderRadius: 10, padding: '6px 8px', background: '#fffdf7' } }, React.createElement("div", { style: { fontSize: 11, fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 } }, DAG_L[di], React.createElement("button", { style: { marginLeft: 'auto', border: 'none', background: 'none', color: '#b02a37', cursor: 'pointer', fontSize: 11, padding: 0 }, title: "Neem standaard over", onClick: () => setDagNorm(dep, i, dk, null) }, "\u2715")), React.createElement("div", { style: { display: 'flex', gap: 4 } }, ['basis', 'max', 'ploegen'].map(f => React.createElement("label", { key: f, style: { display: 'flex', flexDirection: 'column', fontSize: 9, color: '#8a8f9c' } }, f === 'basis' ? 'min' : f === 'max' ? 'max' : 'plg', React.createElement("input", { type: "number", min: 0, value: ov[f] != null ? ov[f] : '', style: { width: 40 }, className: "cin", onChange: e => setDagNorm(dep, i, dk, { [f]: e.target.value === '' ? undefined : +e.target.value }) })))));
+    return React.createElement("div", { key: dk, style: { border: '1px solid #e5c98a', borderRadius: 10, padding: '6px 8px', background: '#fffdf7' } }, React.createElement("div", { style: { fontSize: 11, fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 } }, DAG_L[di], React.createElement("button", { style: { marginLeft: 'auto', border: 'none', background: 'none', color: '#b02a37', cursor: 'pointer', fontSize: 11, padding: 0 }, title: "Neem standaard over", onClick: () => setDagNorm(dep, i, dk, null) }, "\u2715")), React.createElement("div", { style: { display: 'flex', gap: 4 } }, ['basis', 'max'].map(f => React.createElement("label", { key: f, style: { display: 'flex', flexDirection: 'column', fontSize: 9, color: '#8a8f9c' } }, f === 'basis' ? 'min' : f === 'max' ? 'max' : 'plg', React.createElement("input", { type: "number", min: 0, value: ov[f] != null ? ov[f] : '', style: { width: 40 }, className: "cin", onChange: e => setDagNorm(dep, i, dk, { [f]: e.target.value === '' ? undefined : +e.target.value }) })))), React.createElement("div", { style: { marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 3 } }, SHIFTS.map(function (s) { var eff = Array.isArray(ov.shiften) ? ov.shiften : SHIFTS.slice(0, +ov.ploegen || 0).map(function (z) { return { id: z.id, start: (SHIFT_TIMES[z.id] || {}).s || '' }; }); var active = eff.some(function (x) { return x.id === s.id; }); return React.createElement("button", { key: s.id, title: s.naam + ' ' + s.tijd, onClick: function () { var cur = Array.isArray(ov.shiften) ? ov.shiften.slice() : SHIFTS.slice(0, +ov.ploegen || 0).map(function (z) { return { id: z.id, start: (SHIFT_TIMES[z.id] || {}).s || '' }; }); var ix = cur.findIndex(function (x) { return x.id === s.id; }); if (ix > -1) cur.splice(ix, 1); else cur.push({ id: s.id, start: (SHIFT_TIMES[s.id] || {}).s || '' }); var ord = SHIFTS.map(function (z) { return z.id; }); cur.sort(function (a, b) { return ord.indexOf(a.id) - ord.indexOf(b.id); }); setDagNorm(dep, i, dk, { shiften: cur, ploegen: cur.length }); }, style: { fontSize: 9, padding: '2px 6px', borderRadius: 6, border: '1px solid ' + (active ? '#b8860b' : '#ddd'), background: active ? '#f6e2b3' : '#fff', cursor: 'pointer', fontWeight: active ? 700 : 400 } }, s.id); })), React.createElement("div", { style: { marginTop: 3, display: 'flex', flexDirection: 'column', gap: 2 } }, (Array.isArray(ov.shiften) ? ov.shiften : SHIFTS.slice(0, +ov.ploegen || 0).map(function (z) { return { id: z.id, start: (SHIFT_TIMES[z.id] || {}).s || '' }; })).map(function (sh) { return React.createElement("label", { key: sh.id, style: { display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: '#8a8f9c' } }, (SHIFTS.find(function (s) { return s.id === sh.id; }) || {}).naam || sh.id, React.createElement("input", { type: "time", value: sh.start || '', className: "cin", style: { width: 66 }, onChange: function (e) { var cur = Array.isArray(ov.shiften) ? ov.shiften.slice() : SHIFTS.slice(0, +ov.ploegen || 0).map(function (z) { return { id: z.id, start: (SHIFT_TIMES[z.id] || {}).s || '' }; }); cur = cur.map(function (x) { return x.id === sh.id ? Object.assign({}, x, { start: e.target.value }) : x; }); setDagNorm(dep, i, dk, { shiften: cur, ploegen: cur.length }); } })); })));
   })))))));
   const addDept = () => {
     const naam = prompt('Naam nieuwe afdeling:');
@@ -2872,7 +2951,7 @@ function App() {
       className: "sap"
     }, "SAP " + line.sap), React.createElement("span", {
       className: "mr"
-    }, "MR " + line.basis + " · max " + line.max)), SHIFTS.slice(0, Math.max.apply(null, days.map(function (_d) { return resolveNorm(line, _d.k, _d.iso).ploegen; }).concat([0]))).map(sh => React.createElement("div", {
+    }, "MR " + line.basis + " · max " + line.max)), (function () { var _ws = {}; days.forEach(function (_d) { dagShiften(line, _d.k, _d.iso).forEach(function (_s) { _ws[_s.id] = 1; }); }); return SHIFTS.filter(function (_s) { return _ws[_s.id]; }); })().map(sh => React.createElement("div", {
       key: sh.id,
       className: "grow srow"
     }, React.createElement("div", {
@@ -2880,9 +2959,9 @@ function App() {
     }, React.createElement("div", {
       className: "s"
     }, sh.naam)), days.map(day => {
-      const _pl = resolveNorm(line, day.k, day.iso).ploegen;
       const _cKey = cellK(dept, line.lijn, sh.id, wkKey, day.k);
-      if (SHIFTS.indexOf(sh) >= _pl && !(plan[_cKey] && plan[_cKey].length)) return React.createElement("div", { key: day.k, className: "cell", style: { background: '#f4f5f7', borderLeftColor: 'transparent', color: '#c2c6cf', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 40 } }, React.createElement("span", { style: { fontSize: 11 } }, "\u2014"));
+      const _runsSh = dagShiften(line, day.k, day.iso).some(function (_s) { return _s.id === sh.id; });
+      if (!_runsSh && !(plan[_cKey] && plan[_cKey].length)) return React.createElement("div", { key: day.k, className: "cell", style: { background: '#f4f5f7', borderLeftColor: 'transparent', color: '#c2c6cf', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 40 } }, React.createElement("span", { style: { fontSize: 11 } }, "\u2014"));
       const c = info(line, sh.id, day.k);
       const isSel = sel === c.key;
       return React.createElement("div", {
@@ -2963,7 +3042,7 @@ function App() {
         }, React.createElement(I, {
           n: "close"
         }))));
-      }), klembord.length && klembord.some(it => { const sp = it.srcKey.split('|'), tp = c.key.split('|'); return sp[0] === tp[0] && sp[1] === tp[1] && sp[2] === tp[2] && sp[3] === tp[3] && sp[4] !== tp[4]; }) ? React.createElement("button", { key: 'plak', className: "plakbtn", title: "Plak gekopieerde dienst(en) op deze dag", onClick: ev => { ev.stopPropagation(); plakOpCel(c.key); } }, "\u21E9 Plak") : null, React.createElement("button", { key: 'add', className: "addbtn", title: "Medewerker of uitzend toevoegen", onClick: ev => { ev.stopPropagation(); setAddFor(c.key); setAddZoek(''); } }, "+ Toevoegen"));
+      }), klembord.length && klembord.some(it => { const sp = it.srcKey.split('|'), tp = c.key.split('|'); return sp[0] === tp[0] && sp[3] === tp[3] && it.srcKey !== c.key; }) ? React.createElement("button", { key: 'plak', className: "plakbtn", title: "Plak gekopieerde dienst(en) hier (ook van een andere lijn)", onClick: ev => { ev.stopPropagation(); plakOpCel(c.key); } }, "\u21E9 Plak") : null, React.createElement("button", { key: 'add', className: "addbtn", title: "Medewerker of uitzend toevoegen", onClick: ev => { ev.stopPropagation(); setAddFor(c.key); setAddZoek(''); } }, "+ Toevoegen"));
     })))))))), React.createElement("div", {
       className: "card staff"
     }, React.createElement("div", { className: "staffhead" }, React.createElement("h3", null, "Beschikbaar"), React.createElement("div", {
@@ -3058,58 +3137,7 @@ function App() {
     }, "ON-CALL"))))));
   }
   function sapmrView() {
-    return React.createElement("div", {
-      className: "stack"
-    }, React.createElement("div", {
-      className: "topbar"
-    }, React.createElement("h2", null, "SAP MR — Koppeling & Normen"), React.createElement("span", {
-      className: "pill"
-    }, React.createElement("span", {
-      className: "dot"
-    }), "Sync Status: OK")), Object.keys(cfg).map(d => React.createElement("div", {
-      key: d,
-      className: "card",
-      style: {
-        padding: 16
-      }
-    }, React.createElement("h3", {
-      style: {
-        margin: '0 0 10px'
-      }
-    }, d), React.createElement("table", {
-      className: "tbl"
-    }, React.createElement("thead", null, React.createElement("tr", null, ['Lijn', 'SAP-code', 'MR (min)', 'Max', 'Ploegen', 'Status'].map(h => React.createElement("th", {
-      key: h
-    }, h)))), React.createElement("tbody", null, (cfg[d] || []).map((l, i) => React.createElement("tr", {
-      key: l.lijn
-    }, React.createElement("td", null, React.createElement("span", {
-      className: "cdot",
-      style: {
-        background: l.kleur,
-        display: 'inline-block',
-        marginRight: 6
-      }
-    }), l.lijn), React.createElement("td", null, React.createElement("span", {
-      className: "sap"
-    }, l.sap)), React.createElement("td", {
-      className: "mono"
-    }, l.basis), React.createElement("td", {
-      className: "mono"
-    }, l.max), React.createElement("td", null, React.createElement("select", {
-      className: "cin",
-      style: {
-        width: 66
-      },
-      value: l.ploegen || l.shiften || 2,
-      onChange: e => updLine(d, i, 'ploegen', +e.target.value)
-    }, [1, 2, 3, 4, 5].map(n => React.createElement("option", {
-      key: n,
-      value: n
-    }, n + "-plg")))), React.createElement("td", null, React.createElement("span", {
-      className: "ok-tag"
-    }, "gekoppeld")))))))), React.createElement("div", {
-      className: "card note"
-    }, "Deze tabel is het sjabloon per lijn: SAP-code plus standaard MR/max/ploegen die een nieuwe draaidag vult. De werkelijke draaidagen stel je hieronder in bij MR per weekdag — een lijn draait alleen op ingevulde dagen; niet-ingevulde dagen = geen MR = geen productie (grijs in de planning)."), weekdagCard());
+    return React.createElement("div", { className: "stack" }, React.createElement("div", { className: "topbar" }, React.createElement("h2", null, "SAP MR — Normen per weekdag"), React.createElement("span", { className: "pill" }, React.createElement("span", { className: "dot" }), "Sync Status: OK")), weekdagCard());
   }
   function empForm() {
     const e = editEmp;
@@ -4356,8 +4384,9 @@ function App() {
         var lIn = 0,
           lOpen = 0,
           lNeed = 0;
-        SHIFTS.slice(0, line.ploegen || line.shiften || 2).forEach(sh => {
+        SHIFTS.forEach(sh => {
           days.forEach(day => {
+            if (!dagShiften(line, day.k, day.iso).some(function (s) { return s.id === sh.id; })) return;
             var list = plan[cellK(dp, line.lijn, sh.id, wkKey, day.k)] || [];
             var act = list.filter(a => !a.ziek).length;
             lIn += act;
