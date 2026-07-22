@@ -2343,6 +2343,63 @@ function App() {
     };
     r.readAsText(file);
   };
+  const vulVasteBezetting = (stil) => {
+    if (!stil && _bewerkGeblokkeerd()) return;
+    if (pub[dept + '|' + wkKey]) return;
+    var toe = 0, ambig = [], mins = function (t) { var p = String(t || '').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); };
+    setPlan(p => {
+      const n = Object.assign({}, p);
+      (employees || []).forEach(function (e) {
+        if (!e.vastInplannen || e.actief === false || e.status === 'Ziek') return;
+        var mijn = (e.lijnen || []).filter(function (ln) { return (cfg[dept] || []).some(function (L) { return L.lijn === ln; }); });
+        if (mijn.length !== 1) { if (mijn.length > 1) ambig.push(e.naam); return; }
+        var line = (cfg[dept] || []).find(function (L) { return L.lijn === mijn[0]; });
+        if (!line) return;
+        days.forEach(function (day) {
+          if (isOpVerlof(e.naam, day.iso)) return;
+          var wt = getWerktijden(e, day.k, week, templates);
+          if (!wt) return;
+          var shs = dagShiften(line, day.k, day.iso);
+          if (!shs.length) return;
+          var doel = shs.slice().sort(function (a, b) {
+            return Math.abs(mins(lijnStart(line, a.id)) - mins(wt.start)) - Math.abs(mins(lijnStart(line, b.id)) - mins(wt.start));
+          })[0];
+          var alGepland = Object.keys(n).some(function (k) {
+            var pt = k.split('|');
+            return pt[0] === dept && pt[3] === wkKey && pt[4] === day.k && (n[k] || []).some(function (a) { return a.empId === e.id; });
+          });
+          if (alGepland) return;
+          var key = cellK(dept, line.lijn, doel.id, wkKey, day.k);
+          var list = (n[key] || []).slice();
+          list.push({ id: uid(), empId: e.id, type: 'vast', ziek: false, start: wt.start || lijnStart(line, doel.id), eind: wt.eind || '', door: user, ts: new Date().toISOString() });
+          n[key] = list;
+          toe++;
+        });
+      });
+      return n;
+    });
+    logAction('VASTE_BEZETTING_INGEVULD', { toegevoegd: toe, automatisch: !!stil, week: week });
+    if (toe || !stil) ping(toe + ' vaste inzetten toegevoegd' + (ambig.length ? ' \u2014 meerdere lijnen, zelf plaatsen: ' + ambig.join(', ') : ''), ambig.length ? 'warn' : undefined);
+  };
+  // Vaste bezetting automatisch invullen \u2014 UITSLUITEND als deze week/afdeling nog
+  // helemaal leeg is. Zo overschrijft de app nooit handmatige keuzes (iemand die je
+  // bewust weghaalt, komt niet terug bij verversen).
+  const _vastGedaan = React.useRef({});
+  useEffect(() => {
+    const merk = dept + '|' + wkKey;
+    if (_vastGedaan.current[merk]) return;
+    if (!(employees && employees.length)) return;
+    if (pub[merk]) return;
+    const leeg = !Object.keys(plan).some(k => {
+      const pt = k.split('|');
+      return pt[0] === dept && pt[3] === wkKey && (plan[k] || []).length;
+    });
+    if (!leeg) return;
+    _vastGedaan.current[merk] = true;
+    vulVasteBezetting(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dept, wkKey, employees, plan, pub]);
+
   const clearWeek = () => {
     if (_bewerkGeblokkeerd()) return;
     if (!confirm('Week ' + week + ' (' + dept + ') leegmaken?')) return;
@@ -2910,7 +2967,11 @@ function App() {
       title: "Vul tot MR-minimum"
     }, React.createElement(I, {
       n: "bolt"
-    }), "Auto-rooster"), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit \u2014 tik diensten om te (de)selecteren" }, selMode ? "Selecteer: aan" : "Selecteer"), klembord.length ? React.createElement("button", {
+    }), "Auto-rooster"), React.createElement("button", {
+      className: "btn",
+      onClick: () => vulVasteBezetting(false),
+      title: "Zet alle medewerkers met 'Standaard inplannen' op hun lijn"
+    }, React.createElement(I, { n: "how_to_reg" }), "Vaste bezetting"), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit \u2014 tik diensten om te (de)selecteren" }, selMode ? "Selecteer: aan" : "Selecteer"), klembord.length ? React.createElement("button", {
       className: "btn",
       onClick: () => setKlembord([]),
       title: "Klembord legen",
@@ -3440,7 +3501,13 @@ function App() {
           className: "chipbtn " + (on ? 'on' : ''),
           onClick: () => set('lijnen', on ? (e.lijnen || []).filter(x => x !== ln) : (e.lijnen || []).concat([ln]))
         }, ln);
-      })), React.createElement("div", {
+      })), React.createElement("label", {
+        style: { display: 'flex', alignItems: 'center', gap: 8, margin: '10px 0 4px', fontSize: 13, cursor: 'pointer' }
+      }, React.createElement("input", {
+        type: "checkbox",
+        checked: !!e.vastInplannen,
+        onChange: ev => set('vastInplannen', ev.target.checked)
+      }), React.createElement("span", null, React.createElement("strong", null, "Standaard inplannen"), React.createElement("span", { style: { color: '#8a8f9c' } }, " \u2014 automatisch op de lijn volgens eigen rooster (niet bij verlof/ziek)"))), React.createElement("div", {
         className: "hint",
         style: {
           marginTop: 8
