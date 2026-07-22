@@ -2250,7 +2250,7 @@ function App() {
             var _snReq = shiftNorm(line, day.k, iso, sh.id).basis;
             while (list.filter(a => !a.ziek).length < _snReq && g < 60) {
               g++;
-              var cand = employees.find(e => e.actief !== false && (e.lijnen && e.lijnen.indexOf(line.lijn) >= 0) && e.status !== 'Ziek' && !isOpVerlof(e.naam, iso) && !dagBezet[e.id] && !list.some(a => a.empId === e.id) && getWerktijden(e, day.k, week, templates));
+              var cand = employees.find(e => e.actief !== false && (e.afd || dept) === dept && (e.lijnen && e.lijnen.indexOf(line.lijn) >= 0) && e.status !== 'Ziek' && !isOpVerlof(e.naam, iso) && !dagBezet[e.id] && !list.some(a => a.empId === e.id) && getWerktijden(e, day.k, week, templates));
               if (!cand) break;
               var wt = getWerktijden(cand, day.k, week, templates) || {};
               list.push({
@@ -2351,6 +2351,7 @@ function App() {
       const n = Object.assign({}, p);
       (employees || []).forEach(function (e) {
         if (!e.vastInplannen || e.actief === false || e.status === 'Ziek') return;
+        if ((e.afd || dept) !== dept) return;                // alleen eigen afdeling van de kaart
         var mijn = (e.lijnen || []).filter(function (ln) { return (cfg[dept] || []).some(function (L) { return L.lijn === ln; }); });
         if (mijn.length !== 1) { if (mijn.length > 1) ambig.push(e.naam); return; }
         var line = (cfg[dept] || []).find(function (L) { return L.lijn === mijn[0]; });
