@@ -1026,6 +1026,13 @@ function App() {
   const [redenModal, setRedenModal] = useState(null);
   const [intrekModal, setIntrekModal] = useState(null);
   const [mrWeekMode, setMrWeekMode] = useState(false);
+  const [autoSave, setAutoSave] = useState(() => lsGet('bl_autosave_v4', true));
+  const [selMenu, setSelMenu] = useState(null);
+  const [selCells, setSelCells] = useState({});
+  const [cellMenu, setCellMenu] = useState(null);
+  const [multiPick, setMultiPick] = useState(false);
+  const [multiZoek, setMultiZoek] = useState('');
+  const [bulkTijd, setBulkTijd] = useState(null);
   const [intrekReden, setIntrekReden] = useState('');
   const [employees, setEmployees] = useState(() => lsGet(LS_EMP, DEFAULT_EMP));
   const [user, setUser] = useState(() => lsGet('bl_user_v4', 'Teamlead'));
@@ -1388,9 +1395,9 @@ function App() {
       auditLog: auditLog
     }
   });
-  const saveState = overrideBlob => {
+  const saveState = (overrideBlob, stil) => {
     if (!flow.save) {
-      ping('Geen SAVE-flow URL ingesteld', 'warn');
+      if (!stil) ping('Geen SAVE-flow URL ingesteld', 'warn');
       return;
     }
     var body = overrideBlob || buildBlob();
@@ -1407,22 +1414,27 @@ function App() {
       });
     }).then(function (j) {
       if (j && j.conflict) {
-        ping('Conflict: nieuwere versie op SharePoint — laad eerst opnieuw', 'block');
+        _autoArm.current = false;                       // stop auto-opslaan tot je opnieuw laadt
+        setSyncInfo('\u26a0 Conflict \u2014 iemand anders heeft opgeslagen. Klik "Nu laden".');
+        ping('Conflict: nieuwere versie op SharePoint — laad eerst opnieuw (auto-opslaan gepauzeerd)', 'block');
         return;
       }
       var nv = j && j.version != null ? j.version : body.version + 1;
       try {
         localStorage.setItem('bl_ver_v4', JSON.stringify(nv));
       } catch (e) {}
-      setSyncInfo('Opgeslagen ' + new Date().toLocaleTimeString() + ' (v' + nv + ')');
+      setSyncInfo((stil ? 'Automatisch opgeslagen ' : 'Opgeslagen ') + new Date().toLocaleTimeString() + ' (v' + nv + ')');
       logAction('SHAREPOINT_OPGESLAGEN', {
-        version: nv
+        version: nv,
+        automatisch: !!stil
       });
-      ping('Opgeslagen naar SharePoint');
+      if (!stil) ping('Opgeslagen naar SharePoint');
     }).catch(function (e) {
-      ping('Opslaan mislukt: ' + e.message, 'block');
+      setSyncInfo('\u26a0 Opslaan mislukt: ' + e.message);
+      if (!stil) ping('Opslaan mislukt: ' + e.message, 'block');
     });
   };
+  const _autoArm = React.useRef(false);
   const laadVanSharePoint = (guard) => {
     if (!flow.load) {
       ping('Geen LOAD-flow URL ingesteld', 'warn');
@@ -1464,11 +1476,13 @@ function App() {
         } catch (e) {}
       }
       setSyncInfo('Geladen ' + new Date().toLocaleTimeString() + (j && j.version != null ? ' (v' + j.version + ')' : ''));
+      _autoArm.current = true;
       logAction('SHAREPOINT_GELADEN', {
         version: j && j.version
       });
       ping('Geladen van SharePoint');
     }).catch(function (e) {
+      _autoArm.current = true;
       ping('Laden mislukt: ' + e.message, 'block');
     });
   };
@@ -1491,6 +1505,7 @@ function App() {
       setSyncInfo('Laden vanuit SharePoint…');
       laadVanSharePoint(true);                // guarded: overschrijft NIET als de cloud leger is dan lokaal
     } else {
+      _autoArm.current = true;
       setSyncInfo('Lokale modus — geen LOAD-flow ingesteld');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2401,6 +2416,71 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dept, wkKey, employees, plan, pub]);
 
+  const bulkTijdToepassen = () => {
+    if (_bewerkGeblokkeerd()) return;
+    var st = (bulkTijd && bulkTijd.start) || '', ei = (bulkTijd && bulkTijd.eind) || '';
+    var keys = Object.keys(selChips);
+    setPlan(p => {
+      const n = Object.assign({}, p);
+      keys.forEach(function (sk) {
+        var ix = sk.lastIndexOf('::');
+        var ck = sk.slice(0, ix), did = sk.slice(ix + 2);
+        if (!n[ck]) return;
+        n[ck] = n[ck].map(function (a) { return a.id === did ? Object.assign({}, a, { start: st, eind: ei }) : a; });
+      });
+      return n;
+    });
+    logAction('BULK_TIJD_AANGEPAST', { aantal: keys.length, start: st, eind: ei });
+    ping(keys.length + ' diensten aangepast naar ' + st + (ei ? '\u2013' + ei : ''));
+    setBulkTijd(null); setSelChips({}); setSelMenu(null);
+  };
+  const planMeerdere = (empId) => {
+    if (_bewerkGeblokkeerd()) return;
+    var emp = employees.find(e => e.id === empId);
+    if (!emp) return;
+    var keys = Object.keys(selCells);
+    var doen = [], over = [];
+    keys.forEach(function (k) {
+      var pt = k.split('|'), dep = pt[0], dag = pt[4], iso = isoOfDay(dag);
+      if (isOpVerlof(emp.naam, iso)) { over.push(dag + ' (verlof)'); return; }
+      if (emp.status === 'Ziek') { over.push(dag + ' (ziek)'); return; }
+      var wt = getWerktijden(emp, dag, week, templates);
+      if (!wt) { over.push(dag + ' (geen werkdag)'); return; }
+      var al = Object.keys(plan).some(function (kk) {
+        var q = kk.split('|');
+        return q[0] === dep && q[3] === pt[3] && q[4] === dag && (plan[kk] || []).some(function (a) { return a.empId === empId; });
+      });
+      if (al) { over.push(dag + ' (al gepland)'); return; }
+      doen.push({ k: k, wt: wt, lijn: pt[1], sh: pt[2], dep: dep });
+    });
+    if (doen.length) setPlan(p => {
+      const n = Object.assign({}, p);
+      doen.forEach(function (it) {
+        var line = (cfg[it.dep] || []).find(function (L) { return L.lijn === it.lijn; });
+        var list = (n[it.k] || []).slice();
+        list.push({ id: uid(), empId: empId, type: 'vast', ziek: false, start: it.wt.start || lijnStart(line, it.sh), eind: it.wt.eind || '', door: user, ts: new Date().toISOString() });
+        n[it.k] = list;
+      });
+      return n;
+    });
+    logAction('MEERDAAGS_INGEPLAND', { naam: emp.naam, gepland: doen.length, overgeslagen: over });
+    ping(emp.naam + ': ' + doen.length + ' dagen ingepland' + (over.length ? ' \u2014 overgeslagen: ' + over.join(', ') : ''), over.length ? 'warn' : undefined);
+    setMultiPick(false); setSelCells({}); setCellMenu(null); setMultiZoek('');
+  };
+  // Automatisch opslaan \u2014 2,5 s na de laatste wijziging, en pas nadat de
+  // eerste load klaar is (anders zou een halfgeladen staat de cloud overschrijven).
+  // Bij een versieconflict pauzeert het tot je opnieuw laadt.
+  const _autoTimer = React.useRef(null);
+  useEffect(() => {
+    if (!autoSave) return;
+    if (!_autoArm.current) return;
+    if (!flow.save) return;
+    if (_autoTimer.current) clearTimeout(_autoTimer.current);
+    _autoTimer.current = setTimeout(function () { saveState(null, true); }, 2500);
+    return function () { if (_autoTimer.current) clearTimeout(_autoTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, cfg, employees, verlof, pub, skills, templates, agencies, kostplaatsen, redenen, verlofTypes, autoSave]);
+
   const clearWeek = () => {
     if (_bewerkGeblokkeerd()) return;
     if (!confirm('Week ' + week + ' (' + dept + ') leegmaken?')) return;
@@ -2802,16 +2882,22 @@ function App() {
   var heeftOpenDag = function (e) {
     var wd = e.werkdagen || ['ma', 'di', 'wo', 'do', 'vr'];
     var pd = plannedByEmp[e.id] || {};
-    return wd.some(function (dk) {
-      if (pd[dk]) return false;
-      if (e.status === 'Ziek' || e.status === 'Verlof') return false;
-      var idx = DAG_K.indexOf(dk);
-      var iso = (days[idx] || {}).iso;
-      if (heleDagVrij(e.naam, iso)) return false;
-      return true;
-    });
+    // Zichtbaar zolang er nog een werkdag NIET gepland is. Verlof/ziek verbergt niet
+    // langer \u2014 die tonen we juist met een kleur.
+    return wd.some(function (dk) { return !pd[dk]; });
   };
-  const staff = employees.filter(e => e.actief !== false && (e.naam + ' ' + e.rol).toLowerCase().indexOf(zoek.toLowerCase()) >= 0 && !(selISO && (heleDagVrij(e.naam, selISO) || e.status === 'Ziek')) && (!beschAlleenAfd || (e.afd || '') === dept) && heeftOpenDag(e));
+  // Vrij/ziek-status van een medewerker voor de gekozen dag (of de week als er geen cel gekozen is)
+  var vrijStatus = function (e) {
+    if (e.status === 'Ziek') return { label: 'Ziek', bg: '#fde2e2', fg: '#a33' };
+    if (selISO) {
+      if (heleDagVrij(e.naam, selISO)) return { label: 'Vrij', bg: '#dcecff', fg: '#245' };
+      return null;
+    }
+    var wd = e.werkdagen || ['ma', 'di', 'wo', 'do', 'vr'];
+    var n = wd.filter(function (dk) { var iso = (days[DAG_K.indexOf(dk)] || {}).iso; return iso && heleDagVrij(e.naam, iso); }).length;
+    return n ? { label: n + ' dag' + (n > 1 ? 'en' : '') + ' vrij', bg: '#dcecff', fg: '#245' } : null;
+  };
+  const staff = employees.filter(e => e.actief !== false && (e.naam + ' ' + e.rol).toLowerCase().indexOf(zoek.toLowerCase()) >= 0  && (!beschAlleenAfd || (e.afd || '') === dept) && heeftOpenDag(e));
   const openTemp = useMemo(() => {
     let n = 0;
     Object.keys(plan).forEach(k => {
@@ -3117,7 +3203,12 @@ function App() {
       return React.createElement("div", {
         key: day.k,
         className: "cell",
-        onClick: () => {
+        onClick: ev => {
+          if (ev.ctrlKey || ev.metaKey) {
+            setSelCells(s => { const n = Object.assign({}, s); if (n[c.key]) delete n[c.key]; else n[c.key] = true; return n; });
+            setCellMenu({ x: ev.clientX, y: ev.clientY });
+            return;
+          }
           setSel(c.key);
           setTempFor(null);
         },
@@ -3130,7 +3221,7 @@ function App() {
         style: {
           background: tint[c.status] || '#fff',
           borderLeftColor: bar[c.status] || 'transparent',
-          outline: isSel ? '2px solid var(--gold)' : 'none',
+          outline: selCells[c.key] ? '2px dashed var(--gold)' : isSel ? '2px solid var(--gold)' : 'none',
           outlineOffset: '-2px'
         }
       }, React.createElement("div", {
@@ -3146,7 +3237,7 @@ function App() {
         return React.createElement("div", {
           key: a.id,
           className: "chip " + (a.ziek ? 'sick' : a.type === 'uitzend' ? 'tmp' : 'ok') + (selChips[chipSelKey(c.key, a.id)] ? ' selc' : ''),
-          onClick: ev => { ev.stopPropagation(); if ((ev.ctrlKey || ev.metaKey || selMode) && a.type === 'vast') toggleChipSel(c.key, a.id); },
+          onClick: ev => { ev.stopPropagation(); if ((ev.ctrlKey || ev.metaKey || selMode) && a.type === 'vast') { toggleChipSel(c.key, a.id); setSelMenu({ x: ev.clientX, y: ev.clientY }); } },
           title: e ? e.naam : a.bureau || ''
         }, React.createElement("span", {
           className: "h"
@@ -3165,6 +3256,8 @@ function App() {
               id: a.id,
               naam: e ? e.naam : '',
               start: a.start || '06:00',
+              netto: (e && e.netto) || '7:12',
+              pauze: (e && e.pauze) || '1:03',
               eind: a.eind || '',
               kostplaats: a.kostplaats || ''
             });
@@ -3208,6 +3301,7 @@ function App() {
     }, sel ? 'Gekozen: ' + sel.split('|')[1] + ' · ' + (sel.split('|')[2] === 'O' ? 'Ochtend' : 'Middag') + ' — klik iemand' : 'Kies eerst een cel in het rooster'), sel ? React.createElement("div", { style: { margin: '4px 0 10px', padding: '8px', background: '#fff8ec', border: '1px solid #f0d9a8', borderRadius: 8 } }, tempFor === sel ? React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' } }, React.createElement("span", { style: { fontSize: 11, color: '#8a6d1f', width: '100%', marginBottom: 4 } }, "Kies bureau:"), agencies.map(function (ag) { return React.createElement("button", { key: ag, className: "btn", style: { padding: '3px 8px', fontSize: 12 }, onClick: () => askUitzend(sel, ag) }, ag); }), React.createElement("button", { className: "btn", style: { padding: '3px 8px', fontSize: 12 }, onClick: () => setTempFor(null) }, "\u2715")) : React.createElement("button", { className: "btn gold", style: { width: '100%', justifyContent: 'center' }, onClick: () => setTempFor(sel) }, React.createElement(I, { n: "add" }), "Extra uitzendkracht aanvragen")) : null), staff.map(e => React.createElement("div", {
       key: e.id,
       className: "srow-item",
+      style: (function () { var vs = vrijStatus(e); return vs ? { background: vs.bg + '55', opacity: .85 } : null; })(),
       draggable: true,
       onDragStart: ev => {
         ev.dataTransfer.setData("text/plain", e.id);
@@ -3233,7 +3327,7 @@ function App() {
         overflow: 'hidden',
         textOverflow: 'ellipsis'
       }
-    }, e.naam), React.createElement("div", {
+    }, e.naam, (function () { var vs = vrijStatus(e); return vs ? React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: vs.bg, color: vs.fg } }, vs.label) : null; })()), React.createElement("div", {
       className: "rol"
     }, e.functie || e.rol), React.createElement("div", {
       style: {
@@ -4112,7 +4206,7 @@ function App() {
       onClick: saveState
     }, React.createElement(I, {
       n: "cloud_upload"
-    }), "Nu opslaan")), syncInfo ? React.createElement("div", {
+    }), "Nu opslaan"), React.createElement("label", { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', marginLeft: 4 } }, React.createElement("input", { type: "checkbox", checked: !!autoSave, onChange: function (ev) { var v = ev.target.checked; setAutoSave(v); try { localStorage.setItem('bl_autosave_v4', JSON.stringify(v)); } catch (e) {} } }), "Automatisch opslaan")), syncInfo ? React.createElement("div", {
       className: "hint",
       style: {
         marginTop: 8
@@ -4713,7 +4807,7 @@ function App() {
       importJSON(e.target.files[0]);
       e.target.value = '';
     }
-  }), intrekModal ? React.createElement("div", { onClick: () => setIntrekModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 } }, React.createElement("div", { onClick: function (e) { e.stopPropagation(); }, style: { background: '#fff', borderRadius: 12, padding: 20, width: 360, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 8px' } }, "Publicatie intrekken"), React.createElement("div", { style: { fontSize: 13, color: '#5b6070', marginBottom: 10 } }, "Geef een reden op. Daarna is de planning weer bewerkbaar."), React.createElement("textarea", { value: intrekReden, onChange: function (e) { setIntrekReden(e.target.value); }, placeholder: "Reden voor intrekken\u2026", style: { width: '100%', minHeight: 70, boxSizing: 'border-box', marginBottom: 12 } }), React.createElement("div", { style: { display: 'flex', gap: 8, justifyContent: 'flex-end' } }, React.createElement("button", { className: "btn", onClick: function () { setIntrekModal(null); } }, "Annuleren"), React.createElement("button", { className: "btn gold", disabled: !intrekReden.trim(), onClick: doIntrek }, "Intrekken")))) : null, uitzModal ? React.createElement("div", { onClick: () => setUitzModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 360, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Uitzendaanvraag \u2014 " + uitzModal.bureau), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, uitzModal.over ? "Let op: max (" + uitzModal.max + ") bereikt \u2014 na de tijd vragen we een reden." : "Kies de starttijd; eindtijd wordt berekend (aanpasbaar)."), React.createElement("label", { className: "efld" }, "Starttijd", React.createElement("input", { className: "cin", value: uitzModal.start, onChange: e => { var st = e.target.value; setUitzModal(Object.assign({}, uitzModal, { start: st, eind: berekenEindtijd(st, uitzModal.netto, uitzModal.pauze) })); } })), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Eindtijd", React.createElement("input", { className: "cin", value: uitzModal.eind, onChange: e => setUitzModal(Object.assign({}, uitzModal, { eind: e.target.value })) })), React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 14 } }, React.createElement("button", { className: "btn gold", style: { flex: 1, justifyContent: 'center' }, onClick: () => { if (uitzModal.over) { setRedenModal({ kind: 'temp', key: uitzModal.key, bureau: uitzModal.bureau, max: uitzModal.max, start: uitzModal.start, eind: uitzModal.eind }); } else { reqTemp(uitzModal.key, uitzModal.bureau, uitzModal.start, uitzModal.eind); } setUitzModal(null); } }, uitzModal.over ? "Verder (boven max)" : "Aanvragen"), React.createElement("button", { className: "btn", onClick: () => setUitzModal(null) }, "Annuleren")))) : null, addFor ? React.createElement("div", { onClick: () => setAddFor(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 18, width: 400, maxWidth: '94vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column' } }, React.createElement("h3", { style: { margin: '0 0 10px' } }, (function () { var pt = addFor.split('|'); return "Toevoegen — " + pt[1] + " · " + (pt[2] === 'O' ? 'Ochtend' : 'Middag') + " · " + pt[4]; })()), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 6, fontWeight: 700 } }, "Uitzendkracht"), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 } }, agencies.map(function (ag) { return React.createElement("button", { key: ag, className: "btn", style: { padding: '3px 8px', fontSize: 12 }, onClick: () => { var k = addFor; setAddFor(null); askUitzend(k, ag); } }, ag); })), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 6, fontWeight: 700 } }, "Medewerker toevoegen"), React.createElement("div", { className: "search", style: { marginBottom: 8 } }, React.createElement(I, { n: "search" }), React.createElement("input", { value: addZoek, onChange: e => setAddZoek(e.target.value), placeholder: "Zoek naam of vaardigheid…" })), (function () { var lst = eligibleForCell(addFor); return React.createElement("div", { style: { overflowY: 'auto', flex: '1 1 auto', minHeight: 0 } }, lst.length ? lst.map(function (e) { return React.createElement("div", { key: e.id, className: "srow-item", onClick: () => { var k = addFor; setAddFor(null); startAssign(e.id, k); } }, React.createElement("div", { style: { display: 'flex', gap: 10, alignItems: 'center', minWidth: 0 } }, React.createElement("div", { className: "av" }, e.ini), React.createElement("div", { style: { minWidth: 0 } }, React.createElement("div", { style: { fontWeight: 700 } }, e.naam), React.createElement("div", { className: "rol" }, e.functie || e.rol))), React.createElement(I, { n: "add" })); }) : React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c', padding: '10px 2px' } }, "Geen beschikbare medewerkers voor deze cel (kwalificatie, werkdag, verlof of al ingepland).")); })(), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setAddFor(null) }, "Sluiten"))) : null, importPending ? React.createElement("div", { onClick: () => setImportPending(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 400, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 6px' } }, "Import \u2014 afdeling bevestigen"), React.createElement("div", { style: { fontSize: 13, marginBottom: 8 } }, importPending.length + " medewerkers gevonden."), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Gedetecteerd uit UKG-pad: " + function () { var c = {}; importPending.forEach(function (u) { c[u.afd] = (c[u.afd] || 0) + 1; }); return Object.keys(c).map(function (k) { return k + ' (' + c[k] + ')'; }).join(', '); }()), React.createElement("label", { className: "efld", style: { marginBottom: 12, display: 'block' } }, "Forceer alle naar afdeling (optioneel)", React.createElement("select", { className: "cin", value: importForceDept, onChange: e => setImportForceDept(e.target.value) }, [React.createElement("option", { key: '', value: '' }, '\u2014 gebruik gedetecteerde \u2014')].concat(Object.keys(cfg).map(function (dn) { return React.createElement("option", { key: dn, value: dn }, dn); })))), React.createElement("div", { style: { display: 'flex', gap: 8 } }, React.createElement("button", { className: "btn gold", style: { flex: 1 }, onClick: () => commitImport(importPending, importForceDept) }, "Importeer " + importPending.length), React.createElement("button", { className: "btn", onClick: () => setImportPending(null) }, "Annuleren")))) : null, redenModal ? React.createElement("div", { onClick: () => setRedenModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 340, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Boven MR-max toevoegen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Max (" + redenModal.max + ") bereikt. Kies een reden \u2014 deze wordt vastgelegd bij de dienst en in het logboek."), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, (redenen || []).map(r => React.createElement("button", { key: r, className: "btn", style: { justifyContent: 'flex-start', textAlign: 'left' }, onClick: () => confirmReden(r) }, r))), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setRedenModal(null) }, "Annuleren"))) : null, timeModal ? React.createElement("div", {
+  }), cellMenu && Object.keys(selCells).length ? React.createElement("div", { key: 'cellmenu-wrap' }, React.createElement("div", { onClick: function () { setCellMenu(null); }, style: { position: 'fixed', inset: 0, zIndex: 1200 } }), React.createElement("div", { onClick: function (ev) { ev.stopPropagation(); }, style: { position: 'fixed', zIndex: 1201, left: Math.min(cellMenu.x, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 220), top: Math.min(cellMenu.y + 8, (typeof window !== 'undefined' ? window.innerHeight : 800) - 150), background: '#fff', borderRadius: 10, boxShadow: '0 8px 28px rgba(15,20,40,.28)', border: '1px solid #e6e8ee', width: 210, overflow: 'hidden' } }, React.createElement("div", { style: { padding: '8px 12px', fontSize: 11, fontWeight: 700, color: '#8a6d1f', background: '#f6e2b3' } }, Object.keys(selCells).length + " cellen geselecteerd"), React.createElement("button", { onClick: function () { setCellMenu(null); setMultiPick(true); }, style: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, textAlign: 'left' } }, React.createElement(I, { n: 'person_add' }), "Medewerker inplannen"), React.createElement("button", { onClick: function () { setSelCells({}); setCellMenu(null); }, style: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', border: 'none', borderTop: '1px solid #eef0f4', background: 'transparent', cursor: 'pointer', fontSize: 12, color: '#8a8f9c', textAlign: 'left' } }, "Selectie wissen"))) : null, multiPick ? React.createElement("div", { onClick: function () { setMultiPick(false); }, style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 } }, React.createElement("div", { className: "card", onClick: function (ev) { ev.stopPropagation(); }, style: { padding: 18, width: 400, maxWidth: '94vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Inplannen op " + Object.keys(selCells).length + " cellen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 10 } }, "Dagen waarop de persoon niet kan (verlof, ziek, geen werkdag of al gepland) worden overgeslagen."), React.createElement("div", { className: "search", style: { marginBottom: 8 } }, React.createElement(I, { n: 'search' }), React.createElement("input", { value: multiZoek, onChange: function (ev) { setMultiZoek(ev.target.value); }, placeholder: "Zoek naam of vaardigheid\u2026" })), (function () { var seen = {}, lst = []; Object.keys(selCells).forEach(function (k) { (eligibleForCell(k) || []).forEach(function (e) { if (!seen[e.id]) { seen[e.id] = 1; lst.push(e); } }); }); var q = multiZoek.toLowerCase().trim(); if (q) lst = lst.filter(function (e) { return (e.naam || '').toLowerCase().indexOf(q) >= 0 || (e.skills || []).join(' ').toLowerCase().indexOf(q) >= 0 || (e.functie || e.rol || '').toLowerCase().indexOf(q) >= 0; }); return React.createElement("div", { style: { overflowY: 'auto', flex: '1 1 auto', minHeight: 0 } }, lst.length ? lst.map(function (e) { return React.createElement("div", { key: e.id, className: "srow-item", onClick: function () { planMeerdere(e.id); } }, React.createElement("div", { style: { display: 'flex', gap: 10, alignItems: 'center', minWidth: 0 } }, React.createElement("div", { className: "av" }, e.ini), React.createElement("div", { style: { minWidth: 0 } }, React.createElement("div", { style: { fontWeight: 700 } }, e.naam), React.createElement("div", { className: "rol" }, e.functie || e.rol))), React.createElement(I, { n: 'add' })); }) : React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c', padding: '10px 2px' } }, "Geen geschikte medewerkers voor de geselecteerde cellen.")); })(), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: function () { setMultiPick(false); } }, "Sluiten"))) : null, selMenu && selN ? React.createElement("div", { key: 'selmenu-wrap' }, React.createElement("div", { onClick: function () { setSelMenu(null); }, style: { position: 'fixed', inset: 0, zIndex: 1200 } }), React.createElement("div", { onClick: function (ev) { ev.stopPropagation(); }, style: { position: 'fixed', zIndex: 1201, left: Math.min(selMenu.x, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 210), top: Math.min(selMenu.y + 8, (typeof window !== 'undefined' ? window.innerHeight : 800) - 190), background: '#fff', borderRadius: 10, boxShadow: '0 8px 28px rgba(15,20,40,.28)', border: '1px solid #e6e8ee', width: 200, overflow: 'hidden' } }, React.createElement("div", { style: { padding: '8px 12px', fontSize: 11, fontWeight: 700, color: '#8a6d1f', background: '#f6e2b3' } }, selN + " geselecteerd"), [{ n: 'content_copy', t: 'Kopi\u00ebren', f: function () { kopieerSelectie(); setSelMenu(null); } }, { n: 'schedule', t: 'Tijd aanpassen', f: function () { setBulkTijd({ start: '06:00', eind: berekenEindtijd('06:00', '7:12', '1:03') }); setSelMenu(null); } }, { n: 'delete', t: 'Verwijderen', f: function () { verwijderSelectie(); setSelMenu(null); } }].map(function (it) { return React.createElement("button", { key: it.t, onClick: it.f, style: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, textAlign: 'left' } }, React.createElement(I, { n: it.n }), it.t); }), React.createElement("button", { onClick: function () { setSelChips({}); setSelMenu(null); }, style: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', border: 'none', borderTop: '1px solid #eef0f4', background: 'transparent', cursor: 'pointer', fontSize: 12, color: '#8a8f9c', textAlign: 'left' } }, "Selectie wissen"))) : null, bulkTijd ? React.createElement("div", { onClick: function () { setBulkTijd(null); }, style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1300 } }, React.createElement("div", { onClick: function (ev) { ev.stopPropagation(); }, style: { background: '#fff', borderRadius: 12, padding: 20, width: 340, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Tijd aanpassen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, selN + " geselecteerde diensten krijgen deze tijden."), React.createElement("label", { className: "efld" }, "Starttijd", React.createElement("input", { className: "cin", type: "time", value: bulkTijd.start, onChange: function (ev) { var st = ev.target.value; setBulkTijd({ start: st, eind: berekenEindtijd(st, '7:12', '1:03') }); } })), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Eindtijd", React.createElement("input", { className: "cin", type: "time", value: bulkTijd.eind || '', onChange: function (ev) { setBulkTijd(Object.assign({}, bulkTijd, { eind: ev.target.value })); } })), React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 14 } }, React.createElement("button", { className: "btn gold", style: { flex: 1, justifyContent: 'center' }, onClick: bulkTijdToepassen }, "Toepassen"), React.createElement("button", { className: "btn", onClick: function () { setBulkTijd(null); } }, "Annuleren")))) : null, intrekModal ? React.createElement("div", { onClick: () => setIntrekModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 } }, React.createElement("div", { onClick: function (e) { e.stopPropagation(); }, style: { background: '#fff', borderRadius: 12, padding: 20, width: 360, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 8px' } }, "Publicatie intrekken"), React.createElement("div", { style: { fontSize: 13, color: '#5b6070', marginBottom: 10 } }, "Geef een reden op. Daarna is de planning weer bewerkbaar."), React.createElement("textarea", { value: intrekReden, onChange: function (e) { setIntrekReden(e.target.value); }, placeholder: "Reden voor intrekken\u2026", style: { width: '100%', minHeight: 70, boxSizing: 'border-box', marginBottom: 12 } }), React.createElement("div", { style: { display: 'flex', gap: 8, justifyContent: 'flex-end' } }, React.createElement("button", { className: "btn", onClick: function () { setIntrekModal(null); } }, "Annuleren"), React.createElement("button", { className: "btn gold", disabled: !intrekReden.trim(), onClick: doIntrek }, "Intrekken")))) : null, uitzModal ? React.createElement("div", { onClick: () => setUitzModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 360, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Uitzendaanvraag \u2014 " + uitzModal.bureau), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, uitzModal.over ? "Let op: max (" + uitzModal.max + ") bereikt \u2014 na de tijd vragen we een reden." : "Kies de starttijd; eindtijd wordt berekend (aanpasbaar)."), React.createElement("label", { className: "efld" }, "Starttijd", React.createElement("input", { className: "cin", value: uitzModal.start, onChange: e => { var st = e.target.value; setUitzModal(Object.assign({}, uitzModal, { start: st, eind: berekenEindtijd(st, uitzModal.netto, uitzModal.pauze) })); } })), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Eindtijd", React.createElement("input", { className: "cin", value: uitzModal.eind, onChange: e => setUitzModal(Object.assign({}, uitzModal, { eind: e.target.value })) })), React.createElement("div", { style: { display: 'flex', gap: 8, marginTop: 14 } }, React.createElement("button", { className: "btn gold", style: { flex: 1, justifyContent: 'center' }, onClick: () => { if (uitzModal.over) { setRedenModal({ kind: 'temp', key: uitzModal.key, bureau: uitzModal.bureau, max: uitzModal.max, start: uitzModal.start, eind: uitzModal.eind }); } else { reqTemp(uitzModal.key, uitzModal.bureau, uitzModal.start, uitzModal.eind); } setUitzModal(null); } }, uitzModal.over ? "Verder (boven max)" : "Aanvragen"), React.createElement("button", { className: "btn", onClick: () => setUitzModal(null) }, "Annuleren")))) : null, addFor ? React.createElement("div", { onClick: () => setAddFor(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 18, width: 400, maxWidth: '94vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column' } }, React.createElement("h3", { style: { margin: '0 0 10px' } }, (function () { var pt = addFor.split('|'); return "Toevoegen — " + pt[1] + " · " + (pt[2] === 'O' ? 'Ochtend' : 'Middag') + " · " + pt[4]; })()), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 6, fontWeight: 700 } }, "Uitzendkracht"), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 } }, agencies.map(function (ag) { return React.createElement("button", { key: ag, className: "btn", style: { padding: '3px 8px', fontSize: 12 }, onClick: () => { var k = addFor; setAddFor(null); askUitzend(k, ag); } }, ag); })), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 6, fontWeight: 700 } }, "Medewerker toevoegen"), React.createElement("div", { className: "search", style: { marginBottom: 8 } }, React.createElement(I, { n: "search" }), React.createElement("input", { value: addZoek, onChange: e => setAddZoek(e.target.value), placeholder: "Zoek naam of vaardigheid…" })), (function () { var lst = eligibleForCell(addFor); return React.createElement("div", { style: { overflowY: 'auto', flex: '1 1 auto', minHeight: 0 } }, lst.length ? lst.map(function (e) { return React.createElement("div", { key: e.id, className: "srow-item", onClick: () => { var k = addFor; setAddFor(null); startAssign(e.id, k); } }, React.createElement("div", { style: { display: 'flex', gap: 10, alignItems: 'center', minWidth: 0 } }, React.createElement("div", { className: "av" }, e.ini), React.createElement("div", { style: { minWidth: 0 } }, React.createElement("div", { style: { fontWeight: 700 } }, e.naam), React.createElement("div", { className: "rol" }, e.functie || e.rol))), React.createElement(I, { n: "add" })); }) : React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c', padding: '10px 2px' } }, "Geen beschikbare medewerkers voor deze cel (kwalificatie, werkdag, verlof of al ingepland).")); })(), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setAddFor(null) }, "Sluiten"))) : null, importPending ? React.createElement("div", { onClick: () => setImportPending(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 400, maxWidth: '92vw' } }, React.createElement("h3", { style: { margin: '0 0 6px' } }, "Import \u2014 afdeling bevestigen"), React.createElement("div", { style: { fontSize: 13, marginBottom: 8 } }, importPending.length + " medewerkers gevonden."), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Gedetecteerd uit UKG-pad: " + function () { var c = {}; importPending.forEach(function (u) { c[u.afd] = (c[u.afd] || 0) + 1; }); return Object.keys(c).map(function (k) { return k + ' (' + c[k] + ')'; }).join(', '); }()), React.createElement("label", { className: "efld", style: { marginBottom: 12, display: 'block' } }, "Forceer alle naar afdeling (optioneel)", React.createElement("select", { className: "cin", value: importForceDept, onChange: e => setImportForceDept(e.target.value) }, [React.createElement("option", { key: '', value: '' }, '\u2014 gebruik gedetecteerde \u2014')].concat(Object.keys(cfg).map(function (dn) { return React.createElement("option", { key: dn, value: dn }, dn); })))), React.createElement("div", { style: { display: 'flex', gap: 8 } }, React.createElement("button", { className: "btn gold", style: { flex: 1 }, onClick: () => commitImport(importPending, importForceDept) }, "Importeer " + importPending.length), React.createElement("button", { className: "btn", onClick: () => setImportPending(null) }, "Annuleren")))) : null, redenModal ? React.createElement("div", { onClick: () => setRedenModal(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60 } }, React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 340, maxWidth: '90vw' } }, React.createElement("h3", { style: { margin: '0 0 4px' } }, "Boven MR-max toevoegen"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Max (" + redenModal.max + ") bereikt. Kies een reden \u2014 deze wordt vastgelegd bij de dienst en in het logboek."), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, (redenen || []).map(r => React.createElement("button", { key: r, className: "btn", style: { justifyContent: 'flex-start', textAlign: 'left' }, onClick: () => confirmReden(r) }, r))), React.createElement("button", { className: "btn", style: { marginTop: 12 }, onClick: () => setRedenModal(null) }, "Annuleren"))) : null, timeModal ? React.createElement("div", {
     className: "modal-bg",
     onClick: () => setTimeModal(null)
   }, React.createElement("div", {
