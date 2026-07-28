@@ -114,6 +114,20 @@
   .oncall{font-size:10px;color:#7a5c18;}
   .emp-stat{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;font-family:'JetBrains Mono',monospace;white-space:nowrap;flex-shrink:0;}
   .tbl{width:100%;border-collapse:collapse;}
+  .tbl input[type=checkbox]{width:15px;height:15px;accent-color:var(--navy);cursor:pointer;vertical-align:middle;}
+  .bulkbar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;background:var(--navy);border-radius:var(--r);color:#fff;}
+  .bulkbar .bulkbar-n{font-weight:800;font-size:13px;letter-spacing:.02em;}
+  .bulkbar .btn{background:rgba(255,255,255,.14);border:none;color:#fff;}
+  .bulkbar .btn.gold{background:var(--gold);color:#1c1c1c;}
+  .bulkmodal{padding:20px;width:520px;max-width:94vw;max-height:88vh;overflow:auto;}
+  .bulkrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft);}
+  .bulkrow .cin{flex:1;}
+  .bulkchk{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;min-width:150px;cursor:pointer;}
+  .bulkchk input{width:15px;height:15px;accent-color:var(--navy);}
+  .bulkrow-multi{flex-direction:column;align-items:stretch;gap:8px;}
+  .bulkrow-head{display:flex;align-items:center;gap:12px;}
+  .bulkrow-head .bulkmode{max-width:150px;margin-left:auto;flex:0 0 auto;}
+  .bulkchips{display:flex;flex-wrap:wrap;gap:6px;}
   .tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--line);}
   .tbl td{padding:10px;border-bottom:1px solid #eef0f4;font-size:13px;}
   .ok-tag{font-size:10px;font-weight:700;background:var(--ok-bg);color:#2e7d32;padding:2px 8px;border-radius:10px;}
@@ -711,7 +725,8 @@ const LS_PLAN = 'bl_plan_v4',
   LS_EMP = 'bl_emp_v4',
   LS_RED = 'bl_red_v4',
   LS_KP = 'bl_kp_v4',
-  LS_VT = 'bl_vt_v4';
+  LS_VT = 'bl_vt_v4',
+  LS_RR = 'bl_rr_v4';
 function lsGet(k, f) {
   try {
     var r = localStorage.getItem(k);
@@ -866,6 +881,32 @@ function berekenEindtijd(start, netto, pauze) {
   return minHHMM(hhmmMin(start) + hhmmMin(netto) + hhmmMin(pauze));
 }
 const SKILL_OPTIONS = ['Medewerk Inpak', 'Medewerk Inpak B', 'Medewerker Productie A', 'Medewerker Productie B', 'Operator A', 'Operator B'];
+// === B1a: rooster-regels (config-model, defaults + normalizer). Nog GEEN effect op planning. ===
+var ROOSTER_REGELS_DEFAULT = {
+  versie: 1,
+  overdracht: { aan: true, standaardMin: 0, perRol: { 'Operator A': 10, 'Operator B': 10 } },
+  verankering: { modus: 'eind', perLijn: {} },   // 'eind' = eind dienst vast (gestaggerde start) | 'start'
+  pauze: { betaald: false },                       // Broek op Langedijk-default; CAO 5-ploegen = true
+  urenBasis: 'arbeidstijd'                          // 'arbeidstijd' (netto) | 'betaaluren' (netto + doorbetaalde pauze)
+};
+function normRoosterRegels(x) {
+  x = (x && typeof x === 'object') ? x : {};
+  var od = x.overdracht || {}, va = x.verankering || {}, pz = x.pauze || {};
+  return {
+    versie: 1,
+    overdracht: {
+      aan: od.aan !== false,
+      standaardMin: +od.standaardMin || 0,
+      perRol: Object.assign({ 'Operator A': 10, 'Operator B': 10 }, od.perRol || {})
+    },
+    verankering: {
+      modus: va.modus === 'start' ? 'start' : 'eind',
+      perLijn: (va.perLijn && typeof va.perLijn === 'object') ? va.perLijn : {}
+    },
+    pauze: { betaald: pz.betaald === true },
+    urenBasis: x.urenBasis === 'betaaluren' ? 'betaaluren' : 'arbeidstijd'
+  };
+}
 const DAG_NAMEN = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
 const VERLOF_TYPES = [{
   label: 'Vakantie',
@@ -1033,6 +1074,7 @@ function App() {
   const [week, setWeek] = useState(() => NOW_WK.week);
   const [jaar, setJaar] = useState(() => NOW_WK.jaar);
   const [cfg, setCfg] = useState(() => normCfg(lsGet(LS_CFG, DEFAULT_CFG)));
+  const [roosterRegels, setRoosterRegels] = useState(() => normRoosterRegels(lsGet(LS_RR, ROOSTER_REGELS_DEFAULT)));
   const [mrAfd, setMrAfd] = useState(() => lsGet('bl_mrafd_v4', {}));
   const heeftMR = dep => (mrAfd[dep] !== undefined ? !!mrAfd[dep] : ((cfg[dep] || []).length > 0));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
@@ -1070,6 +1112,8 @@ function App() {
   const [user, setUser] = useState(() => lsGet('bl_user_v4', 'Teamlead'));
   const [auditLog, setAuditLog] = useState(() => lsGet('bl_audit_v4', []));
   const [editEmp, setEditEmp] = useState(null);
+  const [selEmps, setSelEmps] = useState({});
+  const [bulkEdit, setBulkEdit] = useState(null);
   const [empFilter, setEmpFilter] = useState('eigen');
   const [empDept, setEmpDept] = useState('alle');
   const [importPending, setImportPending] = useState(null);
@@ -1120,6 +1164,11 @@ function App() {
       localStorage.setItem(LS_CFG, JSON.stringify(cfg));
     } catch (e) {}
   }, [cfg]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_RR, JSON.stringify(roosterRegels));
+    } catch (e) {}
+  }, [roosterRegels]);
   useEffect(() => {
     try {
       localStorage.setItem(LS_AG, JSON.stringify(agencies));
@@ -1278,7 +1327,7 @@ function App() {
       });
       if (!m) return;
       var _has = function (arr) { return arr.some(function (w) { return stateRaw.indexOf(w) >= 0; }); };
-      var status = _has(['reject', 'afgekeur', 'declin', 'denied', 'cancel', 'geannuleer', 'withdraw', 'Planning Bewerken', 'delete', 'verwijder']) ? 'Rejected' : _has(['approv', 'goedgekeur', 'accept']) ? 'Approved' : _has(['pend', 'submit', 'aangevraag', 'ingedien', 'new', 'nieuw', 'open']) ? 'Pending' : 'Rejected';
+      var status = _has(['reject', 'afgekeur', 'declin', 'denied', 'cancel', 'geannuleer', 'withdraw', 'ingetrokken', 'delete', 'verwijder']) ? 'Rejected' : _has(['approv', 'goedgekeur', 'accept']) ? 'Approved' : _has(['pend', 'submit', 'aangevraag', 'ingedien', 'new', 'nieuw', 'open']) ? 'Pending' : 'Rejected';
       if (status === 'Rejected') return;
       var _vanD = String(van).slice(0, 10);
       var _totD = String(tot).slice(0, 10);
@@ -1851,7 +1900,7 @@ function App() {
     });
   };
   const _bewerkGeblokkeerd = () => {
-    if (pub[dept + '|' + wkKey]) { ping('Planning is gepubliceerd \u2014 druk Planning Bewerken om te bewerken', 'warn'); return true; }
+    if (pub[dept + '|' + wkKey]) { ping('Planning is gepubliceerd \u2014 druk Ingetrokken om te bewerken', 'warn'); return true; }
     return false;
   };
   const doAssign = m => {
@@ -3135,7 +3184,7 @@ function App() {
       onClick: nextWeek
     }, React.createElement(I, {
       n: "chevron_right"
-    }))), React.createElement("div", { className: "btnrow", style: { alignItems: "center" } }, React.createElement("div", { className: "segrow" }, Object.keys(cfg).filter(heeftMR).map(d => React.createElement("button", { key: d, className: "btn seg " + (dept === d ? "on" : ""), onClick: () => { setDept(d); setSel(null); } }, d))), React.createElement("button", { className: "btn " + (showFilter ? "on" : ""), onClick: () => setShowFilter(!showFilter), title: "Filter lijnen" }, React.createElement(I, { n: "filter_list" }), React.createElement("span", { className: "btxt" }, "Lijnen")), React.createElement("div", { style: { position: "relative" } }, React.createElement("button", { className: "btn " + (actieMenu ? "on" : ""), onClick: function () { setActieMenu(!actieMenu); }, title: "Planningsacties" }, React.createElement(I, { n: "bolt" }), React.createElement("span", { className: "btxt" }, "Acties"), React.createElement(I, { n: "expand_more" })), actieMenu ? React.createElement("div", null, React.createElement("div", { onClick: function () { setActieMenu(false); }, style: { position: "fixed", inset: 0, zIndex: 900 } }), React.createElement("div", { style: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 901, background: "#fff", border: "1px solid #e6e8ee", borderRadius: 10, boxShadow: "0 8px 28px rgba(15,20,40,.22)", width: 220, overflow: "hidden" } }, React.createElement("button", { key: "Vaste bezetting", onClick: function () { setActieMenu(false); vulVasteBezetting(false); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "how_to_reg" }), "Vaste bezetting"), React.createElement("button", { key: "Auto-rooster", onClick: function () { setActieMenu(false); autoRooster(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "bolt" }), "Auto-rooster"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { key: "Kopieer week", onClick: function () { setActieMenu(false); copyWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "content_copy" }), "Kopieer week"), React.createElement("button", { key: "Kopieer maandag", onClick: function () { setActieMenu(false); kopieerMaandag(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "looks_two" }), "Kopieer maandag"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { onClick: function () { setActieMenu(false); clearWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", color: "#c62828" } }, React.createElement(I, { n: "delete_sweep" }), "Week leegmaken"))) : null), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit" }, React.createElement(I, { n: "check_box" }), React.createElement("span", { className: "btxt" }, "Selecteer")), klembord.length ? React.createElement("button", { className: "btn", onClick: () => setKlembord([]), title: "Klembord legen", style: { color: "#2e7d32", borderColor: "#a5d6a7" } }, React.createElement(I, { n: "content_paste" }), klembord.length + " \u2715") : null, React.createElement("div", { className: "hide-mob", style: { flex: "1 1 auto", minWidth: 0 } }), React.createElement("button", { className: "btn hide-mob " + (isPub ? "" : "gold"), onClick: publish, title: isPub ? "Publicatie intrekken" : "Publiceren en vergrendelen" }, React.createElement(I, { n: isPub ? "lock_open" : "publish" }), React.createElement("span", { className: "btxt" }, isPub ? "Planning Bewerken" : "Publiceer")), isPub ? React.createElement("button", { className: "btn hide-mob", onClick: printRooster, title: "Afdrukken / PDF" }, React.createElement(I, { n: "print" }), React.createElement("span", { className: "btxt" }, "Afdrukken")) : null)), showFilter ? React.createElement("div", {
+    }))), React.createElement("div", { className: "btnrow", style: { alignItems: "center" } }, React.createElement("div", { className: "segrow" }, Object.keys(cfg).filter(heeftMR).map(d => React.createElement("button", { key: d, className: "btn seg " + (dept === d ? "on" : ""), onClick: () => { setDept(d); setSel(null); } }, d))), React.createElement("button", { className: "btn " + (showFilter ? "on" : ""), onClick: () => setShowFilter(!showFilter), title: "Filter lijnen" }, React.createElement(I, { n: "filter_list" }), React.createElement("span", { className: "btxt" }, "Lijnen")), React.createElement("div", { style: { position: "relative" } }, React.createElement("button", { className: "btn " + (actieMenu ? "on" : ""), onClick: function () { setActieMenu(!actieMenu); }, title: "Planningsacties" }, React.createElement(I, { n: "bolt" }), React.createElement("span", { className: "btxt" }, "Acties"), React.createElement(I, { n: "expand_more" })), actieMenu ? React.createElement("div", null, React.createElement("div", { onClick: function () { setActieMenu(false); }, style: { position: "fixed", inset: 0, zIndex: 900 } }), React.createElement("div", { style: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 901, background: "#fff", border: "1px solid #e6e8ee", borderRadius: 10, boxShadow: "0 8px 28px rgba(15,20,40,.22)", width: 220, overflow: "hidden" } }, React.createElement("button", { key: "Vaste bezetting", onClick: function () { setActieMenu(false); vulVasteBezetting(false); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "how_to_reg" }), "Vaste bezetting"), React.createElement("button", { key: "Auto-rooster", onClick: function () { setActieMenu(false); autoRooster(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "bolt" }), "Auto-rooster"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { key: "Kopieer week", onClick: function () { setActieMenu(false); copyWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "content_copy" }), "Kopieer week"), React.createElement("button", { key: "Kopieer maandag", onClick: function () { setActieMenu(false); kopieerMaandag(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "looks_two" }), "Kopieer maandag"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { onClick: function () { setActieMenu(false); clearWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", color: "#c62828" } }, React.createElement(I, { n: "delete_sweep" }), "Week leegmaken"))) : null), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit" }, React.createElement(I, { n: "check_box" }), React.createElement("span", { className: "btxt" }, "Selecteer")), klembord.length ? React.createElement("button", { className: "btn", onClick: () => setKlembord([]), title: "Klembord legen", style: { color: "#2e7d32", borderColor: "#a5d6a7" } }, React.createElement(I, { n: "content_paste" }), klembord.length + " \u2715") : null, React.createElement("div", { className: "hide-mob", style: { flex: "1 1 auto", minWidth: 0 } }), React.createElement("button", { className: "btn hide-mob " + (isPub ? "" : "gold"), onClick: publish, title: isPub ? "Publicatie intrekken" : "Publiceren en vergrendelen" }, React.createElement(I, { n: isPub ? "lock_open" : "publish" }), React.createElement("span", { className: "btxt" }, isPub ? "Ingetrokken" : "Publiceer")), isPub ? React.createElement("button", { className: "btn hide-mob", onClick: printRooster, title: "Afdrukken / PDF" }, React.createElement(I, { n: "print" }), React.createElement("span", { className: "btxt" }, "Afdrukken")) : null)), showFilter ? React.createElement("div", {
       className: "card",
       style: {
         padding: 14
@@ -3761,6 +3810,68 @@ function App() {
       onClick: () => setEditEmp(null)
     }, "Annuleer"))));
   }
+  function bulkModal() {
+    var h = React.createElement;
+    var d = bulkEdit;
+    var upd = function (f, patch) { setBulkEdit(function (b) { var nb = Object.assign({}, b); nb[f] = Object.assign({}, b[f], patch); return nb; }); };
+    var chk = function (f) { return h("input", { type: "checkbox", checked: d[f].on, onChange: function (ev) { upd(f, { on: ev.target.checked }); } }); };
+    var txt = function (f, label, ph) { return h("div", { className: "bulkrow" }, h("label", { className: "bulkchk" }, chk(f), label), h("input", { className: "cin", disabled: !d[f].on, value: d[f].val, placeholder: ph || "", onChange: function (ev) { upd(f, { val: ev.target.value }); } })); };
+    var lineOpts = []; Object.keys(cfg).forEach(function (dn) { (cfg[dn] || []).forEach(function (L) { if (L.lijn && lineOpts.indexOf(L.lijn) < 0) lineOpts.push(L.lijn); }); });
+    var multi = function (f, label, opts, labelFn) {
+      return h("div", { className: "bulkrow bulkrow-multi" },
+        h("div", { className: "bulkrow-head" },
+          h("label", { className: "bulkchk" }, chk(f), label),
+          h("select", { className: "cin bulkmode", disabled: !d[f].on, value: d[f].mode, onChange: function (ev) { upd(f, { mode: ev.target.value }); } },
+            h("option", { value: "add" }, "Toevoegen"), h("option", { value: "remove" }, "Verwijderen"), h("option", { value: "replace" }, "Vervangen"))),
+        h("div", { className: "bulkchips", style: { opacity: d[f].on ? 1 : .4, pointerEvents: d[f].on ? "auto" : "none" } },
+          opts.map(function (o) { var on = d[f].vals.indexOf(o) >= 0; return h("button", { key: o, className: "chipbtn " + (on ? "on" : ""), onClick: function () { upd(f, { vals: on ? d[f].vals.filter(function (x) { return x !== o; }) : d[f].vals.concat([o]) }); } }, labelFn ? labelFn(o) : o); })));
+    };
+    var apply = function () {
+      var ids = selEmps; var enabled = Object.keys(d).filter(function (f) { return d[f].on; });
+      if (!enabled.length) { ping("Kies minstens \u00e9\u00e9n veld"); return; }
+      setEmployees(function (prev) {
+        return prev.map(function (e) {
+          if (!ids[e.id]) return e;
+          var p = {};
+          if (d.functie.on) p.functie = d.functie.val;
+          if (d.afd.on) p.afd = d.afd.val;
+          if (d.starttijd.on) p.starttijd = d.starttijd.val;
+          if (d.netto.on) p.netto = d.netto.val;
+          if (d.pauze.on) p.pauze = d.pauze.val;
+          if (d.vastInplannen.on) p.vastInplannen = d.vastInplannen.val;
+          ["skills", "lijnen", "werkdagen"].forEach(function (f) {
+            if (!d[f].on) return;
+            var cur = (e[f] || []).slice();
+            if (d[f].mode === "replace") cur = d[f].vals.slice();
+            else if (d[f].mode === "add") d[f].vals.forEach(function (v) { if (cur.indexOf(v) < 0) cur.push(v); });
+            else cur = cur.filter(function (x) { return d[f].vals.indexOf(x) < 0; });
+            p[f] = cur;
+          });
+          return Object.assign({}, e, p);
+        });
+      });
+      var n = Object.keys(ids).length;
+      logAction("BULK_BEWERKT", { aantal: n, velden: enabled });
+      ping(n + " medewerkers bijgewerkt");
+      setBulkEdit(null); setSelEmps({});
+    };
+    return h("div", { onClick: function () { setBulkEdit(null); }, style: { position: "fixed", inset: 0, background: "rgba(15,20,40,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 } },
+      h("div", { className: "card bulkmodal", onClick: function (ev) { ev.stopPropagation(); } },
+        h("h3", { style: { margin: "0 0 4px" } }, "Bulk bewerken \u2014 " + Object.keys(selEmps).length + " medewerkers"),
+        h("div", { style: { fontSize: 12, color: "#5b6070", marginBottom: 12 } }, "Vink de velden aan die je wilt wijzigen. Alleen aangevinkte velden worden toegepast."),
+        txt("functie", "Functie", "bijv. Operator A"),
+        h("div", { className: "bulkrow" }, h("label", { className: "bulkchk" }, chk("afd"), "Afdeling"), h("select", { className: "cin", disabled: !d.afd.on, value: d.afd.val, onChange: function (ev) { upd("afd", { val: ev.target.value }); } }, Object.keys(cfg).map(function (dn) { return h("option", { key: dn, value: dn }, dn); }))),
+        txt("starttijd", "Starttijd", "06:00"),
+        txt("netto", "Netto uren", "7:12"),
+        txt("pauze", "Pauze", "1:03"),
+        h("div", { className: "bulkrow" }, h("label", { className: "bulkchk" }, chk("vastInplannen"), "Standaard inplannen"), h("select", { className: "cin", disabled: !d.vastInplannen.on, value: d.vastInplannen.val ? "1" : "0", onChange: function (ev) { upd("vastInplannen", { val: ev.target.value === "1" }); } }, h("option", { value: "1" }, "Aan"), h("option", { value: "0" }, "Uit"))),
+        multi("skills", "Skills", SKILL_OPTIONS),
+        multi("lijnen", "Lijnen", lineOpts),
+        multi("werkdagen", "Werkdagen", DAG_K, function (k) { return DAG_L[DAG_K.indexOf(k)]; }),
+        h("div", { style: { display: "flex", gap: 8, marginTop: 16 } },
+          h("button", { className: "btn gold", style: { flex: 1, justifyContent: "center" }, onClick: apply }, "Toepassen op " + Object.keys(selEmps).length),
+          h("button", { className: "btn", onClick: function () { setBulkEdit(null); } }, "Annuleren"))));
+  }
   function personeelView() {
     const list = employees.filter(e => (empDept === 'alle' || (e.afd || '') === empDept) && (empFilter === 'alle' || (empFilter === 'uitzend' ? e.isUitzend : !e.isUitzend)) && (e.naam + ' ' + (e.functie || e.rol || '') + ' ' + (e.id || '')).toLowerCase().indexOf(zoek.toLowerCase()) >= 0);
     const stClr = s => s === 'Ziek' ? {
@@ -3794,7 +3905,7 @@ function App() {
       onClick: triggerImport
     }, React.createElement(I, {
       n: "upload_file"
-    }), "Importeer UKG"))), editEmp ? empForm() : null, React.createElement("div", {
+    }), "Importeer UKG"))), editEmp ? empForm() : null, bulkEdit ? bulkModal() : null, React.createElement("div", {
       className: "card",
       style: {
         padding: 12
@@ -3825,7 +3936,7 @@ function App() {
       key: f[0],
       className: empFilter === f[0] ? 'on' : '',
       onClick: () => setEmpFilter(f[0])
-    }, f[1])))), React.createElement("div", {
+    }, f[1])))), (Object.keys(selEmps).length ? React.createElement("div", { className: "bulkbar" }, React.createElement("span", { className: "bulkbar-n" }, Object.keys(selEmps).length + " geselecteerd"), React.createElement("div", { style: { flex: 1 } }), React.createElement("button", { className: "btn", onClick: function () { setSelEmps({}); } }, "Deselecteren"), React.createElement("button", { className: "btn gold", onClick: function () { setBulkEdit({ functie: { on: false, val: '' }, afd: { on: false, val: Object.keys(cfg)[0] || '' }, starttijd: { on: false, val: '' }, netto: { on: false, val: '' }, pauze: { on: false, val: '' }, vastInplannen: { on: false, val: true }, skills: { on: false, mode: 'add', vals: [] }, lijnen: { on: false, mode: 'add', vals: [] }, werkdagen: { on: false, mode: 'add', vals: [] } }); } }, React.createElement(I, { n: "edit" }), "Bulk bewerken")) : null), React.createElement("div", {
       style: {
         overflowX: 'auto'
       }
@@ -3834,13 +3945,13 @@ function App() {
       style: {
         minWidth: 720
       }
-    }, React.createElement("thead", null, React.createElement("tr", null, ['Naam', 'ID', 'Afdeling', 'Uren', 'Kostenplaats', 'Functie', 'Status', ''].map(h => React.createElement("th", {
+    }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", { style: { width: 34 } }, React.createElement("input", { type: "checkbox", "aria-label": "Alles selecteren", checked: list.length > 0 && list.every(function (e) { return selEmps[e.id]; }), onChange: function (ev) { var all = ev.target.checked; setSelEmps(function (p) { var n = Object.assign({}, p); list.forEach(function (e) { if (all) n[e.id] = true; else delete n[e.id]; }); return n; }); } })), ['Naam', 'ID', 'Afdeling', 'Uren', 'Kostenplaats', 'Functie', 'Status', ''].map(h => React.createElement("th", {
       key: h
     }, h)))), React.createElement("tbody", null, list.map(e => {
       const c = stClr(e.status || 'Actief');
       return React.createElement("tr", {
         key: e.id
-      }, React.createElement("td", {
+      }, React.createElement("td", { style: { width: 34 } }, React.createElement("input", { type: "checkbox", "aria-label": "Selecteer", checked: !!selEmps[e.id], onChange: function () { setSelEmps(function (p) { var n = Object.assign({}, p); if (n[e.id]) delete n[e.id]; else n[e.id] = true; return n; }); } })), React.createElement("td", {
         style: {
           fontWeight: 600
         }
@@ -3922,6 +4033,46 @@ function App() {
       return React.createElement("div", { key: b, className: "card", style: { padding: 16, marginBottom: 12 } }, React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 } }, React.createElement("div", { className: "av agv" }, b.slice(0, 2).toUpperCase()), React.createElement("h3", { style: { margin: 0 } }, b), React.createElement("span", { className: "pill", style: { marginLeft: 'auto' } }, grp.open.length + " aanvraag \u00b7 " + grp.planned.length + " ingepland"), React.createElement("button", { className: "btn", style: { padding: '4px 10px' }, onClick: () => downloadAanvraagBureau(b) }, React.createElement(I, { n: "download" }), "Excel")), React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#b02a37', margin: '6px 0 4px' } }, "Aan te vragen bij bureau (niet in UKG)"), grp.open.length === 0 ? React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c' } }, "\u2014") : grp.open.map(function (o, i) { return React.createElement("div", { key: 'o' + i, style: { fontSize: 13, padding: '2px 0' } }, dagLbl(o.dag) + " \u00b7 " + (tijd(o) ? tijd(o) + " \u00b7 " : "") + o.dept + " " + o.lijn + " \u00b7 " + shiftNaam(o.shift) + (o.reden ? " \u00b7 " + o.reden : "")); }), React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#2e7d32', margin: '10px 0 4px' } }, "Ingepland (gaat mee in UKG-export)"), grp.planned.length === 0 ? React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c' } }, "\u2014") : grp.planned.map(function (p, i) { return React.createElement("div", { key: 'p' + i, style: { fontSize: 13, padding: '2px 0' } }, dagLbl(p.dag) + " \u00b7 " + (tijd(p) ? tijd(p) + " \u00b7 " : "") + p.naam + " \u00b7 " + p.dept + " " + p.lijn + " \u00b7 " + shiftNaam(p.shift)); }));
     }));
   }
+  function roosterRegelsCard() {
+    var rr = normRoosterRegels(roosterRegels);
+    var upd = function (patch) {
+      setRoosterRegels(function (prev) { return normRoosterRegels(patch(normRoosterRegels(prev))); });
+    };
+    var seg = function (actief, label, cb) {
+      return React.createElement("button", { className: "btn" + (actief ? " gold" : ""), onClick: cb }, label);
+    };
+    var rij = function (label, control) {
+      return React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" } },
+        React.createElement("span", { style: { flex: "0 0 200px", fontWeight: 600 } }, label), control);
+    };
+    return React.createElement("div", { className: "card" + (dichtSec['rr'] ? " collapsed" : ""), style: { padding: 16 } },
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
+        React.createElement("h3", { onClick: function () { toggleSec('rr'); }, style: { margin: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, userSelect: "none" } },
+          React.createElement("span", { className: "chev" }, "\u25BE"), "Rooster-regels")),
+      React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } },
+        rij("Verankering", React.createElement("div", { style: { display: "flex", gap: 6 } },
+          seg(rr.verankering.modus === 'eind', "Eind dienst vast", function () { upd(function (b) { b.verankering.modus = 'eind'; return b; }); }),
+          seg(rr.verankering.modus === 'start', "Start vast", function () { upd(function (b) { b.verankering.modus = 'start'; return b; }); }))),
+        rij("Arbeidsuren tellen als", React.createElement("div", { style: { display: "flex", gap: 6 } },
+          seg(rr.urenBasis === 'arbeidstijd', "Arbeidstijd (netto)", function () { upd(function (b) { b.urenBasis = 'arbeidstijd'; return b; }); }),
+          seg(rr.urenBasis === 'betaaluren', "Betaaluren (incl. pauze)", function () { upd(function (b) { b.urenBasis = 'betaaluren'; return b; }); }))),
+        rij("Pauze doorbetaald", React.createElement("div", { style: { display: "flex", gap: 6 } },
+          seg(rr.pauze.betaald, "Ja", function () { upd(function (b) { b.pauze.betaald = true; return b; }); }),
+          seg(!rr.pauze.betaald, "Nee", function () { upd(function (b) { b.pauze.betaald = false; return b; }); }))),
+        rij("Overdracht-overlap", React.createElement("div", { style: { display: "flex", gap: 6 } },
+          seg(rr.overdracht.aan, "Aan", function () { upd(function (b) { b.overdracht.aan = true; return b; }); }),
+          seg(!rr.overdracht.aan, "Uit", function () { upd(function (b) { b.overdracht.aan = false; return b; }); }))),
+        React.createElement("div", { style: { opacity: rr.overdracht.aan ? 1 : 0.5, pointerEvents: rr.overdracht.aan ? "auto" : "none" } },
+          React.createElement("div", { className: "hint", style: { margin: "0 0 6px" } }, "OVERLAP-MINUTEN PER ROL (0 = geen overdracht)"),
+          React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
+            SKILL_OPTIONS.map(function (rol) {
+              var val = rr.overdracht.perRol[rol] != null ? rr.overdracht.perRol[rol] : rr.overdracht.standaardMin;
+              return React.createElement("div", { key: rol, style: { display: "flex", alignItems: "center", gap: 8 } },
+                React.createElement("span", { style: { flex: "0 0 200px" } }, rol),
+                React.createElement("input", { type: "number", min: 0, max: 60, value: val, onChange: function (e) { var v = Math.max(0, Math.min(60, parseInt(e.target.value, 10) || 0)); upd(function (b) { b.overdracht.perRol[rol] = v; return b; }); }, style: { width: 70 } }),
+                React.createElement("span", { style: { color: "#7a8194" } }, "min"));
+            }))))); 
+  }
   function configView() {
     return React.createElement("div", {
       className: "stack"
@@ -3941,7 +4092,7 @@ function App() {
       }
     }, React.createElement(I, {
       n: "restart_alt"
-    }), "Herstel standaard")), React.createElement("div", {
+    }), "Herstel standaard")), roosterRegelsCard(), React.createElement("div", {
       className: "card" + (dichtSec['afd'] ? " collapsed" : ""),
       style: {
         padding: 16
