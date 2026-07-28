@@ -1900,7 +1900,7 @@ function App() {
     });
   };
   const _bewerkGeblokkeerd = () => {
-    if (pub[dept + '|' + wkKey]) { ping('Planning is gepubliceerd \u2014 druk Planning bewerken om te bewerken', 'warn'); return true; }
+    if (pub[dept + '|' + wkKey]) { ping('Planning is gepubliceerd \u2014 druk planning bewerken om te bewerken', 'warn'); return true; }
     return false;
   };
   const doAssign = m => {
@@ -1935,13 +1935,45 @@ function App() {
     ping((emp ? emp.naam.split(' ')[0] : '') + ' ingepland ' + m.start);
     setTimeModal(null);
   };
+  const afgeleideTijd = (a, key) => {
+    var base = { start: (a && a.start) || '', eind: (a && a.eind) || '', afgeleid: false };
+    if (!a || a.tijdVast || a.type !== 'vast' || !a.empId) return base;
+    var rr = normRoosterRegels(roosterRegels);
+    if (rr.verankering.modus !== 'eind') return base;
+    var pt = String(key).split('|');
+    var si = SHIFTS.findIndex(function (x) { return x.id === pt[2]; });
+    if (si <= 0) return base;
+    var emp = employees.find(function (x) { return x.id === a.empId; });
+    if (!emp) return base;
+    var func = String(emp.functie || emp.rol || '').trim().toLowerCase();
+    if (!func) return base;
+    var prevKey = cellK(pt[0], pt[1], SHIFTS[si - 1].id, pt[3], pt[4]);
+    var laatste = -1;
+    (plan[prevKey] || []).forEach(function (b) {
+      if (b.ziek || b.type !== 'vast' || !b.empId) return;
+      var be = employees.find(function (x) { return x.id === b.empId; });
+      if (!be || String(be.functie || be.rol || '').trim().toLowerCase() !== func) return;
+      var bt = afgeleideTijd(b, prevKey);
+      var mm = bt.eind ? hhmmMin(bt.eind) : -1;
+      if (mm > laatste) laatste = mm;
+    });
+    if (laatste < 0) return base;
+    var pr = rr.overdracht.perRol || {};
+    var ovl = rr.overdracht.aan ? (pr[emp.functie] != null ? pr[emp.functie] : (pr[emp.rol] != null ? pr[emp.rol] : rr.overdracht.standaardMin)) : 0;
+    var start = minHHMM((laatste + (+ovl || 0)) % 1440);
+    var span = 0;
+    if (base.start && base.eind) { span = hhmmMin(base.eind) - hhmmMin(base.start); if (span < 0) span += 1440; }
+    var eind = span ? minHHMM((hhmmMin(start) + span) % 1440) : base.eind;
+    return { start: start, eind: eind, afgeleid: true };
+  };
   const editTime = m => {
     setPlan(p => {
       const n = Object.assign({}, p);
       n[m.key] = (p[m.key] || []).map(a => a.id === m.id ? Object.assign({}, a, {
         kostplaats: m.kostplaats || null,
         start: m.start,
-        eind: m.eind
+        eind: m.eind,
+        tijdVast: true
       }) : a);
       return n;
     });
@@ -2543,7 +2575,7 @@ function App() {
         var ix = sk.lastIndexOf('::');
         var ck = sk.slice(0, ix), did = sk.slice(ix + 2);
         if (!n[ck]) return;
-        n[ck] = n[ck].map(function (a) { return a.id === did ? Object.assign({}, a, { start: st, eind: ei }) : a; });
+        n[ck] = n[ck].map(function (a) { return a.id === did ? Object.assign({}, a, { start: st, eind: ei, tijdVast: true }) : a; });
       });
       return n;
     });
@@ -3002,7 +3034,7 @@ function App() {
         schedH += c.actief * h; capH += c.cap * h;
       });
     }));
-    var coverage = req > 0 ? Math.round(covered / req * 100) : null;
+    var coverage = req > 0 ? Math.round(s / req * 100) : null;
     var hoursPct = capH > 0 ? Math.round(schedH / capH * 100) : null;
     return { s: s, o: o, req: req, cap: cap, covered: covered, underCells: underCells, schedH: schedH, capH: capH, coverage: coverage, hoursPct: hoursPct };
   }, [lines, info, days]);
@@ -3153,7 +3185,7 @@ function App() {
       n: "refresh"
     })))), React.createElement("div", {
       className: "kpis rich"
-    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.covered + "/" + kpi.req + " basisposities", icon: "verified", cls: "" }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, { k: "Onderbezet", v: kpi.underCells, sub: kpi.o + " posities tekort", icon: "warning", cls: kpi.underCells > 0 ? "open" : "" }, { k: "Uren gepland", v: kpi.schedH + "u", sub: (kpi.hoursPct == null ? "—" : kpi.hoursPct + "% van capaciteit"), icon: "schedule", cls: "" }].map(function (m) {
+    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, { k: "Onderbezet", v: kpi.underCells, sub: kpi.o + " posities tekort", icon: "warning", cls: kpi.underCells > 0 ? "open" : "" }, { k: "Uren gepland", v: kpi.schedH + "u", sub: (kpi.hoursPct == null ? "—" : kpi.hoursPct + "% van capaciteit"), icon: "schedule", cls: "" }].map(function (m) {
       return React.createElement("div", {
         key: m.k,
         className: "card kpi " + m.cls
@@ -3338,6 +3370,7 @@ function App() {
       }, c.actief + "/" + c.req)), function () { var rs = c.list.filter(function (x) { return x.overReason; }); if (!rs.length) return null; var uq = []; rs.forEach(function (x) { if (uq.indexOf(x.overReason) < 0) uq.push(x.overReason); }); return React.createElement("span", { key: "ob", title: "Boven max toegevoegd", style: { display: "inline-block", marginLeft: 6, fontSize: 9, fontWeight: 700, color: "#b02a37", background: "#fde8ea", border: "1px solid #f3c2c8", borderRadius: 8, padding: "1px 5px" } }, "▲ " + uq.join(", ")); }(), c.list.map(a => {
         const e = a.empId ? employees.find(x => x.id === a.empId) : null;
         const lbl = a.type === 'uitzend' ? a.bureau ? a.bureau.slice(0, 2).toUpperCase() : 'UZ' : e ? e.naam.split(' ')[0] : '?';
+        const _et = afgeleideTijd(a, c.key);
         return React.createElement("div", {
           key: a.id,
           className: "chip " + (a.ziek ? 'sick' : a.type === 'uitzend' ? 'tmp' : 'ok') + (selChips[chipSelKey(c.key, a.id)] ? ' selc' : ''),
@@ -3363,14 +3396,14 @@ function App() {
               key: c.key,
               id: a.id,
               naam: e ? e.naam : '',
-              start: a.start || '06:00',
+              start: _et.start || '06:00',
               netto: (e && e.netto) || '7:12',
               pauze: (e && e.pauze) || '1:03',
-              eind: a.eind || '',
+              eind: _et.eind || '',
               kostplaats: a.kostplaats || ''
             });
           }
-        }, lbl + (a.start ? " " + a.start : "") + (a.type === 'uitzend' ? ' ·uz' : '')), React.createElement("span", {
+        }, lbl + (_et.start ? " " + _et.start : "") + (a.type === 'uitzend' ? ' ·uz' : '')), React.createElement("span", {
           className: "acts"
         }, a.type === 'vast' ? React.createElement("button", {
           onClick: () => toggleSick(c.key, a.id),
@@ -4782,7 +4815,7 @@ function App() {
       key: 'n'
     }, "Medewerker")].concat(dagen.map(d => React.createElement("th", {
       key: d,
-      style: {
+      style: {I
         padding: '6px 2px',
         textAlign: 'center',
         fontSize: 9
