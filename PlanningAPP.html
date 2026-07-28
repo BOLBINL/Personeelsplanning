@@ -1935,36 +1935,60 @@ function App() {
     ping((emp ? emp.naam.split(' ')[0] : '') + ' ingepland ' + m.start);
     setTimeModal(null);
   };
-  const afgeleideTijd = (a, key) => {
-    var base = { start: (a && a.start) || '', eind: (a && a.eind) || '', afgeleid: false };
-    if (!a || a.tijdVast || a.type !== 'vast' || !a.empId) return base;
+  const afgeleideCel = (key) => {
+    var res = {};
     var rr = normRoosterRegels(roosterRegels);
-    if (rr.verankering.modus !== 'eind') return base;
+    if (rr.verankering.modus !== 'eind') return res;
     var pt = String(key).split('|');
     var si = SHIFTS.findIndex(function (x) { return x.id === pt[2]; });
-    if (si <= 0) return base;
-    var emp = employees.find(function (x) { return x.id === a.empId; });
-    if (!emp) return base;
-    var func = String(emp.functie || emp.rol || '').trim().toLowerCase();
-    if (!func) return base;
+    if (si <= 0) return res;
     var prevKey = cellK(pt[0], pt[1], SHIFTS[si - 1].id, pt[3], pt[4]);
-    var laatste = -1;
+    var prevMap = afgeleideCel(prevKey);
+    var eindVan = function (b) {
+      if (prevMap[b.id] && prevMap[b.id].eind) return prevMap[b.id].eind;
+      return b.eind || '';
+    };
+    var perFunc = {};
+    (plan[key] || []).forEach(function (a) {
+      if (a.tijdVast || a.type !== 'vast' || !a.empId) return;
+      var emp = employees.find(function (x) { return x.id === a.empId; });
+      if (!emp) return;
+      var f = String(emp.functie || emp.rol || '').trim().toLowerCase();
+      if (!f) return;
+      (perFunc[f] = perFunc[f] || { avond: [], ends: [] }).avond.push(a);
+    });
     (plan[prevKey] || []).forEach(function (b) {
       if (b.ziek || b.type !== 'vast' || !b.empId) return;
       var be = employees.find(function (x) { return x.id === b.empId; });
-      if (!be || String(be.functie || be.rol || '').trim().toLowerCase() !== func) return;
-      var bt = afgeleideTijd(b, prevKey);
-      var mm = bt.eind ? hhmmMin(bt.eind) : -1;
-      if (mm > laatste) laatste = mm;
+      if (!be) return;
+      var f = String(be.functie || be.rol || '').trim().toLowerCase();
+      if (!perFunc[f]) return;
+      var e = eindVan(b);
+      if (e) perFunc[f].ends.push(hhmmMin(e));
     });
-    if (laatste < 0) return base;
     var pr = rr.overdracht.perRol || {};
-    var ovl = rr.overdracht.aan ? (pr[emp.functie] != null ? pr[emp.functie] : (pr[emp.rol] != null ? pr[emp.rol] : rr.overdracht.standaardMin)) : 0;
-    var start = minHHMM((laatste + (+ovl || 0)) % 1440);
-    var span = 0;
-    if (base.start && base.eind) { span = hhmmMin(base.eind) - hhmmMin(base.start); if (span < 0) span += 1440; }
-    var eind = span ? minHHMM((hhmmMin(start) + span) % 1440) : base.eind;
-    return { start: start, eind: eind, afgeleid: true };
+    Object.keys(perFunc).forEach(function (f) {
+      var grp = perFunc[f];
+      var ends = grp.ends.slice().sort(function (x, y) { return y - x; });
+      grp.avond.forEach(function (a, i) {
+        if (i >= ends.length) return;
+        var emp = employees.find(function (x) { return x.id === a.empId; });
+        var ovl = rr.overdracht.aan ? (pr[emp.functie] != null ? pr[emp.functie] : (pr[emp.rol] != null ? pr[emp.rol] : rr.overdracht.standaardMin)) : 0;
+        var start = minHHMM((ends[i] + (+ovl || 0)) % 1440);
+        var span = 0;
+        if (a.start && a.eind) { span = hhmmMin(a.eind) - hhmmMin(a.start); if (span < 0) span += 1440; }
+        var eind = span ? minHHMM((hhmmMin(start) + span) % 1440) : (a.eind || '');
+        res[a.id] = { start: start, eind: eind, afgeleid: true };
+      });
+    });
+    return res;
+  };
+  const afgeleideTijd = (a, key) => {
+    if (a && !a.tijdVast) {
+      var m = afgeleideCel(key);
+      if (m[a.id]) return m[a.id];
+    }
+    return { start: (a && a.start) || '', eind: (a && a.eind) || '', afgeleid: false };
   };
   const editTime = m => {
     setPlan(p => {
