@@ -1887,6 +1887,8 @@ function App() {
     var wt = getWerktijden(emp, parts[4], week, templates) || {};
     var st = wt.start || emp.starttijd || '07:00';
     var eind = wt.eind || emp.eindtijd || berekenEindtijd(st, emp.netto || '7:12', emp.pauze || '1:03');
+    var _pv = afgeleideCel(cellKey, { id: '__preview__', functie: emp.functie || emp.rol, start: st, eind: eind })['__preview__'];
+    if (_pv && _pv.afgeleid) { st = _pv.start; eind = _pv.eind; }
     setTimeModal({
       mode: 'add',
       key: cellKey,
@@ -1896,6 +1898,7 @@ function App() {
       netto: emp.netto || '7:12',
       pauze: emp.pauze || '1:03',
       eind: eind,
+      anker: (_pv && _pv.afgeleid) ? { naam: _pv.ankerNaam, eind: _pv.ankerEind, overlap: _pv.overlap } : null,
       kostplaats: line.kostplaats || ''
     });
   };
@@ -1935,7 +1938,7 @@ function App() {
     ping((emp ? emp.naam.split(' ')[0] : '') + ' ingepland ' + m.start);
     setTimeModal(null);
   };
-  const afgeleideCel = (key) => {
+  const afgeleideCel = (key, extra) => {
     var res = {};
     var rr = normRoosterRegels(roosterRegels);
     if (rr.verankering.modus !== 'eind') return res;
@@ -1948,37 +1951,41 @@ function App() {
       if (prevMap[b.id] && prevMap[b.id].eind) return prevMap[b.id].eind;
       return b.eind || '';
     };
+    var funcVan = function (o) { return String((o && (o.functie || o.rol)) || '').trim().toLowerCase(); };
     var perFunc = {};
     (plan[key] || []).forEach(function (a) {
       if (a.tijdVast || a.type !== 'vast' || !a.empId) return;
       var emp = employees.find(function (x) { return x.id === a.empId; });
       if (!emp) return;
-      var f = String(emp.functie || emp.rol || '').trim().toLowerCase();
+      var f = funcVan(emp);
       if (!f) return;
-      (perFunc[f] = perFunc[f] || { avond: [], ends: [] }).avond.push(a);
+      (perFunc[f] = perFunc[f] || { avond: [], ends: [] }).avond.push({ id: a.id, start: a.start, eind: a.eind, functie: emp.functie, rol: emp.rol });
     });
+    if (extra && (extra.functie || extra.rol)) {
+      var ef = funcVan(extra);
+      (perFunc[ef] = perFunc[ef] || { avond: [], ends: [] }).avond.push({ id: extra.id, start: extra.start, eind: extra.eind, functie: extra.functie, rol: extra.rol || extra.functie });
+    }
     (plan[prevKey] || []).forEach(function (b) {
       if (b.ziek || b.type !== 'vast' || !b.empId) return;
       var be = employees.find(function (x) { return x.id === b.empId; });
       if (!be) return;
-      var f = String(be.functie || be.rol || '').trim().toLowerCase();
+      var f = funcVan(be);
       if (!perFunc[f]) return;
       var e = eindVan(b);
-      if (e) perFunc[f].ends.push(hhmmMin(e));
+      if (e) perFunc[f].ends.push({ min: hhmmMin(e), eind: e, naam: be.naam.split(' ')[0] });
     });
     var pr = rr.overdracht.perRol || {};
     Object.keys(perFunc).forEach(function (f) {
       var grp = perFunc[f];
-      var ends = grp.ends.slice().sort(function (x, y) { return y - x; });
+      var ends = grp.ends.slice().sort(function (x, y) { return y.min - x.min; });
       grp.avond.forEach(function (a, i) {
         if (i >= ends.length) return;
-        var emp = employees.find(function (x) { return x.id === a.empId; });
-        var ovl = rr.overdracht.aan ? (pr[emp.functie] != null ? pr[emp.functie] : (pr[emp.rol] != null ? pr[emp.rol] : rr.overdracht.standaardMin)) : 0;
-        var start = minHHMM((ends[i] + (+ovl || 0)) % 1440);
+        var ovl = rr.overdracht.aan ? (pr[a.functie] != null ? pr[a.functie] : (pr[a.rol] != null ? pr[a.rol] : rr.overdracht.standaardMin)) : 0;
+        var start = minHHMM(((ends[i].min - (+ovl || 0)) % 1440 + 1440) % 1440);
         var span = 0;
         if (a.start && a.eind) { span = hhmmMin(a.eind) - hhmmMin(a.start); if (span < 0) span += 1440; }
         var eind = span ? minHHMM((hhmmMin(start) + span) % 1440) : (a.eind || '');
-        res[a.id] = { start: start, eind: eind, afgeleid: true };
+        res[a.id] = { start: start, eind: eind, afgeleid: true, ankerNaam: ends[i].naam, ankerEind: ends[i].eind, overlap: (+ovl || 0) };
       });
     });
     return res;
@@ -3403,7 +3410,7 @@ function App() {
           onTouchStart: ev => { var t = ev.touches && ev.touches[0]; var px = t ? t.clientX : 0, py = t ? t.clientY : 0; if (_lpTimer.current) clearTimeout(_lpTimer.current); _lpTimer.current = setTimeout(function () { setCtxMenu({ x: px, y: py, key: c.key, id: a.id, empId: a.empId, type: a.type }); }, 500); },
           onTouchEnd: () => { if (_lpTimer.current) clearTimeout(_lpTimer.current); },
           onTouchMove: () => { if (_lpTimer.current) clearTimeout(_lpTimer.current); },
-          title: e ? e.naam : a.bureau || ''
+          title: (e ? e.naam : a.bureau || '') + (_et.afgeleid && _et.ankerNaam ? ' — start aangepast: overdracht van ' + _et.ankerNaam + ' (eind ' + _et.ankerEind + ')' : '')
         }, React.createElement("span", {
           className: "h"
         }, "⠿"), React.createElement("span", {
@@ -5076,7 +5083,7 @@ function App() {
     onClick: () => setTimeModal(null)
   }, "\u2715")), React.createElement("div", {
     className: "modal-bd"
-  }, React.createElement("label", {
+  }, timeModal.anker ? React.createElement("div", { style: { background: "#fff4e0", border: "1px solid #f0c987", borderRadius: 8, padding: "8px 10px", fontSize: 12, color: "#8a5a12", marginBottom: 12 } }, "⏰ Starttijd aangepast — overdracht van " + timeModal.anker.naam + " (eind " + timeModal.anker.eind + ")" + (timeModal.anker.overlap ? ", " + timeModal.anker.overlap + " min overlap" : "")) : null, React.createElement("label", {
     className: "efld"
   }, "Starttijd (controle — pas aan indien gewenst)", React.createElement("input", {
     className: "cin",
