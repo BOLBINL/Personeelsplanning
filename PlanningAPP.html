@@ -2137,20 +2137,21 @@ function App() {
         var perPersoon = {};
         var perUitzend = {};
         werkdagen.forEach(function (day) {
-          var lijst = plan[cellK(dept, line.lijn, sh.id, wkKey, day.k)] || [];
+          var _ck = cellK(dept, line.lijn, sh.id, wkKey, day.k);
+          var lijst = plan[_ck] || [];
           lijst.forEach(function (a) {
             if (a.type === 'uitzend') {
               var bur = a.bureau || 'Uitzend';
               var ur = perUitzend[bur] || (perUitzend[bur] = { naam: bur, cellen: {} });
               var arr = ur.cellen[day.k] || (ur.cellen[day.k] = []);
-              arr.push({ start: a.start || '—', kp: a.kostplaats || null, lijnKp: line.kostplaats || null });
+              arr.push({ start: afgeleideTijd(a, _ck).start || a.start || '—', kp: a.kostplaats || null, lijnKp: line.kostplaats || null });
               return;
             }
             if (a.type !== 'vast' || !a.empId) return;
             var e = empById[a.empId];
             if (!e) return;
             var wt = getWerktijden(e, day.k, week, templates) || {};
-            var start = a.start || wt.start || e.starttijd || '';
+            var start = afgeleideTijd(a, _ck).start || a.start || wt.start || e.starttijd || '';
             var rec = perPersoon[a.empId] || (perPersoon[a.empId] = { naam: e.naam, cellen: {} });
             rec.cellen[day.k] = { start: start, lijn: line.lijn, kp: a.kostplaats || null, lijnKp: line.kostplaats || null };
           });
@@ -2702,7 +2703,8 @@ function App() {
     var a = (plan[key] || []).find(x => x.id === id);
     if (!a) { setCtxMenu(null); return; }
     var e = a.empId ? employees.find(x => x.id === a.empId) : null;
-    setTimeModal({ mode: 'edit', key: key, id: a.id, naam: e ? e.naam : (a.bureau || 'Uitzend'), start: a.start || '06:00', netto: (e && e.netto) || '7:12', pauze: (e && e.pauze) || '1:03', eind: a.eind || '', kostplaats: a.kostplaats || '' });
+    var _et = afgeleideTijd(a, key);
+    setTimeModal({ mode: 'edit', key: key, id: a.id, naam: e ? e.naam : (a.bureau || 'Uitzend'), start: _et.start || '06:00', netto: (e && e.netto) || '7:12', pauze: (e && e.pauze) || '1:03', eind: _et.eind || '', anker: _et.afgeleid ? { naam: _et.ankerNaam, eind: _et.ankerEind, overlap: _et.overlap } : null, kostplaats: a.kostplaats || '' });
     setCtxMenu(null);
   };
   const ctxVerplaats = (key, id, targetLijn) => {
@@ -2780,8 +2782,9 @@ function App() {
               const e = employees.find(x => x.id === a.empId);
               if (!e) return;
               var wt = getWerktijden(e, day.k, week, templates) || {};
-              const start = a.start || wt.start || e.starttijd || '07:00';
-              const eind = a.eind || wt.eind || e.eindtijd || berekenEindtijd(start, e.netto || '7:12', e.pauze || '1:03');
+              var _et = afgeleideTijd(a, key);
+              const start = _et.start || a.start || wt.start || e.starttijd || '07:00';
+              const eind = _et.eind || a.eind || wt.eind || e.eindtijd || berekenEindtijd(start, e.netto || '7:12', e.pauze || '1:03');
               planned[(e.id || '') + '|' + iso] = 1;
               var _lw = lunchWindow(start, eind, e.pauze || '1:03');
               rows.push(mkRow({
@@ -2891,7 +2894,7 @@ function App() {
     if (!rows.length) { ping('Geen regels voor ' + bureau, 'warn'); return; }
     var mon = isoMonday(jaar, week);
     var datumVoor = function (dag) { var idx = DAG_K.indexOf(dag); var dt = new Date(mon.getTime()); dt.setUTCDate(mon.getUTCDate() + (idx < 0 ? 0 : idx)); return String(dt.getUTCDate()).padStart(2, '0') + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0') + '-' + dt.getUTCFullYear(); };
-    var startingDay = function (start, eind) { var sh = parseInt(String(start || '').split(':')[0], 10); return sh >= 20 || start && eind && hhmmMin(eind) < hhmmMin(start) ? 'Vorige dag' : ''; };
+    var startingDay = function (start, eind) { var sh = parseInt(String(start || '').split(':')[0], 10); return sh >= 20 ? 'Vorige dag' : ''; };
     var aoa = [['Aanvraag ' + bureau + ' \u2014 Week ' + week + ' ' + jaar], ['Datum', 'Dag', 'Starting day', 'Volledige naam', 'Start-Stop', 'Totaal standaarduren', 'Lijn / Positie']];
     rows.forEach(function (r) {
       aoa.push([datumVoor(r.dag), DAG_L[DAG_K.indexOf(r.dag)] || r.dag, startingDay(r.start, r.eind), r.naam || '', (r.start || '?') + ' - ' + (r.eind || '?'), r.netto || '7:12', r.lijn]);
