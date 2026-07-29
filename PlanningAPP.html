@@ -40,7 +40,10 @@
   .pill .dot{width:7px;height:7px;border-radius:50%;background:#39b45a;}
   .icn{width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:#5b6070;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-1);}
-  .weekbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;padding:12px 14px;}
+  .weekbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;padding:12px 14px;position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(15,20,40,.06);}
+  .app.mob .weekbar{top:52px;}
+  .pers-toolbar{top:0;}
+  .app.mob .pers-toolbar{top:52px;}
   .wk{display:flex;align-items:center;gap:8px;}
   .wk .nb{width:38px;height:38px;border-radius:9px;background:#eef0fb;border:none;display:flex;align-items:center;justify-content:center;color:var(--navy);}
   .wk .lbl2{font-size:20px;font-weight:800;padding:0 6px;}
@@ -3417,7 +3420,7 @@ function App() {
       n: "refresh"
     })))), React.createElement("div", {
       className: "kpis rich"
-    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, { k: "Onderbezet", v: kpi.underCells, sub: kpi.o + " posities tekort", icon: "warning", cls: kpi.underCells > 0 ? "open" : "" }, { k: "Dekking", v: kpi.schedH + "u", sub: (kpi.hoursPct == null ? "—" : kpi.hoursPct + "% van MR-capaciteit"), icon: "schedule", cls: "" }, { k: "Arbeidsuren", v: kpi.arbeidH + "u", sub: (kpi.urenBasis === 'betaaluren' ? "betaaluren (incl. pauze)" : "arbeidstijd (netto)"), icon: "payments", cls: "" }].map(function (m) {
+    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, { k: "Onderbezet", v: kpi.underCells, sub: kpi.o + " posities tekort", icon: "warning", cls: kpi.underCells > 0 ? "open" : "" }, { k: "Arbeid / Dekking", v: kpi.arbeidH + " / " + kpi.schedH + "u", sub: (kpi.hoursPct == null ? "—" : kpi.hoursPct + "% van MR-capaciteit"), icon: "schedule", cls: "" }].map(function (m) {
       return React.createElement("div", {
         key: m.k,
         className: "card kpi " + m.cls
@@ -4127,6 +4130,8 @@ function App() {
           if (d.netto.on) p.netto = d.netto.val;
           if (d.pauze.on) p.pauze = d.pauze.val;
           if (d.vastInplannen.on) p.vastInplannen = d.vastInplannen.val;
+          if (d.isUitzend.on) p.isUitzend = d.isUitzend.val;
+          if (d.bureau.on) p.bureau = d.bureau.val;
           ["skills", "lijnen", "werkdagen"].forEach(function (f) {
             if (!d[f].on) return;
             var cur = (e[f] || []).slice();
@@ -4153,6 +4158,8 @@ function App() {
         txt("netto", "Netto uren", "7:12"),
         txt("pauze", "Pauze", "1:03"),
         h("div", { className: "bulkrow" }, h("label", { className: "bulkchk" }, chk("vastInplannen"), "Standaard inplannen"), h("select", { className: "cin", disabled: !d.vastInplannen.on, value: d.vastInplannen.val ? "1" : "0", onChange: function (ev) { upd("vastInplannen", { val: ev.target.value === "1" }); } }, h("option", { value: "1" }, "Aan"), h("option", { value: "0" }, "Uit"))),
+        h("div", { className: "bulkrow" }, h("label", { className: "bulkchk" }, chk("isUitzend"), "Uitzendkracht"), h("select", { className: "cin", disabled: !d.isUitzend.on, value: d.isUitzend.val ? "1" : "0", onChange: function (ev) { upd("isUitzend", { val: ev.target.value === "1" }); } }, h("option", { value: "1" }, "Ja"), h("option", { value: "0" }, "Nee"))),
+        h("div", { className: "bulkrow" }, h("label", { className: "bulkchk" }, chk("bureau"), "Bureau"), h("select", { className: "cin", disabled: !d.bureau.on, value: d.bureau.val, onChange: function (ev) { upd("bureau", { val: ev.target.value }); } }, [h("option", { key: "_leeg", value: "" }, "\u2014 kies bureau \u2014")].concat((agencies || []).map(function (b) { return h("option", { key: b, value: b }, b); })))),
         multi("skills", "Skills", SKILL_OPTIONS),
         multi("lijnen", "Lijnen", lineOpts),
         multi("werkdagen", "Werkdagen", DAG_K, function (k) { return DAG_L[DAG_K.indexOf(k)]; }),
@@ -4199,12 +4206,18 @@ function App() {
         padding: 12
       }
     }, React.createElement("div", {
+      className: "pers-toolbar",
       style: {
         display: 'flex',
         gap: 8,
         flexWrap: 'wrap',
         alignItems: 'center',
-        marginBottom: 10
+        marginBottom: 10,
+        position: 'sticky',
+        zIndex: 15,
+        background: 'var(--card, #fff)',
+        paddingTop: 8,
+        boxShadow: '0 6px 8px -6px rgba(15,20,40,.12)'
       }
     }, React.createElement("div", {
       className: "search",
@@ -4224,7 +4237,7 @@ function App() {
       key: f[0],
       className: empFilter === f[0] ? 'on' : '',
       onClick: () => setEmpFilter(f[0])
-    }, f[1])))), (Object.keys(selEmps).length ? React.createElement("div", { className: "bulkbar" }, React.createElement("span", { className: "bulkbar-n" }, Object.keys(selEmps).length + " geselecteerd"), React.createElement("div", { style: { flex: 1 } }), React.createElement("button", { className: "btn", onClick: function () { setSelEmps({}); } }, "Deselecteren"), React.createElement("button", { className: "btn gold", onClick: function () { setBulkEdit({ functie: { on: false, val: '' }, afd: { on: false, val: Object.keys(cfg)[0] || '' }, starttijd: { on: false, val: '' }, netto: { on: false, val: '' }, pauze: { on: false, val: '' }, vastInplannen: { on: false, val: true }, skills: { on: false, mode: 'add', vals: [] }, lijnen: { on: false, mode: 'add', vals: [] }, werkdagen: { on: false, mode: 'add', vals: [] } }); } }, React.createElement(I, { n: "edit" }), "Bulk bewerken")) : null), React.createElement("div", {
+    }, f[1])))), (Object.keys(selEmps).length ? React.createElement("div", { className: "bulkbar" }, React.createElement("span", { className: "bulkbar-n" }, Object.keys(selEmps).length + " geselecteerd"), React.createElement("div", { style: { flex: 1 } }), React.createElement("button", { className: "btn", onClick: function () { setSelEmps({}); } }, "Deselecteren"), React.createElement("button", { className: "btn gold", onClick: function () { setBulkEdit({ functie: { on: false, val: '' }, afd: { on: false, val: Object.keys(cfg)[0] || '' }, starttijd: { on: false, val: '' }, netto: { on: false, val: '' }, pauze: { on: false, val: '' }, vastInplannen: { on: false, val: true }, isUitzend: { on: false, val: false }, bureau: { on: false, val: (agencies && agencies[0]) || '' }, skills: { on: false, mode: 'add', vals: [] }, lijnen: { on: false, mode: 'add', vals: [] }, werkdagen: { on: false, mode: 'add', vals: [] } }); } }, React.createElement(I, { n: "edit" }), "Bulk bewerken")) : null), React.createElement("div", {
       style: {
         overflowX: 'auto'
       }
