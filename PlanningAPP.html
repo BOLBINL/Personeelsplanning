@@ -1136,6 +1136,7 @@ function App() {
   const [cfg, setCfg] = useState(() => normCfg(lsGet(LS_CFG, DEFAULT_CFG)));
   const [roosterRegels, setRoosterRegels] = useState(() => normRoosterRegels(lsGet(LS_RR, ROOSTER_REGELS_DEFAULT)));
   const [vijfPloegen, setVijfPloegen] = useState(() => normVijfPloegen(lsGet(LS_5P, { versie: 1, perLijn: {} })));
+  const [sel5pLijn, setSel5pLijn] = useState('');
   const [mrAfd, setMrAfd] = useState(() => lsGet('bl_mrafd_v4', {}));
   const heeftMR = dep => (mrAfd[dep] !== undefined ? !!mrAfd[dep] : ((cfg[dep] || []).length > 0));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
@@ -1953,7 +1954,7 @@ function App() {
     var wt = getWerktijden(emp, parts[4], week, templates) || {};
     var st = wt.start || emp.starttijd || '07:00';
     var eind = wt.eind || emp.eindtijd || berekenEindtijd(st, emp.netto || '7:12', emp.pauze || '1:03');
-    var _pv = afgeleideCel(cellKey, { id: '__preview__', functie: emp.functie || emp.rol, start: st, eind: eind })['__preview__'];
+    var _pv = afgeleideCel(cellKey, { id: '__preview__', functie: emp.functie || emp.rol, skills: emp.skills, start: st, eind: eind })['__preview__'];
     if (_pv && _pv.afgeleid) { st = _pv.start; eind = _pv.eind; }
     setTimeModal({
       mode: 'add',
@@ -2017,15 +2018,26 @@ function App() {
       if (prevMap[b.id] && prevMap[b.id].eind) return prevMap[b.id].eind;
       return b.eind || '';
     };
-    var funcVan = function (o) { return String((o && (o.functie || o.rol)) || '').trim().toLowerCase(); };
+    var funcVan = function (o) { return String((o && (o.functie || o.rol || (o.skills && o.skills[0]))) || '').trim().toLowerCase(); };
+    var overlapVoor = function (o) {
+      if (!rr.overdracht.aan) return 0;
+      var pr = rr.overdracht.perRol || {};
+      var kand = [];
+      if (o.functie != null) kand.push(o.functie);
+      if (Array.isArray(o.skills)) kand = kand.concat(o.skills);
+      if (o.rol != null) kand.push(o.rol);
+      var best = null;
+      kand.forEach(function (k) { if (k != null && pr[k] != null) { var v = +pr[k] || 0; if (best == null || v > best) best = v; } });
+      return best != null ? best : (+rr.overdracht.standaardMin || 0);
+    };
     var infoVan = function (a) {
       if (a.type === 'vast' && a.empId) {
         var emp = employees.find(function (x) { return x.id === a.empId; });
         if (!emp) return null;
-        return { functie: emp.functie, rol: emp.rol, naam: (emp.naam || '').split(' ')[0] };
+        return { functie: emp.functie, rol: emp.rol, skills: emp.skills, naam: (emp.naam || '').split(' ')[0] };
       }
       if (a.type === 'uitzend' && a.functie) {
-        return { functie: a.functie, rol: a.functie, naam: (a.bureau || 'UZ') };
+        return { functie: a.functie, rol: a.functie, skills: [a.functie], naam: (a.bureau || 'UZ') };
       }
       return null;
     };
@@ -2036,11 +2048,11 @@ function App() {
       if (!inf) return;
       var f = funcVan(inf);
       if (!f) return;
-      (perFunc[f] = perFunc[f] || { avond: [], ends: [] }).avond.push({ id: a.id, start: a.start, eind: a.eind, functie: inf.functie, rol: inf.rol });
+      (perFunc[f] = perFunc[f] || { avond: [], ends: [] }).avond.push({ id: a.id, start: a.start, eind: a.eind, functie: inf.functie, rol: inf.rol, skills: inf.skills });
     });
     if (extra && (extra.functie || extra.rol)) {
       var ef = funcVan(extra);
-      (perFunc[ef] = perFunc[ef] || { avond: [], ends: [] }).avond.push({ id: extra.id, start: extra.start, eind: extra.eind, functie: extra.functie, rol: extra.rol || extra.functie });
+      (perFunc[ef] = perFunc[ef] || { avond: [], ends: [] }).avond.push({ id: extra.id, start: extra.start, eind: extra.eind, functie: extra.functie, rol: extra.rol || extra.functie, skills: extra.skills || (extra.functie ? [extra.functie] : []) });
     }
     (plan[prevKey] || []).forEach(function (b) {
       if (b.ziek) return;
@@ -2057,7 +2069,7 @@ function App() {
       var ends = grp.ends.slice().sort(function (x, y) { return y.min - x.min; });
       grp.avond.forEach(function (a, i) {
         if (i >= ends.length) return;
-        var ovl = rr.overdracht.aan ? (pr[a.functie] != null ? pr[a.functie] : (pr[a.rol] != null ? pr[a.rol] : rr.overdracht.standaardMin)) : 0;
+        var ovl = overlapVoor(a);
         var start = minHHMM(((ends[i].min - (+ovl || 0)) % 1440 + 1440) % 1440);
         var span = 0;
         if (a.start && a.eind) { span = hhmmMin(a.eind) - hhmmMin(a.start); if (span < 0) span += 1440; }
@@ -2151,7 +2163,7 @@ function App() {
     var t = defTijd(k);
     var uc = uitzendCfg(ag);
     var _ust = t.start, _uei = berekenEindtijd(t.start, uc.netto, uc.pauze);
-    var _upv = afgeleideCel(k, { id: '__preview__', functie: uc.functie, start: _ust, eind: _uei })['__preview__'];
+    var _upv = afgeleideCel(k, { id: '__preview__', functie: uc.functie, skills: [uc.functie], start: _ust, eind: _uei })['__preview__'];
     if (_upv && _upv.afgeleid) { _ust = _upv.start; _uei = _upv.eind; }
     setUitzModal({ key: k, bureau: ag, start: _ust, netto: uc.netto, pauze: uc.pauze, eind: _uei, functie: uc.functie, anker: (_upv && _upv.afgeleid) ? { naam: _upv.ankerNaam, eind: _upv.ankerEind, overlap: _upv.overlap } : null, over: _over, max: _rnT.max });
     setTempFor(null);
@@ -3052,7 +3064,7 @@ function App() {
     if (!m) return;
     if (m.kind === 'assign') {
       var _mE = employees.find(function (x) { return x.id === m.empId; });
-      var _pv = afgeleideCel(m.key, { id: '__preview__', functie: _mE && (_mE.functie || _mE.rol), start: m.start, eind: m.eind })['__preview__'];
+      var _pv = afgeleideCel(m.key, { id: '__preview__', functie: _mE && (_mE.functie || _mE.rol), skills: _mE && _mE.skills, start: m.start, eind: m.eind })['__preview__'];
       var _mSt = (_pv && _pv.afgeleid) ? _pv.start : m.start;
       var _mEi = (_pv && _pv.afgeleid) ? _pv.eind : m.eind;
       setTimeModal({ mode: 'add', key: m.key, empId: m.empId, naam: m.naam, start: _mSt, netto: m.netto, pauze: m.pauze, eind: _mEi, overReason: r, anker: (_pv && _pv.afgeleid) ? { naam: _pv.ankerNaam, eind: _pv.ankerEind, overlap: _pv.overlap } : null, kostplaats: m.kostplaats || '' });
@@ -4298,6 +4310,73 @@ function App() {
               txt(ov.pauze, uz.standaard.pauze, function (v) { setBu(bu, 'pauze', v); }));
           }))));
   }
+  function vijfPloegenCard() {
+    var vp = normVijfPloegen(vijfPloegen);
+    var lijnOpties = [];
+    Object.keys(cfg).forEach(function (dep) { (cfg[dep] || []).forEach(function (l) { lijnOpties.push({ key: dep + '|' + l.lijn, label: dep + ' / ' + l.lijn }); }); });
+    var huidig = sel5pLijn || (lijnOpties[0] ? lijnOpties[0].key : '');
+    var lc = normVijfPloegenLijn(vp.perLijn[huidig]);
+    var upd = function (patch) {
+      setVijfPloegen(function (prev) {
+        var b = normVijfPloegen(prev);
+        b.perLijn[huidig] = normVijfPloegenLijn(patch(normVijfPloegenLijn(b.perLijn[huidig])));
+        return normVijfPloegen(b);
+      });
+    };
+    var laadPreset = function (pk) {
+      var pr = VIJFPLOEGEN_PRESETS[pk];
+      if (!pr) return;
+      upd(function (c) { c.preset = pk; c.cyclusWeken = pr.cyclusWeken; c.matrix = pr.matrix.map(function (r) { return r.slice(); }); c.ploegOffset = Object.assign({}, pr.ploegOffset); return c; });
+    };
+    var seq = ['-', 'O', 'M', 'N'];
+    var cycleCel = function (wk, dg) { upd(function (c) { var v = (c.matrix[wk] && c.matrix[wk][dg]) || '-'; c.matrix[wk][dg] = seq[(seq.indexOf(v) + 1) % 4]; return c; }); };
+    var kleur = { 'O': '#e6f4ea', 'M': '#fff4e0', 'N': '#e8eaf6', '-': '#f3f4f6' };
+    var dagKort = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
+    return React.createElement("div", { className: "card" + (dichtSec['rr_5p'] ? " collapsed" : ""), style: { padding: 16 } },
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
+        React.createElement("h3", { onClick: function () { toggleSec('rr_5p'); }, style: { margin: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, userSelect: "none" } },
+          React.createElement("span", { className: "chev" }, "\u25BE"), "5-ploegen (per lijn)")),
+      React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
+          React.createElement("span", { style: { flex: "0 0 90px", fontWeight: 600 } }, "Lijn"),
+          React.createElement("select", { value: huidig, onChange: function (e) { setSel5pLijn(e.target.value); }, style: { minWidth: 180 } },
+            lijnOpties.map(function (o) { return React.createElement("option", { key: o.key, value: o.key }, o.label + (normVijfPloegenLijn(vp.perLijn[o.key]).aan ? ' \u2713' : '')); })),
+          React.createElement("button", { className: "btn" + (lc.aan ? " gold" : ""), onClick: function () { upd(function (c) { c.aan = !c.aan; return c; }); } }, lc.aan ? "5-ploegen AAN" : "5-ploegen uit")),
+        huidig ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, opacity: lc.aan ? 1 : 0.55 } },
+          React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
+            React.createElement("span", { style: { flex: "0 0 90px", fontWeight: 600 } }, "Preset"),
+            React.createElement("button", { className: "btn", onClick: function () { laadPreset('vb11'); } }, "Laad Vb11"),
+            React.createElement("button", { className: "btn", onClick: function () { laadPreset('vb10'); } }, "Laad Vb10"),
+            React.createElement("span", { style: { marginLeft: 8 } }, "Cyclus (weken)"),
+            React.createElement("input", { type: "number", min: 1, max: 20, value: lc.cyclusWeken, onChange: function (e) { var n = Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 1)); upd(function (c) { c.cyclusWeken = n; return c; }); }, style: { width: 60 } })),
+          React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
+            React.createElement("span", { style: { flex: "0 0 90px", fontWeight: 600 } }, "Startweek"),
+            React.createElement("span", null, "cyclusweek 1 ="),
+            React.createElement("input", { type: "number", min: 2000, max: 2100, value: lc.refJaar || '', placeholder: "jaar", onChange: function (e) { var n = parseInt(e.target.value, 10) || 0; upd(function (c) { c.refJaar = n; return c; }); }, style: { width: 70 } }),
+            React.createElement("span", null, "wk"),
+            React.createElement("input", { type: "number", min: 1, max: 53, value: lc.refWeek, onChange: function (e) { var n = Math.max(1, Math.min(53, parseInt(e.target.value, 10) || 1)); upd(function (c) { c.refWeek = n; return c; }); }, style: { width: 60 } })),
+          React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
+            React.createElement("span", { style: { flex: "0 0 90px", fontWeight: 600 } }, "Ploeg-offset"),
+            lc.ploegen.map(function (pg) {
+              return React.createElement("span", { key: pg, style: { display: "inline-flex", alignItems: "center", gap: 4 } },
+                React.createElement("b", null, pg),
+                React.createElement("input", { type: "number", min: 0, max: lc.cyclusWeken - 1, value: lc.ploegOffset[pg] != null ? lc.ploegOffset[pg] : 0, onChange: function (e) { var n = parseInt(e.target.value, 10) || 0; upd(function (c) { c.ploegOffset[pg] = n; return c; }); }, style: { width: 48 } }));
+            })),
+          React.createElement("div", { className: "hint", style: { margin: "4px 0 0" } }, "ROTATIE (klik cel: \u2013 \u2192 O \u2192 M \u2192 N)"),
+          React.createElement("div", { style: { overflowX: "auto" } },
+            React.createElement("table", { style: { borderCollapse: "collapse", fontSize: 12 } },
+              React.createElement("thead", null, React.createElement("tr", null,
+                [React.createElement("th", { key: "_h", style: { padding: "2px 6px", textAlign: "left" } }, "wk")].concat(dagKort.map(function (d) { return React.createElement("th", { key: d, style: { padding: "2px 6px" } }, d); })))),
+              React.createElement("tbody", null,
+                lc.matrix.map(function (rij, wk) {
+                  return React.createElement("tr", { key: wk },
+                    [React.createElement("td", { key: "_w", style: { padding: "2px 6px", fontWeight: 600 } }, wk + 1)].concat(rij.map(function (v, dg) {
+                      return React.createElement("td", { key: dg, style: { padding: 1 } },
+                        React.createElement("button", { onClick: function () { cycleCel(wk, dg); }, style: { width: 34, height: 28, border: "1px solid #d0d3da", borderRadius: 4, background: kleur[v] || "#f3f4f6", cursor: "pointer", fontWeight: 700 } }, v === '-' ? '\u2013' : v));
+                    })));
+                }))))
+        ) : React.createElement("div", { className: "hint" }, "Geen lijnen gevonden.")));
+  }
   function configView() {
     return React.createElement("div", {
       className: "stack"
@@ -4317,7 +4396,7 @@ function App() {
       }
     }, React.createElement(I, {
       n: "restart_alt"
-    }), "Herstel standaard")), roosterRegelsCard(), uitzendRegelsCard(), React.createElement("div", {
+    }), "Herstel standaard")), roosterRegelsCard(), uitzendRegelsCard(), vijfPloegenCard(), React.createElement("div", {
       className: "card" + (dichtSec['afd'] ? " collapsed" : ""),
       style: {
         padding: 16
