@@ -726,7 +726,8 @@ const LS_PLAN = 'bl_plan_v4',
   LS_RED = 'bl_red_v4',
   LS_KP = 'bl_kp_v4',
   LS_VT = 'bl_vt_v4',
-  LS_RR = 'bl_rr_v4';
+  LS_RR = 'bl_rr_v4',
+  LS_5P = 'bl_5p_v4';
 function lsGet(k, f) {
   try {
     var r = localStorage.getItem(k);
@@ -882,6 +883,59 @@ function berekenEindtijd(start, netto, pauze) {
 }
 const SKILL_OPTIONS = ['Medewerk Inpak', 'Medewerk Inpak B', 'Medewerker Productie A', 'Medewerker Productie B', 'Operator A', 'Operator B'];
 // === B1a: rooster-regels (config-model, defaults + normalizer). Nog GEEN effect op planning. ===
+var VIJFPLOEGEN_PRESETS = {
+  vb11: {
+    naam: 'Gematigde voorwaartse (CAO Vb 11)', cyclusWeken: 5,
+    ploegOffset: { A: 0, B: 1, C: 2, D: 3, E: 4 },
+    matrix: [
+      ['O','O','O','-','-','M','M'],
+      ['M','M','-','-','N','N','N'],
+      ['-','-','-','O','O','O','O'],
+      ['-','-','M','M','M','-','-'],
+      ['N','N','N','N','-','-','-']
+    ]
+  },
+  vb10: {
+    naam: 'Snelle voorwaartse (CAO Vb 10)', cyclusWeken: 10,
+    ploegOffset: { A: 0, B: 2, C: 4, D: 6, E: 8 },
+    matrix: [
+      ['O','O','M','M','N','N','-'],
+      ['-','-','-','O','O','M','M'],
+      ['N','N','-','-','-','-','O'],
+      ['O','M','M','N','N','-','-'],
+      ['-','-','O','O','M','M','N'],
+      ['N','-','-','-','-','O','O'],
+      ['M','M','N','N','-','-','-'],
+      ['-','O','O','M','M','N','N'],
+      ['-','-','-','-','O','O','M'],
+      ['M','N','N','-','-','-','-']
+    ]
+  }
+};
+function normVijfPloegenLijn(c) {
+  c = (c && typeof c === 'object') ? c : {};
+  var cyc = Math.max(1, parseInt(c.cyclusWeken, 10) || 5);
+  var m = Array.isArray(c.matrix) ? c.matrix.map(function (r) {
+    return (Array.isArray(r) ? r : []).map(function (v) { v = String(v || '-').toUpperCase(); return (v === 'O' || v === 'M' || v === 'N') ? v : '-'; });
+  }) : [];
+  while (m.length < cyc) m.push(['-', '-', '-', '-', '-', '-', '-']);
+  m = m.slice(0, cyc).map(function (r) { r = r.slice(0, 7); while (r.length < 7) r.push('-'); return r; });
+  var ploegen = (Array.isArray(c.ploegen) && c.ploegen.length) ? c.ploegen.map(String) : ['A', 'B', 'C', 'D', 'E'];
+  var off = (c.ploegOffset && typeof c.ploegOffset === 'object') ? c.ploegOffset : {};
+  var po = {}; ploegen.forEach(function (pg, i) { po[pg] = ((off[pg] != null ? (parseInt(off[pg], 10) || 0) : i) % cyc + cyc) % cyc; });
+  return {
+    aan: c.aan === true, preset: c.preset || '', cyclusWeken: cyc,
+    refJaar: parseInt(c.refJaar, 10) || 0, refWeek: Math.max(1, parseInt(c.refWeek, 10) || 1),
+    ploegen: ploegen, ploegOffset: po, matrix: m
+  };
+}
+function normVijfPloegen(x) {
+  x = (x && typeof x === 'object') ? x : {};
+  var pl = (x.perLijn && typeof x.perLijn === 'object') ? x.perLijn : {};
+  var out = {};
+  Object.keys(pl).forEach(function (k) { out[k] = normVijfPloegenLijn(pl[k]); });
+  return { versie: 1, perLijn: out };
+}
 var ROOSTER_REGELS_DEFAULT = {
   versie: 1,
   overdracht: { aan: true, standaardMin: 0, perRol: { 'Operator A': 10, 'Operator B': 10 } },
@@ -1081,6 +1135,7 @@ function App() {
   const [jaar, setJaar] = useState(() => NOW_WK.jaar);
   const [cfg, setCfg] = useState(() => normCfg(lsGet(LS_CFG, DEFAULT_CFG)));
   const [roosterRegels, setRoosterRegels] = useState(() => normRoosterRegels(lsGet(LS_RR, ROOSTER_REGELS_DEFAULT)));
+  const [vijfPloegen, setVijfPloegen] = useState(() => normVijfPloegen(lsGet(LS_5P, { versie: 1, perLijn: {} })));
   const [mrAfd, setMrAfd] = useState(() => lsGet('bl_mrafd_v4', {}));
   const heeftMR = dep => (mrAfd[dep] !== undefined ? !!mrAfd[dep] : ((cfg[dep] || []).length > 0));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
@@ -1175,6 +1230,11 @@ function App() {
       localStorage.setItem(LS_RR, JSON.stringify(roosterRegels));
     } catch (e) {}
   }, [roosterRegels]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_5P, JSON.stringify(vijfPloegen));
+    } catch (e) {}
+  }, [vijfPloegen]);
   useEffect(() => {
     try {
       localStorage.setItem(LS_AG, JSON.stringify(agencies));
@@ -2879,11 +2939,12 @@ function App() {
       var pt = k.split('|');
       if (pt[3] !== wkKey) return;
       (plan[k] || []).forEach(function (a) {
+        var _et = afgeleideTijd(a, k);
         if (a.type === 'uitzend' && (a.bureau || 'Onbekend') === bureau) {
-          rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: 'EXTRA', start: a.start, eind: a.eind, netto: '7:12' });
+          rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: 'EXTRA', start: _et.start || a.start, eind: _et.eind || a.eind, netto: (uitzendCfg(a.bureau) || {}).netto || '7:12' });
         } else if (a.type === 'vast' && a.empId) {
           var e = employees.find(function (x) { return x.id === a.empId; });
-          if (e && e.isUitzend && (e.bureau || 'Onbekend') === bureau) rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: e.naam, start: a.start, eind: a.eind, netto: e.netto || '7:12' });
+          if (e && e.isUitzend && (e.bureau || 'Onbekend') === bureau) rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: e.naam, start: _et.start || a.start, eind: _et.eind || a.eind, netto: e.netto || '7:12' });
         }
       });
     });
@@ -2990,7 +3051,11 @@ function App() {
     const m = redenModal;
     if (!m) return;
     if (m.kind === 'assign') {
-      setTimeModal({ mode: 'add', key: m.key, empId: m.empId, naam: m.naam, start: m.start, netto: m.netto, pauze: m.pauze, eind: m.eind, overReason: r, kostplaats: m.kostplaats || '' });
+      var _mE = employees.find(function (x) { return x.id === m.empId; });
+      var _pv = afgeleideCel(m.key, { id: '__preview__', functie: _mE && (_mE.functie || _mE.rol), start: m.start, eind: m.eind })['__preview__'];
+      var _mSt = (_pv && _pv.afgeleid) ? _pv.start : m.start;
+      var _mEi = (_pv && _pv.afgeleid) ? _pv.eind : m.eind;
+      setTimeModal({ mode: 'add', key: m.key, empId: m.empId, naam: m.naam, start: _mSt, netto: m.netto, pauze: m.pauze, eind: _mEi, overReason: r, anker: (_pv && _pv.afgeleid) ? { naam: _pv.ankerNaam, eind: _pv.ankerEind, overlap: _pv.overlap } : null, kostplaats: m.kostplaats || '' });
       setRedenModal(null);
     } else if (m.kind === 'temp') {
       setPlan(p => {
@@ -3088,7 +3153,31 @@ function App() {
     });
   };
   const kpi = useMemo(() => {
-    let s = 0, o = 0, req = 0, cap = 0, covered = 0, underCells = 0, schedH = 0, capH = 0;
+    let s = 0, o = 0, req = 0, cap = 0, covered = 0, underCells = 0, schedH = 0, capH = 0, arbeidMin = 0;
+    var rrB = normRoosterRegels(roosterRegels);
+    var betaald = rrB.urenBasis === 'betaaluren';
+    var nettoMinVan = function (a, dk) {
+      if (a.ziek) return 0;
+      var nettoMin = 0, pauzeMin = 0;
+      if (a.type === 'vast' && a.empId) {
+        var e = employees.find(function (x) { return x.id === a.empId; });
+        if (!e) return 0;
+        var wt = getWerktijden(e, dk, week, templates);
+        pauzeMin = hhmmMin((wt && wt.pauze) || e.pauze || '1:03');
+        if (wt && wt.start && wt.eind) {
+          var span = hhmmMin(wt.eind) - hhmmMin(wt.start); if (span < 0) span += 1440;
+          nettoMin = span - pauzeMin;
+        } else {
+          nettoMin = hhmmMin(e.netto || '7:12');
+        }
+      } else if (a.type === 'uitzend') {
+        var uc = uitzendCfg(a.bureau);
+        nettoMin = hhmmMin(uc.netto || '7:12');
+        pauzeMin = hhmmMin(uc.pauze || '1:03');
+      } else return 0;
+      if (nettoMin < 0) nettoMin = 0;
+      return nettoMin + (betaald && rrB.pauze.betaald ? pauzeMin : 0);
+    };
     lines.forEach(l => SHIFTS.slice(0, l.ploegen || l.shiften || 2).forEach(sh => {
       var h = (SHIFT_TIMES[sh.id] || {}).h || 8;
       days.forEach(dy => {
@@ -3097,12 +3186,14 @@ function App() {
         covered += Math.min(c.actief, c.req);
         if (c.tekort > 0) underCells++;
         schedH += c.actief * h; capH += c.cap * h;
+        (plan[cellK(dept, l.lijn, sh.id, wkKey, dy.k)] || []).forEach(function (a) { arbeidMin += nettoMinVan(a, dy.k); });
       });
     }));
     var coverage = req > 0 ? Math.round(s / req * 100) : null;
     var hoursPct = capH > 0 ? Math.round(schedH / capH * 100) : null;
-    return { s: s, o: o, req: req, cap: cap, covered: covered, underCells: underCells, schedH: schedH, capH: capH, coverage: coverage, hoursPct: hoursPct };
-  }, [lines, info, days]);
+    var arbeidH = Math.round(arbeidMin / 60);
+    return { s: s, o: o, req: req, cap: cap, covered: covered, underCells: underCells, schedH: schedH, capH: capH, coverage: coverage, hoursPct: hoursPct, arbeidH: arbeidH, urenBasis: rrB.urenBasis };
+  }, [lines, info, days, plan, employees, roosterRegels, templates, week, dept, wkKey]);
   const isoOfDay = dk => {
     var mon = isoMonday(jaar, week);
     var idx = DAG_K.indexOf(dk);
@@ -3250,7 +3341,7 @@ function App() {
       n: "refresh"
     })))), React.createElement("div", {
       className: "kpis rich"
-    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, { k: "Onderbezet", v: kpi.underCells, sub: kpi.o + " posities tekort", icon: "warning", cls: kpi.underCells > 0 ? "open" : "" }, { k: "Uren gepland", v: kpi.schedH + "u", sub: (kpi.hoursPct == null ? "—" : kpi.hoursPct + "% van capaciteit"), icon: "schedule", cls: "" }].map(function (m) {
+    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, { k: "Onderbezet", v: kpi.underCells, sub: kpi.o + " posities tekort", icon: "warning", cls: kpi.underCells > 0 ? "open" : "" }, { k: "Dekking", v: kpi.schedH + "u", sub: (kpi.hoursPct == null ? "—" : kpi.hoursPct + "% van MR-capaciteit"), icon: "schedule", cls: "" }, { k: "Arbeidsuren", v: kpi.arbeidH + "u", sub: (kpi.urenBasis === 'betaaluren' ? "betaaluren (incl. pauze)" : "arbeidstijd (netto)"), icon: "payments", cls: "" }].map(function (m) {
       return React.createElement("div", {
         key: m.k,
         className: "card kpi " + m.cls
