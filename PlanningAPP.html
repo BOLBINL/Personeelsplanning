@@ -44,6 +44,11 @@
   .app.mob .weekbar{top:52px;}
   .pers-toolbar{top:0;}
   .app.mob .pers-toolbar{top:52px;}
+  .cfgcatbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:2px;}
+  .cfgcat-btn{border:1px solid var(--line);background:#fff;color:#4a4f63;border-radius:999px;padding:8px 16px;font-size:12px;font-weight:700;letter-spacing:.02em;cursor:pointer;}
+  .cfgcat-btn.on{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .configwrap .cfgcard{display:none;}
+  .configwrap.show-A .cat-A,.configwrap.show-B .cat-B,.configwrap.show-C .cat-C,.configwrap.show-D .cat-D,.configwrap.show-E .cat-E{display:block;}
   .wk{display:flex;align-items:center;gap:8px;}
   .wk .nb{width:38px;height:38px;border-radius:9px;background:#eef0fb;border:none;display:flex;align-items:center;justify-content:center;color:var(--navy);}
   .wk .lbl2{font-size:20px;font-weight:800;padding:0 6px;}
@@ -1157,6 +1162,7 @@ function App() {
   const [ctxMenu, setCtxMenu] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dichtSec, setDichtSec] = useState({});
+  const [cfgCat, setCfgCat] = useState('A');
   const toggleSec = id => setDichtSec(s => Object.assign({}, s, { [id]: !s[id] }));
   const [isMobile, setIsMobile] = useState(function () { try { return window.matchMedia('(max-width:1024px)').matches; } catch (e) { return false; } });
   useEffect(function () {
@@ -4490,7 +4496,7 @@ function App() {
   }
   function configView() {
     return React.createElement("div", {
-      className: "stack"
+      className: "stack configwrap show-" + cfgCat
     }, React.createElement("div", {
       className: "topbar"
     }, React.createElement("h2", null, "Configuratie"), React.createElement("button", {
@@ -4507,8 +4513,8 @@ function App() {
       }
     }, React.createElement(I, {
       n: "restart_alt"
-    }), "Herstel standaard")), roosterRegelsCard(), uitzendRegelsCard(), vijfPloegenCard(), React.createElement("div", {
-      className: "card" + (dichtSec['afd'] ? " collapsed" : ""),
+    }), "Herstel standaard")), React.createElement("div",{className:"cfgcatbar"},[["A","Lijnen & MR"],["B","Rooster & tijden"],["C","Personeel"],["D","Uitzend"],["E","Systeem & data"]].map(function(c){return React.createElement("button",{key:c[0],className:"cfgcat-btn"+(cfgCat===c[0]?" on":""),onClick:function(){setCfgCat(c[0]);}},c[1]);})), React.createElement("div",{className:"cfgcard cat-B"},roosterRegelsCard()), React.createElement("div",{className:"cfgcard cat-D"},uitzendRegelsCard()), React.createElement("div",{className:"cfgcard cat-B"},vijfPloegenCard()), React.createElement("div", {
+      className: "card cfgcard cat-A" + (dichtSec['afd'] ? " collapsed" : ""),
       style: {
         padding: 16
       }
@@ -4549,7 +4555,7 @@ function App() {
       className: "tiny del2",
       onClick: () => delDept(dn)
     }, "\u2715"))))), React.createElement("div", {
-      className: "card" + (dichtSec['skills'] ? " collapsed" : ""),
+      className: "card cfgcard cat-C" + (dichtSec['skills'] ? " collapsed" : ""),
       style: {
         padding: 16
       }
@@ -4598,7 +4604,7 @@ function App() {
       }
     }, "\u2715"))))), Object.keys(cfg).filter(heeftMR).map(d => React.createElement("div", {
       key: d,
-      className: "card",
+      className: "card cfgcard cat-A",
       style: {
         padding: 16
       }
@@ -4668,7 +4674,7 @@ function App() {
     }, React.createElement(I, {
       n: "delete"
     }))))))))), React.createElement("div", {
-      className: "card" + (dichtSec['bureaus'] ? " collapsed" : ""),
+      className: "card cfgcard cat-D" + (dichtSec['bureaus'] ? " collapsed" : ""),
       style: {
         padding: 16
       }
@@ -4704,8 +4710,8 @@ function App() {
       onClick: () => delAg(i)
     }, React.createElement(I, {
       n: "delete"
-    }))))), kpCard(), reasonsCard(), verlofTypesCard(), React.createElement("div", {
-      className: "card",
+    }))))), React.createElement("div",{className:"cfgcard cat-A"},kpCard()), React.createElement("div",{className:"cfgcard cat-C"},reasonsCard()), React.createElement("div",{className:"cfgcard cat-C"},verlofTypesCard()), React.createElement("div", {
+      className: "card cfgcard cat-B",
       style: {
         padding: 16
       }
@@ -4769,7 +4775,7 @@ function App() {
         });
       }
     }, "\u2715"))))), React.createElement("div", {
-      className: "card" + (dichtSec['sp'] ? " collapsed" : ""),
+      className: "card cfgcard cat-E" + (dichtSec['sp'] ? " collapsed" : ""),
       style: {
         padding: 16
       }
@@ -4845,7 +4851,7 @@ function App() {
         marginTop: 6
       }
     }, "Versie-check voorkomt overschrijven: SAVE stuurt de laatst-geladen versie mee; de flow weigert als SharePoint nieuwer is.")), React.createElement("div", {
-      className: "card",
+      className: "card cfgcard cat-E",
       style: {
         padding: 16
       }
@@ -4899,7 +4905,7 @@ function App() {
         fontSize: 12
       }
     }, [r.wie, r.cel, r.bureau, r.afd, r.naam].filter(Boolean).join(' · ')))))))), React.createElement("div", {
-      className: "card" + (dichtSec['backup'] ? " collapsed" : ""),
+      className: "card cfgcard cat-E" + (dichtSec['backup'] ? " collapsed" : ""),
       style: {
         padding: 16
       }
@@ -4933,7 +4939,7 @@ function App() {
         marginTop: 8
       }
     }, "Volledige app-state als bestand — handig als losse back-up naast SharePoint.")), React.createElement("div", {
-      className: "card note"
+      className: "card note cfgcard cat-A"
     }, "Wijzigingen worden direct opgeslagen en sturen de MR-blokkering in de planning. Let op: Packaging Lijn 1 max stond op 50 — zet dit op de echte lijncapaciteit zodat het maximum ook blokkeert."));
   }
   function ukgView() {
