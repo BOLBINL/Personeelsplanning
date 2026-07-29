@@ -2086,6 +2086,66 @@ function App() {
     }
     return { start: (a && a.start) || '', eind: (a && a.eind) || '', afgeleid: false };
   };
+  const wis5p = () => {
+    if (_bewerkGeblokkeerd()) return;
+    var n = Object.assign({}, plan);
+    var verw = 0;
+    (cfg[dept] || []).forEach(function (line) {
+      (SHIFTS || []).forEach(function (sh) {
+        days.forEach(function (dy) {
+          var ck = cellK(dept, line.lijn, sh.id, wkKey, dy.k);
+          if (!n[ck]) return;
+          var voor = n[ck].length;
+          n[ck] = n[ck].filter(function (a) { return !a.bron5p; });
+          verw += voor - n[ck].length;
+        });
+      });
+    });
+    if (!verw) { ping('Geen 5-ploegen-plaatsingen in ' + dept + ' deze week.', 'warn'); return; }
+    setPlan(n);
+    logAction('WIS_5PLOEGEN', { week: wkKey, dept: dept, verwijderd: verw });
+    ping(verw + ' 5-ploegen-plaatsingen gewist in ' + wkKey);
+  };
+  const genereer5p = () => {
+    if (_bewerkGeblokkeerd()) return;
+    var vp = normVijfPloegen(vijfPloegen);
+    var n = Object.assign({}, plan);
+    var geplaatst = 0, overgeslagen = 0, actieveLijnen = 0;
+    (cfg[dept] || []).forEach(function (line) {
+      var key = dept + '|' + line.lijn;
+      var lc = normVijfPloegenLijn(vp.perLijn[key]);
+      if (!lc.aan) return;
+      if (!lc.refJaar) return;
+      actieveLijnen++;
+      var elapsed = Math.round((isoMonday(jaar, week).getTime() - isoMonday(lc.refJaar, lc.refWeek).getTime()) / (7 * 86400000));
+      var ledenVanPloeg = {};
+      employees.forEach(function (e) {
+        if (e.actief === false || e.isUitzend) return;
+        var pg = (e.ploeg5p || {})[key];
+        if (pg && lc.ploegen.indexOf(pg) >= 0) (ledenVanPloeg[pg] = ledenVanPloeg[pg] || []).push(e);
+      });
+      days.forEach(function (dy, di) {
+        lc.ploegen.forEach(function (pg) {
+          var row = (((elapsed + (lc.ploegOffset[pg] || 0)) % lc.cyclusWeken) + lc.cyclusWeken) % lc.cyclusWeken;
+          var sh = (lc.matrix[row] || [])[di] || '-';
+          if (sh !== 'O' && sh !== 'M' && sh !== 'N') return;
+          var ck = cellK(dept, line.lijn, sh, wkKey, dy.k);
+          var st = lijnStart(line, sh) || (sh === 'O' ? '06:00' : sh === 'M' ? '14:00' : '22:00');
+          var ei = berekenEindtijd(st, '7:30', '0:30');
+          (ledenVanPloeg[pg] || []).forEach(function (e) {
+            if (e.status === 'Ziek' || isOpVerlof(e.naam, dy.iso) || heleDagVrij(e.naam, dy.iso)) { overgeslagen++; return; }
+            if ((n[ck] || []).some(function (a) { return a.empId === e.id; })) return;
+            n[ck] = (n[ck] || []).concat([{ id: uid(), empId: e.id, type: 'vast', ziek: false, start: st, eind: ei, kostplaats: line.kostplaats || null, bron5p: pg, door: user, ts: new Date().toISOString() }]);
+            geplaatst++;
+          });
+        });
+      });
+    });
+    if (!actieveLijnen) { ping('Geen 5-ploegen-lijn met startweek in ' + dept + '. Stel dit in bij Configuratie \u2192 5-ploegen.', 'warn'); return; }
+    setPlan(n);
+    logAction('GENEREER_5PLOEGEN', { week: wkKey, dept: dept, geplaatst: geplaatst });
+    ping('5-ploegen ' + wkKey + ': ' + geplaatst + ' geplaatst' + (overgeslagen ? ', ' + overgeslagen + ' overgeslagen (verlof/ziek)' : ''));
+  };
   const editTime = m => {
     setPlan(p => {
       const n = Object.assign({}, p);
@@ -3170,6 +3230,10 @@ function App() {
     var betaald = rrB.urenBasis === 'betaaluren';
     var nettoMinVan = function (a, dk) {
       if (a.ziek) return 0;
+      if (a.bron5p && a.start && a.eind) {
+        var sp5 = hhmmMin(a.eind) - hhmmMin(a.start); if (sp5 < 0) sp5 += 1440;
+        return betaald ? sp5 : (sp5 - 30);
+      }
       var nettoMin = 0, pauzeMin = 0;
       if (a.type === 'vast' && a.empId) {
         var e = employees.find(function (x) { return x.id === a.empId; });
@@ -3384,7 +3448,7 @@ function App() {
       onClick: nextWeek
     }, React.createElement(I, {
       n: "chevron_right"
-    }))), React.createElement("div", { className: "btnrow", style: { alignItems: "center" } }, React.createElement("div", { className: "segrow" }, Object.keys(cfg).filter(heeftMR).map(d => React.createElement("button", { key: d, className: "btn seg " + (dept === d ? "on" : ""), onClick: () => { setDept(d); setSel(null); } }, d))), React.createElement("button", { className: "btn " + (showFilter ? "on" : ""), onClick: () => setShowFilter(!showFilter), title: "Filter lijnen" }, React.createElement(I, { n: "filter_list" }), React.createElement("span", { className: "btxt" }, "Lijnen")), React.createElement("div", { style: { position: "relative" } }, React.createElement("button", { className: "btn " + (actieMenu ? "on" : ""), onClick: function () { setActieMenu(!actieMenu); }, title: "Planningsacties" }, React.createElement(I, { n: "bolt" }), React.createElement("span", { className: "btxt" }, "Acties"), React.createElement(I, { n: "expand_more" })), actieMenu ? React.createElement("div", null, React.createElement("div", { onClick: function () { setActieMenu(false); }, style: { position: "fixed", inset: 0, zIndex: 900 } }), React.createElement("div", { style: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 901, background: "#fff", border: "1px solid #e6e8ee", borderRadius: 10, boxShadow: "0 8px 28px rgba(15,20,40,.22)", width: 220, overflow: "hidden" } }, React.createElement("button", { key: "Vaste bezetting", onClick: function () { setActieMenu(false); vulVasteBezetting(false); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "how_to_reg" }), "Vaste bezetting"), React.createElement("button", { key: "Auto-rooster", onClick: function () { setActieMenu(false); autoRooster(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "bolt" }), "Auto-rooster"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { key: "Kopieer week", onClick: function () { setActieMenu(false); copyWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "content_copy" }), "Kopieer week"), React.createElement("button", { key: "Kopieer maandag", onClick: function () { setActieMenu(false); kopieerMaandag(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "looks_two" }), "Kopieer maandag"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { onClick: function () { setActieMenu(false); clearWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", color: "#c62828" } }, React.createElement(I, { n: "delete_sweep" }), "Week leegmaken"))) : null), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit" }, React.createElement(I, { n: "check_box" }), React.createElement("span", { className: "btxt" }, "Selecteer")), klembord.length ? React.createElement("button", { className: "btn", onClick: () => setKlembord([]), title: "Klembord legen", style: { color: "#2e7d32", borderColor: "#a5d6a7" } }, React.createElement(I, { n: "content_paste" }), klembord.length + " \u2715") : null, React.createElement("div", { className: "hide-mob", style: { flex: "1 1 auto", minWidth: 0 } }), React.createElement("button", { className: "btn hide-mob " + (isPub ? "" : "gold"), onClick: publish, title: isPub ? "Publicatie intrekken" : "Publiceren en vergrendelen" }, React.createElement(I, { n: isPub ? "lock_open" : "publish" }), React.createElement("span", { className: "btxt" }, isPub ? "Ingetrokken" : "Publiceer")), isPub ? React.createElement("button", { className: "btn hide-mob", onClick: printRooster, title: "Afdrukken / PDF" }, React.createElement(I, { n: "print" }), React.createElement("span", { className: "btxt" }, "Afdrukken")) : null)), showFilter ? React.createElement("div", {
+    }))), React.createElement("div", { className: "btnrow", style: { alignItems: "center" } }, React.createElement("div", { className: "segrow" }, Object.keys(cfg).filter(heeftMR).map(d => React.createElement("button", { key: d, className: "btn seg " + (dept === d ? "on" : ""), onClick: () => { setDept(d); setSel(null); } }, d))), React.createElement("button", { className: "btn " + (showFilter ? "on" : ""), onClick: () => setShowFilter(!showFilter), title: "Filter lijnen" }, React.createElement(I, { n: "filter_list" }), React.createElement("span", { className: "btxt" }, "Lijnen")), React.createElement("div", { style: { position: "relative" } }, React.createElement("button", { className: "btn " + (actieMenu ? "on" : ""), onClick: function () { setActieMenu(!actieMenu); }, title: "Planningsacties" }, React.createElement(I, { n: "bolt" }), React.createElement("span", { className: "btxt" }, "Acties"), React.createElement(I, { n: "expand_more" })), actieMenu ? React.createElement("div", null, React.createElement("div", { onClick: function () { setActieMenu(false); }, style: { position: "fixed", inset: 0, zIndex: 900 } }), React.createElement("div", { style: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 901, background: "#fff", border: "1px solid #e6e8ee", borderRadius: 10, boxShadow: "0 8px 28px rgba(15,20,40,.22)", width: 220, overflow: "hidden" } }, React.createElement("button", { key: "Vaste bezetting", onClick: function () { setActieMenu(false); vulVasteBezetting(false); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "how_to_reg" }), "Vaste bezetting"), React.createElement("button", { key: "Auto-rooster", onClick: function () { setActieMenu(false); autoRooster(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "bolt" }), "Auto-rooster"), React.createElement("button", { key: "5-ploegen", onClick: function () { setActieMenu(false); genereer5p(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "groups" }), "Genereer 5-ploegen"), React.createElement("button", { key: "wis5p", onClick: function () { setActieMenu(false); wis5p(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", color: "#c62828" } }, React.createElement(I, { n: "backspace" }), "Wis 5-ploegen"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { key: "Kopieer week", onClick: function () { setActieMenu(false); copyWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "content_copy" }), "Kopieer week"), React.createElement("button", { key: "Kopieer maandag", onClick: function () { setActieMenu(false); kopieerMaandag(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "looks_two" }), "Kopieer maandag"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { onClick: function () { setActieMenu(false); clearWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", color: "#c62828" } }, React.createElement(I, { n: "delete_sweep" }), "Week leegmaken"))) : null), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit" }, React.createElement(I, { n: "check_box" }), React.createElement("span", { className: "btxt" }, "Selecteer")), klembord.length ? React.createElement("button", { className: "btn", onClick: () => setKlembord([]), title: "Klembord legen", style: { color: "#2e7d32", borderColor: "#a5d6a7" } }, React.createElement(I, { n: "content_paste" }), klembord.length + " \u2715") : null, React.createElement("div", { className: "hide-mob", style: { flex: "1 1 auto", minWidth: 0 } }), React.createElement("button", { className: "btn hide-mob " + (isPub ? "" : "gold"), onClick: publish, title: isPub ? "Publicatie intrekken" : "Publiceren en vergrendelen" }, React.createElement(I, { n: isPub ? "lock_open" : "publish" }), React.createElement("span", { className: "btxt" }, isPub ? "Ingetrokken" : "Publiceer")), isPub ? React.createElement("button", { className: "btn hide-mob", onClick: printRooster, title: "Afdrukken / PDF" }, React.createElement(I, { n: "print" }), React.createElement("span", { className: "btxt" }, "Afdrukken")) : null)), showFilter ? React.createElement("div", {
       className: "card",
       style: {
         padding: 14
@@ -3863,6 +3927,29 @@ function App() {
           onClick: () => set('werkdagen', on ? wd.filter(x => x !== DAG_K[i]) : wd.concat([DAG_K[i]]))
         }, d);
       }))));
+      content = React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, content, (function () {
+        var vpp = normVijfPloegen(vijfPloegen);
+        var opties = [];
+        Object.keys(cfg).forEach(function (dp) {
+          (cfg[dp] || []).forEach(function (l) {
+            var k2 = dp + '|' + l.lijn;
+            var lc2 = normVijfPloegenLijn(vpp.perLijn[k2]);
+            if (!lc2.aan) return;
+            if ((e.afd || '') !== dp) return;
+            if (e.lijnen && e.lijnen.length && e.lijnen.indexOf(l.lijn) < 0) return;
+            opties.push({ key: k2, label: dp + ' / ' + l.lijn, ploegen: lc2.ploegen });
+          });
+        });
+        if (!opties.length) return React.createElement("div", { className: "hint" }, "Geen 5-ploegen-lijn voor deze medewerker (zet de lijn op 5-ploegen in Configuratie).");
+        return React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+          React.createElement("div", { className: "hint", style: { margin: 0 } }, "5-PLOEGEN \u2014 ploeg per lijn"),
+          opties.map(function (o) {
+            return React.createElement("div", { key: o.key, style: { display: 'flex', alignItems: 'center', gap: 8 } },
+              React.createElement("span", { style: { flex: '1 1 auto' } }, o.label),
+              React.createElement("select", { className: "cin", value: (e.ploeg5p || {})[o.key] || '', onChange: function (ev) { set('ploeg5p', Object.assign({}, e.ploeg5p || {}, (function () { var m = {}; m[o.key] = ev.target.value; return m; })())); }, style: { minWidth: 90, width: 'auto' } },
+                [React.createElement("option", { key: '_', value: '' }, '\u2014')].concat(o.ploegen.map(function (pg) { return React.createElement("option", { key: pg, value: pg }, "Ploeg " + pg); }))));
+          }));
+      })());
     } else if (tab === 'skills') {
       content = React.createElement("div", null, React.createElement("div", {
         className: "hint",
@@ -4316,6 +4403,9 @@ function App() {
     Object.keys(cfg).forEach(function (dep) { (cfg[dep] || []).forEach(function (l) { lijnOpties.push({ key: dep + '|' + l.lijn, label: dep + ' / ' + l.lijn }); }); });
     var huidig = sel5pLijn || (lijnOpties[0] ? lijnOpties[0].key : '');
     var lc = normVijfPloegenLijn(vp.perLijn[huidig]);
+    var hp = String(huidig).split('|');
+    var ledenVanLijn = employees.filter(function (e) { return e.actief !== false && !e.isUitzend && (e.afd || '') === hp[0] && (!e.lijnen || e.lijnen.length === 0 || e.lijnen.indexOf(hp[1]) >= 0); }).sort(function (a, b) { return a.naam.localeCompare(b.naam); });
+    var zetPloeg = function (id, v) { setEmployees(function (prev) { return prev.map(function (e) { return e.id === id ? Object.assign({}, e, { ploeg5p: Object.assign({}, e.ploeg5p || {}, (function () { var o = {}; o[huidig] = v; return o; })()) }) : e; }); }); };
     var upd = function (patch) {
       setVijfPloegen(function (prev) {
         var b = normVijfPloegen(prev);
@@ -4374,7 +4464,15 @@ function App() {
                       return React.createElement("td", { key: dg, style: { padding: 1 } },
                         React.createElement("button", { onClick: function () { cycleCel(wk, dg); }, style: { width: 34, height: 28, border: "1px solid #d0d3da", borderRadius: 4, background: kleur[v] || "#f3f4f6", cursor: "pointer", fontWeight: 700 } }, v === '-' ? '\u2013' : v));
                     })));
-                }))))
+                })))),
+          React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 4 } },
+            React.createElement("div", { className: "hint", style: { margin: 0 } }, "PLOEG-INDELING (" + (function () { var t = {}; lc.ploegen.forEach(function (pg) { t[pg] = 0; }); ledenVanLijn.forEach(function (e) { var pg = (e.ploeg5p || {})[huidig]; if (pg && t[pg] != null) t[pg]++; }); return lc.ploegen.map(function (pg) { return pg + ":" + t[pg]; }).join("  "); })() + ")"),
+            ledenVanLijn.length ? ledenVanLijn.map(function (e) {
+              return React.createElement("div", { key: e.id, style: { display: "flex", alignItems: "center", gap: 8 } },
+                React.createElement("span", { style: { flex: "1 1 auto" } }, e.naam + (e.functie ? " \u00b7 " + e.functie : "")),
+                React.createElement("select", { value: (e.ploeg5p || {})[huidig] || '', onChange: function (ev) { zetPloeg(e.id, ev.target.value); }, style: { minWidth: 84 } },
+                  [React.createElement("option", { key: '_', value: '' }, '\u2014')].concat(lc.ploegen.map(function (pg) { return React.createElement("option", { key: pg, value: pg }, "Ploeg " + pg); }))));
+            }) : React.createElement("div", { className: "hint" }, "Geen medewerkers op deze lijn."))
         ) : React.createElement("div", { className: "hint" }, "Geen lijnen gevonden.")));
   }
   function configView() {
