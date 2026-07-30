@@ -97,7 +97,7 @@
   .kpi{padding:18px;text-align:center;}
   .kpi .v{font-size:34px;font-weight:800;line-height:1;}
   .kpi .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:6px;font-family:'JetBrains Mono',monospace;}
-  .kpi.open{background:#fff8e8;}.kpi.open .v{color:#c15400;}.kpi.open .k{color:#c15400;}.kpi.over{background:#eef3ff;}.kpi.over .v{color:#2b5bd7;}.kpi.over .k{color:#2b5bd7;}
+  .kpi.open{background:#fff8e8;}.kpi.open .v{color:#c15400;}.kpi.open .k{color:#c15400;}.kpi.over{background:#fdeaea;}.kpi.over .v{color:#c62828;}.kpi.over .k{color:#c62828;}
   .kpis.rich{grid-template-columns:repeat(4,1fr);}
   .kpis.rich .kpi{padding:16px 18px;text-align:left;display:flex;flex-direction:column;gap:7px;}
   .kpis.rich .kpi .kpi-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
@@ -860,9 +860,11 @@ function shiftNorm(line, dagKey, iso, shiftId) {
   var wd = (line.dagNorm || {})[dagKey];
   var arr = (dt && Array.isArray(dt.shiften)) ? dt.shiften : (wd && Array.isArray(wd.shiften)) ? wd.shiften : null;
   var e = arr ? arr.find(function (s) { return s.id === shiftId; }) : null;
+  if (arr && !e) return { basis: 0, max: 0, uren: 8, runs: false, start: lijnStart(line, shiftId) };
   return {
     basis: (e && e.basis != null) ? +e.basis : rn.basis,
     max: (e && e.max != null) ? +e.max : rn.max,
+    uren: (e && e.uren != null) ? +e.uren : 8,
     runs: rn.runs,
     start: lijnStart(line, shiftId)
   };
@@ -1930,7 +1932,8 @@ function App() {
       req: req,
       cap: cap,
       tekort: tekort,
-      status: status
+      status: status,
+      uren: _sn.uren
     };
   }, [plan, dept, wkKey, days]);
   const startAssign = (empId, keyArg) => {
@@ -3183,7 +3186,7 @@ function App() {
     var _ovWk = mrWeekMode && _iso ? (l.datumNorm || {})[_iso] : null;
     var ov = mrWeekMode ? _ovWk : (l.dagNorm || {})[dk];
     if (!ov) return React.createElement("button", { key: dk, className: "chipbtn", style: { fontSize: 11, opacity: .7 }, onClick: () => setDagNorm(dep, i, dk, { basis: +l.basis || 0, max: +l.max || 0, ploegen: +(l.ploegen || l.shiften || 2) }) }, "+ " + DAG_L[di] + (mrWeekMode && _iso ? " " + _iso.slice(8) : ""));
-    return React.createElement("div", { key: dk, style: { border: '1px solid #e5c98a', borderRadius: 10, padding: '6px 8px', background: '#fffdf7' } }, React.createElement("div", { style: { fontSize: 11, fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 } }, DAG_L[di] + (mrWeekMode && _iso ? " " + _iso.slice(8) : ""), mrWeekMode && _ovWk ? React.createElement("span", { title: "Afwijking alleen voor deze week", style: { fontSize: 8, background: '#b8860b', color: '#fff', borderRadius: 4, padding: '1px 4px' } }, "wk") : null, React.createElement("button", { style: { marginLeft: 'auto', border: 'none', background: 'none', color: '#b02a37', cursor: 'pointer', fontSize: 11, padding: 0 }, title: "Neem standaard over", onClick: () => setDagNorm(dep, i, dk, null) }, "✕")), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 4 } }, lijnShifts(l).map(function (s) { var shDef = SHIFTS.find(function (x) { return x.id === s.id; }) || {}; var active = Array.isArray(ov.shiften) && ov.shiften.some(function (x) { return x.id === s.id; }); return React.createElement("button", { key: s.id, title: (shDef.naam || s.id) + ' ' + (s.start || ''), onClick: function () { var arr = Array.isArray(ov.shiften) ? ov.shiften.slice() : []; var ix = arr.findIndex(function (x) { return x.id === s.id; }); if (ix > -1) arr.splice(ix, 1); else arr.push({ id: s.id, basis: ov.basis != null ? +ov.basis : (l.basis != null ? +l.basis : undefined), max: ov.max != null ? +ov.max : (l.max != null ? +l.max : undefined) }); var ord = lijnShifts(l).map(function (z) { return z.id; }); arr.sort(function (a, b) { return ord.indexOf(a.id) - ord.indexOf(b.id); }); setDagNorm(dep, i, dk, { shiften: arr, ploegen: arr.length }); }, style: { fontSize: 9, padding: '2px 6px', borderRadius: 6, border: '1px solid ' + (active ? '#b8860b' : '#ddd'), background: active ? '#f6e2b3' : '#fff', cursor: 'pointer', fontWeight: active ? 700 : 400 } }, (shDef.naam || s.id)); })), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 3 } }, (Array.isArray(ov.shiften) ? ov.shiften : []).map(function (sh) { var shDef = SHIFTS.find(function (x) { return x.id === sh.id; }) || {}; return React.createElement("div", { key: sh.id, style: { display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#8a8f9c' } }, React.createElement("span", { style: { minWidth: 46, fontWeight: 600 } }, shDef.naam || sh.id), ['basis', 'max'].map(function (f) { var val = sh[f] != null ? sh[f] : (ov[f] != null ? ov[f] : (l[f] != null ? l[f] : '')); return React.createElement("label", { key: f, style: { display: 'flex', flexDirection: 'column', fontSize: 8 } }, f === 'basis' ? 'min' : 'max', React.createElement("input", { type: "number", min: 0, className: "cin", style: { width: 40 }, value: val, onChange: function (e) { var arr = ov.shiften.map(function (x) { return x.id === sh.id ? Object.assign({}, x, { [f]: e.target.value === '' ? undefined : +e.target.value }) : x; }); setDagNorm(dep, i, dk, { shiften: arr, ploegen: arr.length }); } })); })); })));
+    return React.createElement("div", { key: dk, style: { border: '1px solid #e5c98a', borderRadius: 10, padding: '6px 8px', background: '#fffdf7' } }, React.createElement("div", { style: { fontSize: 11, fontWeight: 700, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 } }, DAG_L[di] + (mrWeekMode && _iso ? " " + _iso.slice(8) : ""), mrWeekMode && _ovWk ? React.createElement("span", { title: "Afwijking alleen voor deze week", style: { fontSize: 8, background: '#b8860b', color: '#fff', borderRadius: 4, padding: '1px 4px' } }, "wk") : null, React.createElement("button", { style: { marginLeft: 'auto', border: 'none', background: 'none', color: '#b02a37', cursor: 'pointer', fontSize: 11, padding: 0 }, title: "Neem standaard over", onClick: () => setDagNorm(dep, i, dk, null) }, "✕")), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 4 } }, lijnShifts(l).map(function (s) { var shDef = SHIFTS.find(function (x) { return x.id === s.id; }) || {}; var active = Array.isArray(ov.shiften) && ov.shiften.some(function (x) { return x.id === s.id; }); return React.createElement("button", { key: s.id, title: (shDef.naam || s.id) + ' ' + (s.start || ''), onClick: function () { var arr = Array.isArray(ov.shiften) ? ov.shiften.slice() : []; var ix = arr.findIndex(function (x) { return x.id === s.id; }); if (ix > -1) arr.splice(ix, 1); else arr.push({ id: s.id, basis: ov.basis != null ? +ov.basis : (l.basis != null ? +l.basis : undefined), max: ov.max != null ? +ov.max : (l.max != null ? +l.max : undefined) }); var ord = lijnShifts(l).map(function (z) { return z.id; }); arr.sort(function (a, b) { return ord.indexOf(a.id) - ord.indexOf(b.id); }); setDagNorm(dep, i, dk, { shiften: arr, ploegen: arr.length }); }, style: { fontSize: 9, padding: '2px 6px', borderRadius: 6, border: '1px solid ' + (active ? '#b8860b' : '#ddd'), background: active ? '#f6e2b3' : '#fff', cursor: 'pointer', fontWeight: active ? 700 : 400 } }, (shDef.naam || s.id)); })), React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 3 } }, (Array.isArray(ov.shiften) ? ov.shiften : []).map(function (sh) { var shDef = SHIFTS.find(function (x) { return x.id === sh.id; }) || {}; return React.createElement("div", { key: sh.id, style: { display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#8a8f9c' } }, React.createElement("span", { style: { minWidth: 46, fontWeight: 600 } }, shDef.naam || sh.id), ['basis', 'max', 'uren'].map(function (f) { var val = sh[f] != null ? sh[f] : (ov[f] != null ? ov[f] : (l[f] != null ? l[f] : (f === 'uren' ? 8 : ''))); return React.createElement("label", { key: f, style: { display: 'flex', flexDirection: 'column', fontSize: 8 } }, f === 'basis' ? 'min' : (f === 'uren' ? 'uren' : 'max'), React.createElement("input", { type: "number", min: 0, className: "cin", style: { width: 40 }, value: val, onChange: function (e) { var arr = ov.shiften.map(function (x) { return x.id === sh.id ? Object.assign({}, x, { [f]: e.target.value === '' ? undefined : +e.target.value }) : x; }); setDagNorm(dep, i, dk, { shiften: arr, ploegen: arr.length }); } })); })); })));
   })))))));
   const addDept = () => {
     const naam = prompt('Naam nieuwe afdeling:');
@@ -3285,7 +3288,6 @@ function App() {
       return nettoMin + (betaald && rrB.pauze.betaald ? pauzeMin : 0);
     };
     lines.forEach(l => SHIFTS.slice(0, l.ploegen || l.shiften || 2).forEach(sh => {
-      var h = (SHIFT_TIMES[sh.id] || {}).h || 8;
       var _bk = l.lijn + '|' + sh.id;
       if (!bd[_bk]) bd[_bk] = { lijn: l.lijn, shiftLabel: (sh.label || sh.id), ingepland: 0, basis: 0, tekort: 0, over: 0, schedH: 0, capH: 0 };
       days.forEach(dy => {
@@ -3294,8 +3296,8 @@ function App() {
         covered += Math.min(c.actief, c.req);
         if (c.tekort > 0) underCells++;
         if (c.actief > c.cap) { over += (c.actief - c.cap); overCells++; }
-        bd[_bk].ingepland += c.actief; bd[_bk].basis += c.req; bd[_bk].tekort += c.tekort; bd[_bk].over += Math.max(0, c.actief - c.cap); bd[_bk].schedH += c.actief * h; bd[_bk].capH += c.cap * h;
-        schedH += c.actief * h; capH += c.cap * h;
+        bd[_bk].ingepland += c.actief; bd[_bk].basis += c.req; bd[_bk].tekort += c.tekort; bd[_bk].over += Math.max(0, c.actief - c.cap); bd[_bk].schedH += c.actief * c.uren; bd[_bk].capH += c.cap * c.uren;
+        schedH += c.actief * c.uren; capH += c.cap * c.uren;
         (plan[cellK(dept, l.lijn, sh.id, wkKey, dy.k)] || []).forEach(function (a) { arbeidMin += nettoMinVan(a, dy.k); });
       });
     }));
@@ -3306,20 +3308,19 @@ function App() {
       var uC = 0, oT = 0, ovC = 0, ov = 0, sH = 0, cH = 0;
       (cfg[afd] || []).filter(function (ln) { return !hidden[afd + '|' + ln.lijn]; }).forEach(function (ln) {
         SHIFTS.slice(0, ln.ploegen || ln.shiften || 2).forEach(function (shf) {
-          var hh = (SHIFT_TIMES[shf.id] || {}).h || 8;
           days.forEach(function (dy) {
             var act = (plan[cellK(afd, ln.lijn, shf.id, wkKey, dy.k)] || []).filter(function (a) { return !a.ziek; }).length;
             var sn = shiftNorm(ln, dy.k, dy.iso, shf.id);
             var rq = sn.basis, cp = sn.max, tk = Math.max(0, rq - act);
             if (tk > 0) { uC++; oT += tk; }
             if (act > cp) { ovC++; ov += (act - cp); }
-            sH += act * hh; cH += cp * hh;
+            sH += act * sn.uren; cH += cp * sn.uren;
           });
         });
       });
       return { afd: afd, underCells: uC, o: oT, overCells: ovC, over: ov, schedH: sH, capH: cH, hoursPct: cH > 0 ? Math.round(sH / cH * 100) : null };
     });
-    return { s: s, o: o, req: req, cap: cap, covered: covered, underCells: underCells, over: over, overCells: overCells, schedH: schedH, capH: capH, coverage: coverage, hoursPct: hoursPct, arbeidH: arbeidH, urenBasis: rrB.urenBasis, bd: Object.keys(bd).map(function (k) { return bd[k]; }), perAfd: perAfd };
+    return { s: s, o: o, req: req, cap: cap, covered: covered, underCells: underCells, over: over, overCells: overCells, schedH: schedH, capH: capH, coverage: coverage, hoursPct: hoursPct, nettoPct: (capH > 0 ? Math.round((arbeidMin / 60) / capH * 100) : null), arbeidH: arbeidH, urenBasis: rrB.urenBasis, bd: Object.keys(bd).map(function (k) { return bd[k]; }), perAfd: perAfd };
   }, [lines, info, days, plan, employees, roosterRegels, templates, week, dept, wkKey, cfg, hidden]);
   const deptKpi = useMemo(function () {
     var out = [];
@@ -3328,7 +3329,6 @@ function App() {
       var s = 0, req = 0, o = 0, over = 0, underCells = 0, overCells = 0, schedH = 0, capH = 0;
       dlines.forEach(function (l) {
         SHIFTS.slice(0, l.ploegen || l.shiften || 2).forEach(function (sh) {
-          var h = (SHIFT_TIMES[sh.id] || {}).h || 8;
           days.forEach(function (dy) {
             var actief = (plan[cellK(dp, l.lijn, sh.id, wkKey, dy.k)] || []).filter(function (a) { return !a.ziek; }).length;
             var _sn = shiftNorm(l, dy.k, dy.iso, sh.id);
@@ -3336,7 +3336,7 @@ function App() {
             s += actief; req += rq; o += tk;
             if (tk > 0) underCells++;
             if (actief > cp) { over += (actief - cp); overCells++; }
-            schedH += actief * h; capH += cp * h;
+            schedH += actief * _sn.uren; capH += cp * _sn.uren;
           });
         });
       });
@@ -3492,9 +3492,9 @@ function App() {
       n: "refresh"
     })))), React.createElement("div", {
       className: "kpis rich"
-    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, (kpi.underCells > 0 ? { k: "Onderbezet", v: kpi.underCells, sub: kpi.o + " posities tekort", icon: "warning", cls: "open", onClick: function () { setBdOpen(function (v) { return !v; }); } } : kpi.overCells > 0 ? { k: "Overbezet", v: kpi.overCells, sub: kpi.over + " posities te veel", icon: "groups", cls: "over", onClick: function () { setBdOpen(function (v) { return !v; }); } } : { k: "Bezetting", v: "OK", sub: "binnen norm", icon: "verified", cls: "", onClick: function () { setBdOpen(function (v) { return !v; }); } }), { k: "Uren \u00b7 dekking", v: kpi.schedH + " / " + kpi.capH + "u", sub: (kpi.hoursPct == null ? "—" : kpi.hoursPct + "% van MR-max"), icon: "schedule", cls: "" }].map(function (m) {
+    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, (function () { var _tog = function () { setBdOpen(function (v) { return !v; }); }; var _short = (kpi.bd || []).filter(function (r) { return r.tekort > 0; }).map(function (r) { return r.lijn + " " + r.shiftLabel + " (" + r.tekort + ")"; }).join(", "); var _big, _cls, _icon; if (kpi.over > 0) { _big = kpi.over + " te veel"; _cls = "over"; _icon = "groups"; } else if (kpi.o > 0) { _big = kpi.o + " tekort"; _cls = "open"; _icon = "warning"; } else { _big = "OK"; _cls = ""; _icon = "verified"; } var _sub = kpi.o > 0 ? ("\u26a0 " + _short + " tekort") : (kpi.over > 0 ? ("afdeling overbezet \u00b7 " + dept) : "binnen norm"); return { k: "Bezetting", v: _big, sub: _sub, icon: _icon, cls: _cls, onClick: _tog }; })(), { k: "Uren \u00b7 dekking", v: kpi.arbeidH + " / " + kpi.capH + "u", sub: (kpi.nettoPct == null ? "—" : kpi.nettoPct + "% van MR-max"), icon: "schedule", cls: "" }].map(function (m, _mi) {
       return React.createElement("div", {
-        key: m.k,
+        key: _mi,
         className: "card kpi " + m.cls,
         onClick: m.onClick,
         style: { cursor: m.onClick ? "pointer" : "default" }
