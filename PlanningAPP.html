@@ -5566,7 +5566,7 @@ function App() {
       className: "cin",
       readOnly: true,
       value: berekenEindtijd(wk.start, wk.netto, wk.pauze)
-    })), React.createElement("label", { className: "efld" }, "Vorige dag (begon gisteren)", React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6 } }, React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? " gold" : ""), onClick: function () { setWk('vorigeDag', true); } }, "Ja"), React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? "" : " gold"), onClick: function () { setWk('vorigeDag', false); } }, "Nee")))), React.createElement("div", {
+    })), React.createElement("label", { className: "efld" }, "Vorige dag (begint vorige dag)", React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6 } }, React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? " gold" : ""), onClick: function () { setWk('vorigeDag', true); } }, "Ja"), React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? "" : " gold"), onClick: function () { setWk('vorigeDag', false); } }, "Nee")))), React.createElement("div", {
       style: {
         marginTop: 8
       }
