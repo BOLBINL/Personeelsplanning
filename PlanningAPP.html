@@ -1152,6 +1152,7 @@ function App() {
   const [vijfPloegen, setVijfPloegen] = useState(() => normVijfPloegen(lsGet(LS_5P, { versie: 1, perLijn: {} })));
   const [sel5pLijn, setSel5pLijn] = useState('');
   const [mrAfd, setMrAfd] = useState(() => lsGet('bl_mrafd_v4', {}));
+  const [mgrMails, setMgrMails] = useState(() => lsGet('bl_mgrmails_v4', {}));
   const heeftMR = dep => (mrAfd[dep] !== undefined ? !!mrAfd[dep] : ((cfg[dep] || []).length > 0));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
   const [redenen, setRedenen] = useState(() => lsGet(LS_RED, DEFAULT_REDENEN));
@@ -1569,7 +1570,8 @@ function App() {
       skills: skills,
       templates: templates,
       auditLog: auditLog,
-      mrAfd: mrAfd
+      mrAfd: mrAfd,
+      mgrMails: mgrMails
     }
   });
   const saveState = (overrideBlob, stil) => {
@@ -1649,6 +1651,7 @@ function App() {
       if (dat.pub) setPub(dat.pub);
       if (dat.skills) setSkills(dat.skills);
       if (dat.mrAfd) setMrAfd(dat.mrAfd);
+      if (dat.mgrMails) setMgrMails(dat.mgrMails);
       if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
       if (j && j.version != null) {
         try {
@@ -2729,6 +2732,7 @@ function App() {
         if (dat.pub) setPub(dat.pub);
         if (dat.skills) setSkills(dat.skills);
       if (dat.mrAfd) setMrAfd(dat.mrAfd);
+      if (dat.mgrMails) setMgrMails(dat.mgrMails);
         if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
         logAction('BACKUP_IMPORT', {});
         ping('Backup teruggezet \u2014 klik NU Opslaan om naar SharePoint te uploaden (anders laadt de cloud-versie bij verversen terug).', 'warn');
@@ -4877,6 +4881,16 @@ function App() {
       onChange: e => setFlow(Object.assign({}, flow, {
         company: e.target.value
       }))
+    })), React.createElement("label", {
+      className: "efld",
+      style: {
+        marginTop: 8
+      }
+    }, "Manager e-mail(s) \u2014 " + dept + " (over-max melding \u00b7 meerdere: ; of ,)", React.createElement("input", {
+      className: "cin",
+      value: (mgrMails[dept] || ''),
+      onChange: e => { var _v = e.target.value; setMgrMails(function (m) { var n = Object.assign({}, m, { [dept]: _v }); try { localStorage.setItem('bl_mgrmails_v4', JSON.stringify(n)); } catch (x) {} return n; }); },
+      placeholder: "manager1@biscuit.nl; manager2@biscuit.nl"
     })), React.createElement("div", {
       className: "hint",
       style: {
