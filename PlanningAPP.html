@@ -97,7 +97,7 @@
   .kpi{padding:18px;text-align:center;}
   .kpi .v{font-size:34px;font-weight:800;line-height:1;}
   .kpi .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:6px;font-family:'JetBrains Mono',monospace;}
-  .kpi.open{background:#fff8e8;}.kpi.open .v{color:#c15400;}.kpi.open .k{color:#c15400;}.kpi.over{background:#fdeaea;}.kpi.over .v{color:#c62828;}.kpi.over .k{color:#c62828;}
+  .kpi.open{background:#fff8e8;}.kpi.open .v{color:#c15400;}.kpi.open .k{color:#c15400;}.kpi.over{background:#fdeaea;}.kpi.over .v{color:#c62828;}.kpi.over .k{color:#c62828;}@keyframes blPulse{0%{box-shadow:0 0 0 0 rgba(198,40,40,.5)}70%{box-shadow:0 0 0 9px rgba(198,40,40,0)}100%{box-shadow:0 0 0 0 rgba(198,40,40,0)}}
   .kpis.rich{grid-template-columns:repeat(4,1fr);}
   .kpis.rich .kpi{padding:16px 18px;text-align:left;display:flex;flex-direction:column;gap:7px;}
   .kpis.rich .kpi .kpi-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
@@ -1170,6 +1170,8 @@ function App() {
   const [dichtSec, setDichtSec] = useState({});
   const [cfgCat, setCfgCat] = useState('A');
   const [bdOpen, setBdOpen] = useState(false);
+  const [bdExpand, setBdExpand] = useState({});
+  const [conflict, setConflict] = useState(false);
   const toggleSec = id => setDichtSec(s => Object.assign({}, s, { [id]: !s[id] }));
   const [isMobile, setIsMobile] = useState(function () { try { return window.matchMedia('(max-width:1024px)').matches; } catch (e) { return false; } });
   useEffect(function () {
@@ -1589,11 +1591,13 @@ function App() {
       });
     }).then(function (j) {
       if (j && j.conflict) {
+        setConflict(true);
         _autoArm.current = false;                       // stop auto-opslaan tot je opnieuw laadt
         setSyncInfo('\u26a0 Conflict \u2014 iemand anders heeft opgeslagen. Klik "Nu laden".');
         ping('Conflict: nieuwere versie op SharePoint — laad eerst opnieuw (auto-opslaan gepauzeerd)', 'block');
         return;
       }
+      setConflict(false);
       var nv = j && j.version != null ? j.version : body.version + 1;
       try {
         localStorage.setItem('bl_ver_v4', JSON.stringify(nv));
@@ -1653,6 +1657,7 @@ function App() {
       }
       setSyncInfo('Geladen ' + new Date().toLocaleTimeString() + (j && j.version != null ? ' (v' + j.version + ')' : ''));
       _autoArm.current = true;
+      setConflict(false);
       logAction('SHAREPOINT_GELADEN', {
         version: j && j.version
       });
@@ -3289,14 +3294,14 @@ function App() {
     };
     lines.forEach(l => SHIFTS.slice(0, l.ploegen || l.shiften || 2).forEach(sh => {
       var _bk = l.lijn + '|' + sh.id;
-      if (!bd[_bk]) bd[_bk] = { lijn: l.lijn, shiftLabel: (sh.label || sh.id), ingepland: 0, basis: 0, tekort: 0, over: 0, schedH: 0, capH: 0 };
+      if (!bd[_bk]) bd[_bk] = { lijn: l.lijn, shift: sh.id, shiftLabel: (sh.label || sh.id), ingepland: 0, basis: 0, tekort: 0, over: 0, schedH: 0, capH: 0, dagen: [] };
       days.forEach(dy => {
         const c = info(l, sh.id, dy.k);
         s += c.actief; o += c.tekort; req += c.req; cap += c.cap;
         covered += Math.min(c.actief, c.req);
         if (c.tekort > 0) underCells++;
         if (c.actief > c.cap) { over += (c.actief - c.cap); overCells++; }
-        bd[_bk].ingepland += c.actief; bd[_bk].basis += c.req; bd[_bk].tekort += c.tekort; bd[_bk].over += Math.max(0, c.actief - c.cap); bd[_bk].schedH += c.actief * c.uren; bd[_bk].capH += c.cap * c.uren;
+        bd[_bk].ingepland += c.actief; bd[_bk].basis += c.req; bd[_bk].tekort += c.tekort; bd[_bk].over += Math.max(0, c.actief - c.cap); bd[_bk].schedH += c.actief * c.uren; bd[_bk].capH += c.cap * c.uren; bd[_bk].dagen.push({ dag: dy.k, ingepland: c.actief, basis: c.req, tekort: c.tekort, over: Math.max(0, c.actief - c.cap) });
         schedH += c.actief * c.uren; capH += c.cap * c.uren;
         (plan[cellK(dept, l.lijn, sh.id, wkKey, dy.k)] || []).forEach(function (a) { arbeidMin += nettoMinVan(a, dy.k); });
       });
@@ -3481,13 +3486,14 @@ function App() {
       className: "pill"
     }, React.createElement("span", {
       className: "dot"
-    }), "Sync Status: OK"), React.createElement("button", {
+    }), "Sync Status: " + (conflict ? "CONFLICT" : "OK")), React.createElement("button", {
       className: "icn",
-      title: "Herlaad",
-      onClick: () => {
+      title: conflict ? "Conflict \u2014 klik om te verversen vanaf SharePoint" : "Herlaad",
+      onClick: conflict ? () => { laadVanSharePoint(false); } : () => {
         setPlan(lsGet(LS_PLAN, {}));
         ping('Herladen uit opslag');
-      }
+      },
+      style: conflict ? { background: "#c62828", color: "#fff", animation: "blPulse 1.4s infinite" } : undefined
     }, React.createElement(I, {
       n: "refresh"
     })))), React.createElement("div", {
@@ -3509,7 +3515,7 @@ function App() {
       }, m.v), React.createElement("div", {
         className: "kpi-sub"
       }, m.sub));
-    })), bdOpen ? React.createElement("div", { className: "card", style: { padding: 14, overflowX: "auto" } }, React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } }, React.createElement("div", { style: { fontWeight: 800 } }, "Bezetting per lijn & shift \u2014 " + dept), React.createElement("button", { className: "btn", style: { padding: "4px 10px" }, onClick: function () { setBdOpen(false); } }, "Sluiten")), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (deptKpi || []).map(function (d) { return React.createElement("tr", { key: d.dept }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, d.dept), React.createElement("td", { style: { padding: "4px 8px", color: d.underCells > 0 ? "#c15400" : "#9aa0ad", fontWeight: d.underCells > 0 ? 700 : 400 } }, d.underCells > 0 ? (d.underCells + " \u00b7 " + d.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: d.overCells > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: d.overCells > 0 ? 700 : 400 } }, d.overCells > 0 ? (d.overCells + " \u00b7 " + d.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, d.schedH + " / " + d.capH + "u"), React.createElement("td", { style: { padding: "4px 8px" } }, d.hoursPct == null ? "\u2014" : d.hoursPct + "%")); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Detail \u2014 " + dept), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.perAfd || []).map(function (a) { return React.createElement("tr", { key: a.afd, style: { fontWeight: a.afd === dept ? 700 : 400, background: a.afd === dept ? "#f6f7fb" : "transparent" } }, React.createElement("td", { style: { padding: "4px 8px" } }, a.afd), React.createElement("td", { style: { padding: "4px 8px", color: a.o > 0 ? "#c15400" : "#9aa0ad", fontWeight: a.o > 0 ? 700 : 400 } }, a.o > 0 ? (a.underCells + " \u00b7 " + a.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: a.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: a.over > 0 ? 700 : 400 } }, a.over > 0 ? (a.overCells + " \u00b7 " + a.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, a.schedH + " / " + a.capH + "u" + (a.hoursPct == null ? "" : " \u00b7 " + a.hoursPct + "%"))); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Detail \u2014 " + dept), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13 } }, React.createElement("thead", null, React.createElement("tr", null, ["Lijn", "Shift", "Ingepland", "Basis", "Tekort", "Te veel", "Uren", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.bd || []).map(function (r) { return React.createElement("tr", { key: r.lijn + r.shiftLabel }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, r.lijn), React.createElement("td", { style: { padding: "4px 8px" } }, r.shiftLabel), React.createElement("td", { style: { padding: "4px 8px" } }, r.ingepland), React.createElement("td", { style: { padding: "4px 8px" } }, r.basis), React.createElement("td", { style: { padding: "4px 8px", color: r.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: r.tekort > 0 ? 700 : 400 } }, r.tekort || "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: r.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: r.over > 0 ? 700 : 400 } }, r.over || "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, r.schedH + "u"), React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600, color: (r.capH > 0 && r.schedH / r.capH < 0.5) ? "#c15400" : "inherit" } }, r.capH > 0 ? Math.round(r.schedH / r.capH * 100) + "%" : "\u2014")); }))), React.createElement("div", { className: "hint", style: { marginTop: 8 } }, "Oranje = onder de MR-basis (bv. lege middag). Draait die shift niet? Zet de basis op 0 in Configuratie \u2192 Lijnen & MR, dan telt het niet meer als tekort.")) : null, React.createElement("div", {
+    })), bdOpen ? React.createElement("div", { className: "card", style: { padding: 14, overflowX: "auto" } }, React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } }, React.createElement("div", { style: { fontWeight: 800 } }, "Bezetting per lijn & shift \u2014 " + dept), React.createElement("button", { className: "btn", style: { padding: "4px 10px" }, onClick: function () { setBdOpen(false); } }, "Sluiten")), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (deptKpi || []).map(function (d) { return React.createElement("tr", { key: d.dept }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, d.dept), React.createElement("td", { style: { padding: "4px 8px", color: d.underCells > 0 ? "#c15400" : "#9aa0ad", fontWeight: d.underCells > 0 ? 700 : 400 } }, d.underCells > 0 ? (d.underCells + " \u00b7 " + d.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: d.overCells > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: d.overCells > 0 ? 700 : 400 } }, d.overCells > 0 ? (d.overCells + " \u00b7 " + d.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, d.schedH + " / " + d.capH + "u"), React.createElement("td", { style: { padding: "4px 8px" } }, d.hoursPct == null ? "\u2014" : d.hoursPct + "%")); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Detail \u2014 " + dept), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.perAfd || []).map(function (a) { return React.createElement("tr", { key: a.afd, style: { fontWeight: a.afd === dept ? 700 : 400, background: a.afd === dept ? "#f6f7fb" : "transparent" } }, React.createElement("td", { style: { padding: "4px 8px" } }, a.afd), React.createElement("td", { style: { padding: "4px 8px", color: a.o > 0 ? "#c15400" : "#9aa0ad", fontWeight: a.o > 0 ? 700 : 400 } }, a.o > 0 ? (a.underCells + " \u00b7 " + a.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: a.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: a.over > 0 ? 700 : 400 } }, a.over > 0 ? (a.overCells + " \u00b7 " + a.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, a.schedH + " / " + a.capH + "u" + (a.hoursPct == null ? "" : " \u00b7 " + a.hoursPct + "%"))); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Detail \u2014 " + dept), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13 } }, React.createElement("thead", null, React.createElement("tr", null, ["Lijn", "Shift", "Ingepland", "Basis", "Tekort", "Te veel", "Uren", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.bd || []).map(function (r) { var _ek = r.lijn + "|" + r.shift; var _ex = bdExpand[_ek]; var _tog = function () { setBdExpand(function (pp) { var nn = Object.assign({}, pp); nn[_ek] = !nn[_ek]; return nn; }); }; var _main = React.createElement("tr", { key: _ek, onClick: _tog, style: { cursor: "pointer" } }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, (_ex ? "\u25be " : "\u25b8 ") + r.lijn), React.createElement("td", { style: { padding: "4px 8px" } }, r.shiftLabel), React.createElement("td", { style: { padding: "4px 8px" } }, r.ingepland), React.createElement("td", { style: { padding: "4px 8px" } }, r.basis), React.createElement("td", { style: { padding: "4px 8px", color: r.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: r.tekort > 0 ? 700 : 400 } }, r.tekort || "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: r.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: r.over > 0 ? 700 : 400 } }, r.over || "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, r.schedH + "u"), React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600, color: (r.capH > 0 && r.schedH / r.capH < 0.5) ? "#c15400" : "inherit" } }, r.capH > 0 ? Math.round(r.schedH / r.capH * 100) + "%" : "\u2014")); var _kids = [_main]; if (_ex) { var _DL = { ma: "Ma", di: "Di", wo: "Wo", do: "Do", vr: "Vr", za: "Za", zo: "Zo" }; (r.dagen || []).filter(function (d) { return d.basis > 0 || d.ingepland > 0; }).forEach(function (d) { _kids.push(React.createElement("tr", { key: _ek + "|" + d.dag, style: { background: "#f6f7fb", fontSize: 12 } }, React.createElement("td", { style: { padding: "3px 8px 3px 22px", color: "#6b7280" } }, _DL[d.dag] || d.dag), React.createElement("td", { style: { padding: "3px 8px" } }, ""), React.createElement("td", { style: { padding: "3px 8px" } }, d.ingepland), React.createElement("td", { style: { padding: "3px 8px" } }, d.basis), React.createElement("td", { style: { padding: "3px 8px", color: d.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: d.tekort > 0 ? 700 : 400 } }, d.tekort || "\u2014"), React.createElement("td", { style: { padding: "3px 8px", color: d.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: d.over > 0 ? 700 : 400 } }, d.over || "\u2014"), React.createElement("td", { style: { padding: "3px 8px" } }, ""), React.createElement("td", { style: { padding: "3px 8px" } }, ""))); }); } return React.createElement(React.Fragment, { key: _ek }, _kids); }))), React.createElement("div", { className: "hint", style: { marginTop: 8 } }, "Oranje = onder de MR-basis (bv. lege middag). Draait die shift niet? Zet de basis op 0 in Configuratie \u2192 Lijnen & MR, dan telt het niet meer als tekort.")) : null, React.createElement("div", {
       className: "card weekbar"
     }, React.createElement("div", {
       className: "wk"
