@@ -3661,7 +3661,8 @@ function App() {
               netto: (e && e.netto) || '7:12',
               pauze: (e && e.pauze) || '1:03',
               eind: _et.eind || '',
-              kostplaats: a.kostplaats || ''
+              kostplaats: a.kostplaats || '',
+              vorigeDag: (a.vorigeDag === true)
             });
           }
         }, lbl + (_et.start ? " " + _et.start : "") + (a.type === 'uitzend' ? ' ·uz' : '')), React.createElement("span", {
