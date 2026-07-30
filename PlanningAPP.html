@@ -1037,6 +1037,7 @@ function getWerktijden(emp, dagKey, weekNr, templates) {
     start: ov.start || '',
     eind: ov.eind || '',
     pauze: ov.pauze || emp.pauze || '1:03',
+    vorigeDag: false,
     bron: 'override'
   };
   var t = emp.template ? (templates || []).find(function (x) {
@@ -1054,6 +1055,7 @@ function getWerktijden(emp, dagKey, weekNr, templates) {
       eind: berekenEindtijd(start, wk.netto || '7:12', wk.pauze || '1:03'),
       pauze: wk.pauze || '1:03',
       cyclusWeek: idx + 1,
+      vorigeDag: (wk.vorigeDag === true),
       bron: 'template'
     };
   }
@@ -1063,6 +1065,7 @@ function getWerktijden(emp, dagKey, weekNr, templates) {
     start: st,
     eind: emp.eindtijd || berekenEindtijd(st, emp.netto || '7:12', emp.pauze || '1:03'),
     pauze: emp.pauze || '1:03',
+    vorigeDag: false,
     bron: 'profiel'
   };
 }
@@ -2007,6 +2010,7 @@ function App() {
         eind: m.eind,
         overReason: m.overReason || null,
         kostplaats: m.kostplaats || null,
+        vorigeDag: (m.vorigeDag === true),
         door: user,
         ts: new Date().toISOString()
       }]);
@@ -2031,9 +2035,10 @@ function App() {
     if (rr.verankering.modus !== 'eind') return res;
     var pt = String(key).split('|');
     var si = SHIFTS.findIndex(function (x) { return x.id === pt[2]; });
-    if (si <= 0) return res;
-    var prevKey = cellK(pt[0], pt[1], SHIFTS[si - 1].id, pt[3], pt[4]);
-    var prevMap = afgeleideCel(prevKey);
+    if (si < 0) return res;
+    var isOchtend = (si === 0);
+    var prevKey = isOchtend ? cellK(pt[0], pt[1], SHIFTS[SHIFTS.length - 1].id, pt[3], pt[4]) : cellK(pt[0], pt[1], SHIFTS[si - 1].id, pt[3], pt[4]);
+    var prevMap = isOchtend ? {} : afgeleideCel(prevKey);
     var eindVan = function (b) {
       if (prevMap[b.id] && prevMap[b.id].eind) return prevMap[b.id].eind;
       return b.eind || '';
@@ -2076,6 +2081,7 @@ function App() {
     }
     (plan[prevKey] || []).forEach(function (b) {
       if (b.ziek) return;
+      if (isOchtend) { if (b.vorigeDag !== true) return; }
       var inf = infoVan(b);
       if (!inf) return;
       var f = funcVan(inf);
@@ -2173,7 +2179,8 @@ function App() {
         kostplaats: m.kostplaats || null,
         start: m.start,
         eind: m.eind,
-        tijdVast: true
+        tijdVast: true,
+        vorigeDag: (m.vorigeDag === true)
       }) : a);
       return n;
     });
@@ -2856,7 +2863,7 @@ function App() {
     if (!a) { setCtxMenu(null); return; }
     var e = a.empId ? employees.find(x => x.id === a.empId) : null;
     var _et = afgeleideTijd(a, key);
-    setTimeModal({ mode: 'edit', key: key, id: a.id, naam: e ? e.naam : (a.bureau || 'Uitzend'), start: _et.start || '06:00', netto: (e && e.netto) || '7:12', pauze: (e && e.pauze) || '1:03', eind: _et.eind || '', anker: _et.afgeleid ? { naam: _et.ankerNaam, eind: _et.ankerEind, overlap: _et.overlap } : null, kostplaats: a.kostplaats || '' });
+    setTimeModal({ mode: 'edit', key: key, id: a.id, naam: e ? e.naam : (a.bureau || 'Uitzend'), start: _et.start || '06:00', netto: (e && e.netto) || '7:12', pauze: (e && e.pauze) || '1:03', eind: _et.eind || '', anker: _et.afgeleid ? { naam: _et.ankerNaam, eind: _et.ankerEind, overlap: _et.overlap } : null, kostplaats: a.kostplaats || '', vorigeDag: (a.vorigeDag === true) });
     setCtxMenu(null);
   };
   const ctxVerplaats = (key, id, targetLijn) => {
@@ -2952,7 +2959,8 @@ function App() {
                 'Standard Total Hours': e.netto || '7:12',
                 'Skill': e.skills && e.skills[0] || e.rol || '',
                 'Day Type': (e.pauze || '1:03') + ' Pauze',
-                'Start Day': parseInt(start, 10) >= 20 ? 'P' : ''
+                'Start Day': (a.vorigeDag === true || (wt && wt.vorigeDag === true)) ? 'P' : '',
+                'Cost Center 5': (hhmmMin(e.netto || '7:12') === 480 && ((((hhmmMin(eind) - hhmmMin(start)) % 1440 + 1440) % 1440) - hhmmMin(e.netto || '7:12')) === 30) ? 'Paid break 30' : ''
               }));
             });
           });
@@ -2984,7 +2992,7 @@ function App() {
           'Standard Total Hours': e.netto || '7:12',
           'Skill': e.skills && e.skills[0] || e.rol || '',
           'Day Type': (wt.pauze || '1:03') + ' Pauze',
-          'Start Day': parseInt(wt.start, 10) >= 20 ? 'P' : ''
+          'Start Day': (wt && wt.vorigeDag === true) ? 'P' : ''
         }));
       });
     });
@@ -3033,10 +3041,10 @@ function App() {
       (plan[k] || []).forEach(function (a) {
         var _et = afgeleideTijd(a, k);
         if (a.type === 'uitzend' && (a.bureau || 'Onbekend') === bureau) {
-          rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: 'EXTRA', start: _et.start || a.start, eind: _et.eind || a.eind, netto: (uitzendCfg(a.bureau) || {}).netto || '7:12' });
+          rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: 'EXTRA', start: _et.start || a.start, eind: _et.eind || a.eind, netto: (uitzendCfg(a.bureau) || {}).netto || '7:12', vorigeDag: a.vorigeDag === true });
         } else if (a.type === 'vast' && a.empId) {
           var e = employees.find(function (x) { return x.id === a.empId; });
-          if (e && e.isUitzend && (e.bureau || 'Onbekend') === bureau) rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: e.naam, start: _et.start || a.start, eind: _et.eind || a.eind, netto: e.netto || '7:12' });
+          if (e && e.isUitzend && (e.bureau || 'Onbekend') === bureau) rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: e.naam, start: _et.start || a.start, eind: _et.eind || a.eind, netto: e.netto || '7:12', vorigeDag: a.vorigeDag === true });
         }
       });
     });
@@ -3047,10 +3055,10 @@ function App() {
     if (!rows.length) { ping('Geen regels voor ' + bureau, 'warn'); return; }
     var mon = isoMonday(jaar, week);
     var datumVoor = function (dag) { var idx = DAG_K.indexOf(dag); var dt = new Date(mon.getTime()); dt.setUTCDate(mon.getUTCDate() + (idx < 0 ? 0 : idx)); return String(dt.getUTCDate()).padStart(2, '0') + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0') + '-' + dt.getUTCFullYear(); };
-    var startingDay = function (start, eind) { var sh = parseInt(String(start || '').split(':')[0], 10); return sh >= 20 ? 'Vorige dag' : ''; };
+    var startingDay = function (vd) { return vd ? 'Vorige dag' : ''; };
     var aoa = [['Aanvraag ' + bureau + ' \u2014 Week ' + week + ' ' + jaar], ['Datum', 'Dag', 'Starting day', 'Volledige naam', 'Start-Stop', 'Totaal standaarduren', 'Lijn / Positie']];
     rows.forEach(function (r) {
-      aoa.push([datumVoor(r.dag), DAG_L[DAG_K.indexOf(r.dag)] || r.dag, startingDay(r.start, r.eind), r.naam || '', (r.start || '?') + ' - ' + (r.eind || '?'), r.netto || '7:12', r.lijn]);
+      aoa.push([datumVoor(r.dag), DAG_L[DAG_K.indexOf(r.dag)] || r.dag, startingDay(r.vorigeDag), r.naam || '', (r.start || '?') + ' - ' + (r.eind || '?'), r.netto || '7:12', r.lijn]);
     });
     var wb = XLSX.utils.book_new();
     var ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -5432,7 +5440,7 @@ function App() {
     onChange: ev => setTimeModal(Object.assign({}, timeModal, {
       eind: ev.target.value
     }))
-  })), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Kostenplaats (afwijkend \u2014 leeg = van de lijn)", React.createElement("select", { className: "cin", value: timeModal.kostplaats || '', onChange: ev => setTimeModal(Object.assign({}, timeModal, { kostplaats: ev.target.value })) }, [React.createElement("option", { key: '_leeg', value: '' }, '\u2014 van de lijn \u2014')].concat((timeModal.kostplaats && kostplaatsen.indexOf(timeModal.kostplaats) < 0 ? [timeModal.kostplaats] : []).concat(kostplaatsen).map(function (kp) { return React.createElement("option", { key: kp, value: kp }, kp); }))))), React.createElement("div", {
+  })), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Kostenplaats (afwijkend \u2014 leeg = van de lijn)", React.createElement("select", { className: "cin", value: timeModal.kostplaats || '', onChange: ev => setTimeModal(Object.assign({}, timeModal, { kostplaats: ev.target.value })) }, [React.createElement("option", { key: '_leeg', value: '' }, '\u2014 van de lijn \u2014')].concat((timeModal.kostplaats && kostplaatsen.indexOf(timeModal.kostplaats) < 0 ? [timeModal.kostplaats] : []).concat(kostplaatsen).map(function (kp) { return React.createElement("option", { key: kp, value: kp }, kp); })))), React.createElement("label", { className: "efld", style: { marginTop: 10 } }, "Vorige dag \u2014 nachtdienst begon gisteren (UKG start-day = P)", React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 6 } }, React.createElement("button", { type: "button", className: "btn" + ((timeModal.vorigeDag === true) ? " gold" : ""), onClick: function () { setTimeModal(Object.assign({}, timeModal, { vorigeDag: true })); } }, "Ja"), React.createElement("button", { type: "button", className: "btn" + ((timeModal.vorigeDag === true) ? "" : " gold"), onClick: function () { setTimeModal(Object.assign({}, timeModal, { vorigeDag: false })); } }, "Nee")))), React.createElement("div", {
     className: "modal-ft"
   }, React.createElement("button", {
     className: "btn gold",
@@ -5557,7 +5565,7 @@ function App() {
       className: "cin",
       readOnly: true,
       value: berekenEindtijd(wk.start, wk.netto, wk.pauze)
-    }))), React.createElement("div", {
+    })), React.createElement("label", { className: "efld" }, "Vorige dag (begon gisteren)", React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6 } }, React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? " gold" : ""), onClick: function () { setWk('vorigeDag', true); } }, "Ja"), React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? "" : " gold"), onClick: function () { setWk('vorigeDag', false); } }, "Nee")))), React.createElement("div", {
       style: {
         marginTop: 8
       }
