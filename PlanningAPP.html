@@ -1167,6 +1167,7 @@ function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dichtSec, setDichtSec] = useState({});
   const [cfgCat, setCfgCat] = useState('A');
+  const [bdOpen, setBdOpen] = useState(false);
   const toggleSec = id => setDichtSec(s => Object.assign({}, s, { [id]: !s[id] }));
   const [isMobile, setIsMobile] = useState(function () { try { return window.matchMedia('(max-width:1024px)').matches; } catch (e) { return false; } });
   useEffect(function () {
@@ -3254,6 +3255,7 @@ function App() {
   };
   const kpi = useMemo(() => {
     let s = 0, o = 0, req = 0, cap = 0, covered = 0, underCells = 0, over = 0, overCells = 0, schedH = 0, capH = 0, arbeidMin = 0;
+    var bd = {};
     var rrB = normRoosterRegels(roosterRegels);
     var betaald = rrB.urenBasis === 'betaaluren';
     var nettoMinVan = function (a, dk) {
@@ -3284,12 +3286,15 @@ function App() {
     };
     lines.forEach(l => SHIFTS.slice(0, l.ploegen || l.shiften || 2).forEach(sh => {
       var h = (SHIFT_TIMES[sh.id] || {}).h || 8;
+      var _bk = l.lijn + '|' + sh.id;
+      if (!bd[_bk]) bd[_bk] = { lijn: l.lijn, shiftLabel: (sh.label || sh.id), ingepland: 0, basis: 0, tekort: 0, over: 0 };
       days.forEach(dy => {
         const c = info(l, sh.id, dy.k);
         s += c.actief; o += c.tekort; req += c.req; cap += c.cap;
         covered += Math.min(c.actief, c.req);
         if (c.tekort > 0) underCells++;
         if (c.actief > c.cap) { over += (c.actief - c.cap); overCells++; }
+        bd[_bk].ingepland += c.actief; bd[_bk].basis += c.req; bd[_bk].tekort += c.tekort; bd[_bk].over += Math.max(0, c.actief - c.cap);
         schedH += c.actief * h; capH += c.cap * h;
         (plan[cellK(dept, l.lijn, sh.id, wkKey, dy.k)] || []).forEach(function (a) { arbeidMin += nettoMinVan(a, dy.k); });
       });
@@ -3297,7 +3302,7 @@ function App() {
     var coverage = req > 0 ? Math.round(s / req * 100) : null;
     var hoursPct = capH > 0 ? Math.round(schedH / capH * 100) : null;
     var arbeidH = Math.round(arbeidMin / 60);
-    return { s: s, o: o, req: req, cap: cap, covered: covered, underCells: underCells, over: over, overCells: overCells, schedH: schedH, capH: capH, coverage: coverage, hoursPct: hoursPct, arbeidH: arbeidH, urenBasis: rrB.urenBasis };
+    return { s: s, o: o, req: req, cap: cap, covered: covered, underCells: underCells, over: over, overCells: overCells, schedH: schedH, capH: capH, coverage: coverage, hoursPct: hoursPct, arbeidH: arbeidH, urenBasis: rrB.urenBasis, bd: Object.keys(bd).map(function (k) { return bd[k]; }) };
   }, [lines, info, days, plan, employees, roosterRegels, templates, week, dept, wkKey]);
   const isoOfDay = dk => {
     var mon = isoMonday(jaar, week);
@@ -3446,10 +3451,12 @@ function App() {
       n: "refresh"
     })))), React.createElement("div", {
       className: "kpis rich"
-    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, (kpi.underCells > 0 ? { k: "Onderbezet", v: kpi.underCells, sub: kpi.o + " posities tekort", icon: "warning", cls: "open" } : kpi.overCells > 0 ? { k: "Overbezet", v: kpi.overCells, sub: kpi.over + " posities te veel", icon: "groups", cls: "over" } : { k: "Bezetting", v: "OK", sub: "binnen norm", icon: "verified", cls: "" }), { k: "Uren \u00b7 dekking", v: kpi.schedH + " / " + kpi.capH + "u", sub: (kpi.hoursPct == null ? "—" : kpi.hoursPct + "% van MR-max"), icon: "schedule", cls: "" }].map(function (m) {
+    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, (kpi.underCells > 0 ? { k: "Onderbezet", v: kpi.underCells, sub: kpi.o + " posities tekort", icon: "warning", cls: "open", onClick: function () { setBdOpen(function (v) { return !v; }); } } : kpi.overCells > 0 ? { k: "Overbezet", v: kpi.overCells, sub: kpi.over + " posities te veel", icon: "groups", cls: "over", onClick: function () { setBdOpen(function (v) { return !v; }); } } : { k: "Bezetting", v: "OK", sub: "binnen norm", icon: "verified", cls: "", onClick: function () { setBdOpen(function (v) { return !v; }); } }), { k: "Uren \u00b7 dekking", v: kpi.schedH + " / " + kpi.capH + "u", sub: (kpi.hoursPct == null ? "—" : kpi.hoursPct + "% van MR-max"), icon: "schedule", cls: "" }].map(function (m) {
       return React.createElement("div", {
         key: m.k,
-        className: "card kpi " + m.cls
+        className: "card kpi " + m.cls,
+        onClick: m.onClick,
+        style: { cursor: m.onClick ? "pointer" : "default" }
       }, React.createElement("div", {
         className: "kpi-top"
       }, React.createElement("div", {
@@ -3461,7 +3468,7 @@ function App() {
       }, m.v), React.createElement("div", {
         className: "kpi-sub"
       }, m.sub));
-    })), React.createElement("div", {
+    })), bdOpen ? React.createElement("div", { className: "card", style: { padding: 14, overflowX: "auto" } }, React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } }, React.createElement("div", { style: { fontWeight: 800 } }, "Bezetting per lijn & shift \u2014 " + dept), React.createElement("button", { className: "btn", style: { padding: "4px 10px" }, onClick: function () { setBdOpen(false); } }, "Sluiten")), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13 } }, React.createElement("thead", null, React.createElement("tr", null, ["Lijn", "Shift", "Ingepland", "Basis", "Tekort", "Te veel"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.bd || []).map(function (r) { return React.createElement("tr", { key: r.lijn + r.shiftLabel }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, r.lijn), React.createElement("td", { style: { padding: "4px 8px" } }, r.shiftLabel), React.createElement("td", { style: { padding: "4px 8px" } }, r.ingepland), React.createElement("td", { style: { padding: "4px 8px" } }, r.basis), React.createElement("td", { style: { padding: "4px 8px", color: r.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: r.tekort > 0 ? 700 : 400 } }, r.tekort || "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: r.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: r.over > 0 ? 700 : 400 } }, r.over || "\u2014")); }))), React.createElement("div", { className: "hint", style: { marginTop: 8 } }, "Oranje = onder de MR-basis (bv. lege middag). Draait die shift niet? Zet de basis op 0 in Configuratie \u2192 Lijnen & MR, dan telt het niet meer als tekort.")) : null, React.createElement("div", {
       className: "card weekbar"
     }, React.createElement("div", {
       className: "wk"
