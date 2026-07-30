@@ -1624,6 +1624,7 @@ function App() {
       return r.json();
     }).then(function (j) {
       var dat = j && j.data ? j.data : j;
+      if (dat && dat.data && !dat.cfg && !dat.plan) dat = dat.data;   // vergeef dubbel-ingepakte LOAD-respons
       if (!dat) {
         ping('Lege respons', 'block');
         return;
