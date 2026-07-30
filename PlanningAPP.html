@@ -3302,8 +3302,49 @@ function App() {
     var coverage = req > 0 ? Math.round(s / req * 100) : null;
     var hoursPct = capH > 0 ? Math.round(schedH / capH * 100) : null;
     var arbeidH = Math.round(arbeidMin / 60);
-    return { s: s, o: o, req: req, cap: cap, covered: covered, underCells: underCells, over: over, overCells: overCells, schedH: schedH, capH: capH, coverage: coverage, hoursPct: hoursPct, arbeidH: arbeidH, urenBasis: rrB.urenBasis, bd: Object.keys(bd).map(function (k) { return bd[k]; }) };
-  }, [lines, info, days, plan, employees, roosterRegels, templates, week, dept, wkKey]);
+    var perAfd = Object.keys(cfg).map(function (afd) {
+      var uC = 0, oT = 0, ovC = 0, ov = 0, sH = 0, cH = 0;
+      (cfg[afd] || []).filter(function (ln) { return !hidden[afd + '|' + ln.lijn]; }).forEach(function (ln) {
+        SHIFTS.slice(0, ln.ploegen || ln.shiften || 2).forEach(function (shf) {
+          var hh = (SHIFT_TIMES[shf.id] || {}).h || 8;
+          days.forEach(function (dy) {
+            var act = (plan[cellK(afd, ln.lijn, shf.id, wkKey, dy.k)] || []).filter(function (a) { return !a.ziek; }).length;
+            var sn = shiftNorm(ln, dy.k, dy.iso, shf.id);
+            var rq = sn.basis, cp = sn.max, tk = Math.max(0, rq - act);
+            if (tk > 0) { uC++; oT += tk; }
+            if (act > cp) { ovC++; ov += (act - cp); }
+            sH += act * hh; cH += cp * hh;
+          });
+        });
+      });
+      return { afd: afd, underCells: uC, o: oT, overCells: ovC, over: ov, schedH: sH, capH: cH, hoursPct: cH > 0 ? Math.round(sH / cH * 100) : null };
+    });
+    return { s: s, o: o, req: req, cap: cap, covered: covered, underCells: underCells, over: over, overCells: overCells, schedH: schedH, capH: capH, coverage: coverage, hoursPct: hoursPct, arbeidH: arbeidH, urenBasis: rrB.urenBasis, bd: Object.keys(bd).map(function (k) { return bd[k]; }), perAfd: perAfd };
+  }, [lines, info, days, plan, employees, roosterRegels, templates, week, dept, wkKey, cfg, hidden]);
+  const deptKpi = useMemo(function () {
+    var out = [];
+    Object.keys(cfg).forEach(function (dp) {
+      var dlines = (cfg[dp] || []).filter(function (l) { return !hidden[dp + "|" + l.lijn]; });
+      var s = 0, req = 0, o = 0, over = 0, underCells = 0, overCells = 0, schedH = 0, capH = 0;
+      dlines.forEach(function (l) {
+        SHIFTS.slice(0, l.ploegen || l.shiften || 2).forEach(function (sh) {
+          var h = (SHIFT_TIMES[sh.id] || {}).h || 8;
+          days.forEach(function (dy) {
+            var actief = (plan[cellK(dp, l.lijn, sh.id, wkKey, dy.k)] || []).filter(function (a) { return !a.ziek; }).length;
+            var _sn = shiftNorm(l, dy.k, dy.iso, sh.id);
+            var rq = _sn.basis, cp = _sn.max, tk = Math.max(0, rq - actief);
+            s += actief; req += rq; o += tk;
+            if (tk > 0) underCells++;
+            if (actief > cp) { over += (actief - cp); overCells++; }
+            schedH += actief * h; capH += cp * h;
+          });
+        });
+      });
+      out.push({ dept: dp, s: s, req: req, o: o, over: over, underCells: underCells, overCells: overCells, schedH: schedH, capH: capH, hoursPct: capH > 0 ? Math.round(schedH / capH * 100) : null });
+    });
+    return out;
+  }, [cfg, hidden, days, plan, roosterRegels, templates, week, wkKey]);
+
   const isoOfDay = dk => {
     var mon = isoMonday(jaar, week);
     var idx = DAG_K.indexOf(dk);
@@ -3468,7 +3509,7 @@ function App() {
       }, m.v), React.createElement("div", {
         className: "kpi-sub"
       }, m.sub));
-    })), bdOpen ? React.createElement("div", { className: "card", style: { padding: 14, overflowX: "auto" } }, React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } }, React.createElement("div", { style: { fontWeight: 800 } }, "Bezetting per lijn & shift \u2014 " + dept), React.createElement("button", { className: "btn", style: { padding: "4px 10px" }, onClick: function () { setBdOpen(false); } }, "Sluiten")), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13 } }, React.createElement("thead", null, React.createElement("tr", null, ["Lijn", "Shift", "Ingepland", "Basis", "Tekort", "Te veel", "Uren", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.bd || []).map(function (r) { return React.createElement("tr", { key: r.lijn + r.shiftLabel }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, r.lijn), React.createElement("td", { style: { padding: "4px 8px" } }, r.shiftLabel), React.createElement("td", { style: { padding: "4px 8px" } }, r.ingepland), React.createElement("td", { style: { padding: "4px 8px" } }, r.basis), React.createElement("td", { style: { padding: "4px 8px", color: r.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: r.tekort > 0 ? 700 : 400 } }, r.tekort || "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: r.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: r.over > 0 ? 700 : 400 } }, r.over || "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, r.schedH + "u"), React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600, color: (r.capH > 0 && r.schedH / r.capH < 0.5) ? "#c15400" : "inherit" } }, r.capH > 0 ? Math.round(r.schedH / r.capH * 100) + "%" : "\u2014")); }))), React.createElement("div", { className: "hint", style: { marginTop: 8 } }, "Oranje = onder de MR-basis (bv. lege middag). Draait die shift niet? Zet de basis op 0 in Configuratie \u2192 Lijnen & MR, dan telt het niet meer als tekort.")) : null, React.createElement("div", {
+    })), bdOpen ? React.createElement("div", { className: "card", style: { padding: 14, overflowX: "auto" } }, React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } }, React.createElement("div", { style: { fontWeight: 800 } }, "Bezetting per lijn & shift \u2014 " + dept), React.createElement("button", { className: "btn", style: { padding: "4px 10px" }, onClick: function () { setBdOpen(false); } }, "Sluiten")), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (deptKpi || []).map(function (d) { return React.createElement("tr", { key: d.dept }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, d.dept), React.createElement("td", { style: { padding: "4px 8px", color: d.underCells > 0 ? "#c15400" : "#9aa0ad", fontWeight: d.underCells > 0 ? 700 : 400 } }, d.underCells > 0 ? (d.underCells + " \u00b7 " + d.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: d.overCells > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: d.overCells > 0 ? 700 : 400 } }, d.overCells > 0 ? (d.overCells + " \u00b7 " + d.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, d.schedH + " / " + d.capH + "u"), React.createElement("td", { style: { padding: "4px 8px" } }, d.hoursPct == null ? "\u2014" : d.hoursPct + "%")); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Detail \u2014 " + dept), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.perAfd || []).map(function (a) { return React.createElement("tr", { key: a.afd, style: { fontWeight: a.afd === dept ? 700 : 400, background: a.afd === dept ? "#f6f7fb" : "transparent" } }, React.createElement("td", { style: { padding: "4px 8px" } }, a.afd), React.createElement("td", { style: { padding: "4px 8px", color: a.o > 0 ? "#c15400" : "#9aa0ad", fontWeight: a.o > 0 ? 700 : 400 } }, a.o > 0 ? (a.underCells + " \u00b7 " + a.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: a.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: a.over > 0 ? 700 : 400 } }, a.over > 0 ? (a.overCells + " \u00b7 " + a.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, a.schedH + " / " + a.capH + "u" + (a.hoursPct == null ? "" : " \u00b7 " + a.hoursPct + "%"))); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Detail \u2014 " + dept), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13 } }, React.createElement("thead", null, React.createElement("tr", null, ["Lijn", "Shift", "Ingepland", "Basis", "Tekort", "Te veel", "Uren", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.bd || []).map(function (r) { return React.createElement("tr", { key: r.lijn + r.shiftLabel }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, r.lijn), React.createElement("td", { style: { padding: "4px 8px" } }, r.shiftLabel), React.createElement("td", { style: { padding: "4px 8px" } }, r.ingepland), React.createElement("td", { style: { padding: "4px 8px" } }, r.basis), React.createElement("td", { style: { padding: "4px 8px", color: r.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: r.tekort > 0 ? 700 : 400 } }, r.tekort || "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: r.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: r.over > 0 ? 700 : 400 } }, r.over || "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, r.schedH + "u"), React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600, color: (r.capH > 0 && r.schedH / r.capH < 0.5) ? "#c15400" : "inherit" } }, r.capH > 0 ? Math.round(r.schedH / r.capH * 100) + "%" : "\u2014")); }))), React.createElement("div", { className: "hint", style: { marginTop: 8 } }, "Oranje = onder de MR-basis (bv. lege middag). Draait die shift niet? Zet de basis op 0 in Configuratie \u2192 Lijnen & MR, dan telt het niet meer als tekort.")) : null, React.createElement("div", {
       className: "card weekbar"
     }, React.createElement("div", {
       className: "wk"
