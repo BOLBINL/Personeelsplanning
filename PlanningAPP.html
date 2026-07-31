@@ -1152,7 +1152,6 @@ function App() {
   const [vijfPloegen, setVijfPloegen] = useState(() => normVijfPloegen(lsGet(LS_5P, { versie: 1, perLijn: {} })));
   const [sel5pLijn, setSel5pLijn] = useState('');
   const [mrAfd, setMrAfd] = useState(() => lsGet('bl_mrafd_v4', {}));
-  const [mgrMails, setMgrMails] = useState(() => lsGet('bl_mgrmails_v4', {}));
   const heeftMR = dep => (mrAfd[dep] !== undefined ? !!mrAfd[dep] : ((cfg[dep] || []).length > 0));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
   const [redenen, setRedenen] = useState(() => lsGet(LS_RED, DEFAULT_REDENEN));
@@ -1215,8 +1214,7 @@ function App() {
     load: '',
     save: '',
     verlof: '',
-    company: '',
-    notify: ''
+    company: ''
   }));
   const [syncInfo, setSyncInfo] = useState('');
   const [templates, setTemplates] = useState(() => lsGet('bl_templates_v4', [{
@@ -1571,8 +1569,7 @@ function App() {
       skills: skills,
       templates: templates,
       auditLog: auditLog,
-      mrAfd: mrAfd,
-      mgrMails: mgrMails
+      mrAfd: mrAfd
     }
   });
   const saveState = (overrideBlob, stil) => {
@@ -1627,6 +1624,7 @@ function App() {
       return r.json();
     }).then(function (j) {
       var dat = j && j.data ? j.data : j;
+      if (dat && dat.data && !dat.cfg && !dat.plan) dat = dat.data;   // vergeef dubbel-ingepakte LOAD-respons
       if (!dat) {
         ping('Lege respons', 'block');
         return;
@@ -1639,6 +1637,7 @@ function App() {
         setSyncInfo('Lokale planning behouden (' + _localN + ' regels > cloud ' + _cloudN + ')');
         ping('SharePoint bevat minder data dan je lokale planning \u2014 NIET overschreven. Klik Opslaan om je lokale versie te uploaden.', 'warn');
         try { logAction('LAADGUARD_OVERGESLAGEN', { cloudN: _cloudN, localN: _localN }); } catch (e) {}
+        _autoArm.current = true;   // toch armen: lokale (grotere) staat mag automatisch naar cloud
         return;
       }
       if (dat.plan) setPlan(dat.plan);
@@ -1652,7 +1651,6 @@ function App() {
       if (dat.pub) setPub(dat.pub);
       if (dat.skills) setSkills(dat.skills);
       if (dat.mrAfd) setMrAfd(dat.mrAfd);
-      if (dat.mgrMails) setMgrMails(dat.mgrMails);
       if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
       if (j && j.version != null) {
         try {
@@ -1945,95 +1943,6 @@ function App() {
       uren: _sn.uren
     };
   }, [plan, dept, wkKey, days]);
-  // --- Fase 2: over-max digest builder (pure; verzendt niets) ---
-  const buildOverMaxDigest = () => {
-    const lines = cfg[dept] || [];
-    const overMax = [];
-    Object.keys(plan).forEach(function (k) {
-      const list = plan[k];
-      if (!list || !list.length) return;
-      const pt = k.split('|'); // [afd, lijn, shift, wkKey, dag]
-      if (pt[0] !== dept || pt[3] !== wkKey) return;
-      const L = lines.find(function (x) { return x.lijn === pt[1]; });
-      if (!L) return;
-      const c = info(L, pt[2], pt[4]);
-      if (c.status !== 'over') return;
-      const redenen = [];
-      const wie = [];
-      c.list.forEach(function (a) {
-        if (!a.overReason) return;
-        if (redenen.indexOf(a.overReason) < 0) redenen.push(a.overReason);
-        const nm = a.empId
-          ? ((employees.find(function (e) { return e.id === a.empId; }) || {}).naam || String(a.empId))
-          : ('Uitzendkracht' + (a.bureau ? ' (' + a.bureau + ')' : ''));
-        wie.push(nm);
-      });
-      const dObj = days.find(function (x) { return x.k === pt[4]; });
-      overMax.push({
-        lijn: L.lijn,
-        shift: pt[2],
-        shiftLabel: (pt[2] === 'O' ? 'Ochtend' : pt[2] === 'M' ? 'Middag' : pt[2]),
-        dag: pt[4],
-        datum: dObj ? dObj.iso : null,
-        basis: c.req,
-        max: c.cap,
-        gepland: c.actief,
-        over: c.actief - c.cap,
-        redenen: redenen,
-        wie: wie
-      });
-    });
-    overMax.sort(function (a, b) {
-      return (a.lijn + a.dag + a.shift).localeCompare(b.lijn + b.dag + b.shift);
-    });
-    const priorPub = auditLog.filter(function (r) {
-      return r.actie === 'GEPUBLICEERD' && r.afd === dept && r.week === week && r.jaar === jaar;
-    });
-    const type = priorPub.length ? 'update' : 'nieuw';
-    let heropenReden = null;
-    if (type === 'update') {
-      const intrek = auditLog.filter(function (r) {
-        return r.actie === 'PUBLICATIE_INGETROKKEN' && r.afd === dept && r.week === week && r.jaar === jaar;
-      });
-      if (intrek.length) heropenReden = intrek[intrek.length - 1].reden || null;
-    }
-    const managers = String(mgrMails[dept] || '')
-      .split(/[;,\s]+/)
-      .map(function (x) { return x.trim(); })
-      .filter(function (x) { return x.indexOf('@') > 0; });
-    return {
-      afd: dept,
-      week: week,
-      jaar: jaar,
-      wkKey: wkKey,
-      type: type,
-      heropenReden: heropenReden,
-      managers: managers,
-      aantalCellen: overMax.length,
-      totaalOver: overMax.reduce(function (sm, c) { return sm + c.over; }, 0),
-      overMax: overMax,
-      gegenereerdOp: new Date().toISOString(),
-      door: user
-    };
-  };
-  // --- Fase 3: over-max melding naar managers via NOTIFY-flow ---
-  const sendOverMaxNotify = (trigger) => {
-    if (!flow.notify) return;
-    var d = buildOverMaxDigest();
-    if (!d.managers.length || !d.overMax.length) return; // niets te melden of niemand om te mailen
-    d.trigger = trigger || 'publicatie';
-    fetch(flow.notify, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(d)
-    }).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      ping('Over-max melding verstuurd naar ' + d.managers.length + ' manager(s)');
-      logAction('OVERMAX_MELDING_VERZONDEN', { afd: d.afd, week: d.week, cellen: d.aantalCellen, over: d.totaalOver, managers: d.managers.length, type: d.type });
-    }).catch(function (e) {
-      ping('Over-max melding mislukt: ' + e.message, 'warn');
-    });
-  };
   const startAssign = (empId, keyArg) => {
     if (_bewerkGeblokkeerd()) return;
     var cellKey = keyArg || sel;
@@ -2535,7 +2444,6 @@ function App() {
       saveState(_blob);
       ping('Opslaan naar SharePoint gestart…');
     }
-    sendOverMaxNotify('publicatie');
   };
   const doIntrek = () => {
     const key = dept + '|' + wkKey;
@@ -2823,7 +2731,6 @@ function App() {
         if (dat.pub) setPub(dat.pub);
         if (dat.skills) setSkills(dat.skills);
       if (dat.mrAfd) setMrAfd(dat.mrAfd);
-      if (dat.mgrMails) setMgrMails(dat.mgrMails);
         if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
         logAction('BACKUP_IMPORT', {});
         ping('Backup teruggezet \u2014 klik NU Opslaan om naar SharePoint te uploaden (anders laadt de cloud-versie bij verversen terug).', 'warn');
@@ -4927,18 +4834,6 @@ function App() {
         save: e.target.value
       })),
       placeholder: "https://prod-...logic.azure.com/...invoke"
-    })), React.createElement("label", {
-      className: "efld",
-      style: {
-        marginTop: 8
-      }
-    }, "NOTIFY-flow URL (over-max melding bij publiceren, POST)", React.createElement("input", {
-      className: "cin",
-      value: flow.notify,
-      onChange: e => setFlow(Object.assign({}, flow, {
-        notify: e.target.value
-      })),
-      placeholder: "https://prod-...logic.azure.com/...invoke"
     })), React.createElement("div", {
       style: {
         display: 'flex',
@@ -4948,12 +4843,12 @@ function App() {
       }
     }, React.createElement("button", {
       className: "btn",
-      onClick: laadVanSharePoint
+      onClick: () => laadVanSharePoint()
     }, React.createElement(I, {
       n: "cloud_download"
     }), "Nu laden"), React.createElement("button", {
       className: "btn gold",
-      onClick: saveState
+      onClick: () => saveState()
     }, React.createElement(I, {
       n: "cloud_upload"
     }), "Nu opslaan"), React.createElement("label", { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', marginLeft: 4 } }, React.createElement("input", { type: "checkbox", checked: !!autoSave, onChange: function (ev) { var v = ev.target.checked; setAutoSave(v); try { localStorage.setItem('bl_autosave_v4', JSON.stringify(v)); } catch (e) {} } }), "Automatisch opslaan")), syncInfo ? React.createElement("div", {
@@ -4984,16 +4879,6 @@ function App() {
       onChange: e => setFlow(Object.assign({}, flow, {
         company: e.target.value
       }))
-    })), React.createElement("label", {
-      className: "efld",
-      style: {
-        marginTop: 8
-      }
-    }, "Manager e-mail(s) \u2014 " + dept + " (over-max melding \u00b7 meerdere: ; of ,)", React.createElement("input", {
-      className: "cin",
-      value: (mgrMails[dept] || ''),
-      onChange: e => { var _v = e.target.value; setMgrMails(function (m) { var n = Object.assign({}, m, { [dept]: _v }); try { localStorage.setItem('bl_mgrmails_v4', JSON.stringify(n)); } catch (x) {} return n; }); },
-      placeholder: "manager1@biscuit.nl; manager2@biscuit.nl"
     })), React.createElement("div", {
       className: "hint",
       style: {
@@ -5528,7 +5413,7 @@ function App() {
   if (view === 'planning') body = planningView();else if (view === 'sapmr') body = sapmrView();else if (view === 'personeel') body = personeelView();else if (view === 'uitzend') body = uitzendView();else if (view === 'config') body = configView();else if (view === 'ukg') body = ukgView();else if (view === 'dashboard') body = dashboardView();else body = vakantieView();
   return React.createElement("div", {
     className: "app" + (isMobile ? " mob" : "")
-  }, (isMobile ? null : sidebar), (isMobile && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(React.createElement("div", { className: "mobnav" }, React.createElement("div", { className: "mtopbar" }, React.createElement("button", { className: "hamb", onClick: () => setDrawerOpen(true), title: "Menu", "aria-label": "Menu" }, React.createElement(I, { n: "menu" })), React.createElement("div", { className: "mtb-title" }, dept + " \u00b7 wk " + week), React.createElement("div", { className: "mtb-actions" }, React.createElement("button", { onClick: laadVanSharePoint, title: "Verversen (laden)" }, React.createElement(I, { n: "refresh" })), React.createElement("button", { className: (isPub ? "" : "gold"), onClick: publish, title: isPub ? "Publicatie intrekken" : "Publiceren en vergrendelen" }, React.createElement(I, { n: isPub ? "lock_open" : "publish" })), isPub ? React.createElement("button", { onClick: printRooster, title: "Afdrukken / PDF" }, React.createElement(I, { n: "print" })) : null)), drawerOpen ? React.createElement("div", { className: "drawer-ov", onClick: () => setDrawerOpen(false) }) : null, sidebar), document.body) : null), React.createElement("main", {
+  }, (isMobile ? null : sidebar), (isMobile && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(React.createElement("div", { className: "mobnav" }, React.createElement("div", { className: "mtopbar" }, React.createElement("button", { className: "hamb", onClick: () => setDrawerOpen(true), title: "Menu", "aria-label": "Menu" }, React.createElement(I, { n: "menu" })), React.createElement("div", { className: "mtb-title" }, dept + " \u00b7 wk " + week), React.createElement("div", { className: "mtb-actions" }, React.createElement("button", { onClick: () => laadVanSharePoint(), title: "Verversen (laden)" }, React.createElement(I, { n: "refresh" })), React.createElement("button", { className: (isPub ? "" : "gold"), onClick: publish, title: isPub ? "Publicatie intrekken" : "Publiceren en vergrendelen" }, React.createElement(I, { n: isPub ? "lock_open" : "publish" })), isPub ? React.createElement("button", { onClick: printRooster, title: "Afdrukken / PDF" }, React.createElement(I, { n: "print" })) : null)), drawerOpen ? React.createElement("div", { className: "drawer-ov", onClick: () => setDrawerOpen(false) }) : null, sidebar), document.body) : null), React.createElement("main", {
     className: "main"
   }, body), React.createElement("input", {
     id: "ukgFileInput",
