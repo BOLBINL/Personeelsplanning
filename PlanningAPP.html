@@ -1153,6 +1153,8 @@ function App() {
   const [sel5pLijn, setSel5pLijn] = useState('');
   const [mrAfd, setMrAfd] = useState(() => lsGet('bl_mrafd_v4', {}));
   const [mgrMails, setMgrMails] = useState(() => lsGet('bl_mgrmails_v4', {}));
+  const [mailOpties, setMailOpties] = useState(() => lsGet('bl_mailopties_v4', { overmax: true, tekort: false, altijd: false }));
+  const [mailAfd, setMailAfd] = useState(() => lsGet('bl_mailafd_v4', {}));
   const heeftMR = dep => (mrAfd[dep] !== undefined ? !!mrAfd[dep] : ((cfg[dep] || []).length > 0));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
   const [redenen, setRedenen] = useState(() => lsGet(LS_RED, DEFAULT_REDENEN));
@@ -1572,7 +1574,8 @@ function App() {
       templates: templates,
       auditLog: auditLog,
       mrAfd: mrAfd,
-      mgrMails: mgrMails
+      mgrMails: mgrMails,
+      mailAfd: mailAfd
     }
   });
   const saveState = (overrideBlob, stil) => {
@@ -1655,6 +1658,7 @@ function App() {
       if (dat.skills) setSkills(dat.skills);
       if (dat.mrAfd) setMrAfd(dat.mrAfd);
       if (dat.mgrMails) setMgrMails(dat.mgrMails);
+      if (dat.mailAfd) setMailAfd(dat.mailAfd);
       if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
       if (j && j.version != null) {
         try {
@@ -1984,6 +1988,18 @@ function App() {
         wie: wie
       });
     });
+    var tekort = [];
+    lines.forEach(function (L) {
+      (SHIFTS || []).slice(0, L.ploegen || L.shiften || 2).forEach(function (sh) {
+        days.forEach(function (dy) {
+          var c = info(L, sh.id, dy.k);
+          if (!c || c.tekort <= 0) return;
+          var dO = days.find(function (x) { return x.k === dy.k; });
+          tekort.push({ lijn: L.lijn, shift: sh.id, shiftLabel: (sh.id === 'O' ? 'Ochtend' : sh.id === 'M' ? 'Middag' : sh.id === 'N' ? 'Nacht' : sh.id), dag: dy.k, datum: dO ? dO.iso : null, basis: c.req, max: c.cap, gepland: c.actief, tekort: c.tekort });
+        });
+      });
+    });
+    tekort.sort(function (a, b) { return (a.lijn + a.dag + a.shift).localeCompare(b.lijn + b.dag + b.shift); });
     overMax.sort(function (a, b) {
       return (a.lijn + a.dag + a.shift).localeCompare(b.lijn + b.dag + b.shift);
     });
@@ -2013,6 +2029,9 @@ function App() {
       aantalCellen: overMax.length,
       totaalOver: overMax.reduce(function (sm, c) { return sm + c.over; }, 0),
       overMax: overMax,
+      tekort: tekort,
+      aantalTekort: tekort.length,
+      totaalTekort: tekort.reduce(function (sm, c) { return sm + c.tekort; }, 0),
       gegenereerdOp: new Date().toISOString(),
       door: user
     };
@@ -2020,8 +2039,14 @@ function App() {
   // --- Fase 3: over-max melding naar managers via NOTIFY-flow ---
   const sendOverMaxNotify = (trigger) => {
     if (!flow.notify) return;
+    if (mailAfd[dept] === false) return;   // afdeling staat op 'Mail: Nee'
     var d = buildOverMaxDigest();
-    if (!d.managers.length || !d.overMax.length) return; // niets te melden of niemand om te mailen
+    if (!d.managers.length) return;
+    var wantOver = mailOpties.overmax && d.overMax.length > 0;
+    var wantTekort = mailOpties.tekort && d.tekort.length > 0;
+    var wantAltijd = !!mailOpties.altijd;
+    if (!wantOver && !wantTekort && !wantAltijd) return;
+    d.secties = { overmax: wantOver, tekort: wantTekort, altijd: wantAltijd };
     d.trigger = trigger || 'publicatie';
     fetch(flow.notify, {
       method: 'POST',
@@ -2029,7 +2054,7 @@ function App() {
       body: JSON.stringify(d)
     }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      ping('Over-max melding verstuurd naar ' + d.managers.length + ' manager(s)');
+      ping('Melding verstuurd naar ' + d.managers.length + ' manager(s)');
       logAction('OVERMAX_MELDING_VERZONDEN', { afd: d.afd, week: d.week, cellen: d.aantalCellen, over: d.totaalOver, managers: d.managers.length, type: d.type });
     }).catch(function (e) {
       ping('Over-max melding mislukt: ' + e.message, 'warn');
@@ -2825,6 +2850,7 @@ function App() {
         if (dat.skills) setSkills(dat.skills);
       if (dat.mrAfd) setMrAfd(dat.mrAfd);
       if (dat.mgrMails) setMgrMails(dat.mgrMails);
+      if (dat.mailAfd) setMailAfd(dat.mailAfd);
         if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
         logAction('BACKUP_IMPORT', {});
         ping('Backup teruggezet \u2014 klik NU Opslaan om naar SharePoint te uploaden (anders laadt de cloud-versie bij verversen terug).', 'warn');
@@ -3888,8 +3914,8 @@ function App() {
         marginTop: 3
       }
     }, DAG_L.map(function (dl, di) {
-      var _wd = e.werkdagen || ['ma', 'di', 'wo', 'do', 'vr'];
-      if (_wd.indexOf(DAG_K[di]) < 0) return null;
+      if (e.template) { if (!getWerktijden(e, DAG_K[di], week, templates)) return null; }
+      else { var _wd = e.werkdagen || ['ma', 'di', 'wo', 'do', 'vr']; if (_wd.indexOf(DAG_K[di]) < 0) return null; }
       var _iso = (days[di] || {}).iso;
       var _planned = !!(plannedByEmp[e.id] || {})[DAG_K[di]];
       var _leave = e.status === 'Ziek' || e.status === 'Verlof' || heleDagVrij(e.naam, _iso);
@@ -4713,7 +4739,7 @@ function App() {
         flex: 1,
         fontWeight: 700
       }
-    }, dn + ' (' + (cfg[dn] || []).length + ' lijnen)'), React.createElement("button", {
+    }, dn + ' (' + (cfg[dn] || []).length + ' lijnen)'), React.createElement("button", { className: "tiny", style: { fontWeight: 700, background: (mailAfd[dn] === false ? '#eee' : '#e7f6ec'), color: (mailAfd[dn] === false ? '#888' : '#137a3f') }, title: "Mail bij publiceren van deze afdeling", onClick: () => setMailAfd(function (m) { var n = Object.assign({}, m); n[dn] = (m[dn] === false); try { localStorage.setItem('bl_mailafd_v4', JSON.stringify(n)); } catch (er) {} return n; }) }, "Mail: " + (mailAfd[dn] === false ? "Nee" : "Ja")), React.createElement("button", {
       className: "tiny",
       onClick: () => renameDept(dn)
     }, "Hernoem"), React.createElement("button", {
@@ -4973,7 +4999,7 @@ function App() {
       onChange: e => setFlow(Object.assign({}, flow, {
         company: e.target.value
       }))
-    })), React.createElement("label", { className: "efld", style: { marginTop: 8 } }, "NOTIFY-flow URL (over-max melding bij publiceren, POST)", React.createElement("input", { className: "cin", value: flow.notify, onChange: e => setFlow(Object.assign({}, flow, { notify: e.target.value })), placeholder: "https://prod-...logic.azure.com/...invoke" })), React.createElement("label", { className: "efld", style: { marginTop: 8 } }, "Manager e-mail(s) \u2014 " + dept + " (over-max melding \u00b7 meerdere: ; of ,)", React.createElement("input", { className: "cin", value: (mgrMails[dept] || ''), onChange: e => { var _v = e.target.value; setMgrMails(function (m) { var n = Object.assign({}, m, { [dept]: _v }); try { localStorage.setItem('bl_mgrmails_v4', JSON.stringify(n)); } catch (er) {} return n; }); }, placeholder: "manager1@biscuit.nl; manager2@biscuit.nl" })), React.createElement("div", {
+    })), React.createElement("label", { className: "efld", style: { marginTop: 8 } }, "NOTIFY-flow URL (over-max melding bij publiceren, POST)", React.createElement("input", { className: "cin", value: flow.notify, onChange: e => setFlow(Object.assign({}, flow, { notify: e.target.value })), placeholder: "https://prod-...logic.azure.com/...invoke" })), React.createElement("label", { className: "efld", style: { marginTop: 8 } }, "Manager e-mail(s) \u2014 " + dept + " (over-max melding \u00b7 meerdere: ; of ,)", React.createElement("input", { className: "cin", value: (mgrMails[dept] || ''), onChange: e => { var _v = e.target.value; setMgrMails(function (m) { var n = Object.assign({}, m, { [dept]: _v }); try { localStorage.setItem('bl_mgrmails_v4', JSON.stringify(n)); } catch (er) {} return n; }); }, placeholder: "manager1@biscuit.nl; manager2@biscuit.nl" })), React.createElement("div", { className: "efld", style: { marginTop: 8 } }, "Mail bij publiceren (\u00e9\u00e9n mail per publicatie)", React.createElement("div", { style: { display: "flex", gap: 14, flexWrap: "wrap", marginTop: 4 } }, [["overmax", "Over-max"], ["tekort", "Tekort"], ["altijd", "Altijd (elke publicatie)"]].map(function (o) { return React.createElement("label", { key: o[0], style: { display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer" } }, React.createElement("input", { type: "checkbox", checked: !!mailOpties[o[0]], onChange: function (ev) { var _c = ev.target.checked; setMailOpties(function (m) { var n = Object.assign({}, m); n[o[0]] = _c; try { localStorage.setItem('bl_mailopties_v4', JSON.stringify(n)); } catch (er) {} return n; }); } }), o[1]); }))), React.createElement("div", {
       className: "hint",
       style: {
         marginTop: 6
