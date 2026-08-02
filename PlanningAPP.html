@@ -1999,12 +1999,13 @@ function App() {
         });
       });
     });
-    var bezetting = [];
+    var bezetting = [], kpiIngepland = 0, kpiVereist = 0, kpiSchedH = 0, kpiCapH = 0;
     lines.forEach(function (L) {
       (SHIFTS || []).slice(0, L.ploegen || L.shiften || 2).forEach(function (sh) {
         days.forEach(function (dy) {
           var c = info(L, sh.id, dy.k);
           if (!c || (c.req === 0 && c.actief === 0)) return;
+          kpiIngepland += c.actief; kpiVereist += c.req; kpiSchedH += c.actief * c.uren; kpiCapH += c.cap * c.uren;
           var dO = days.find(function (x) { return x.k === dy.k; });
           bezetting.push({ lijn: L.lijn, shift: sh.id, shiftLabel: (sh.id === 'O' ? 'Ochtend' : sh.id === 'M' ? 'Middag' : sh.id === 'N' ? 'Nacht' : sh.id), dag: dy.k, datum: dO ? dO.iso : null, basis: c.req, max: c.cap, gepland: c.actief, tekort: c.tekort });
         });
@@ -2045,6 +2046,13 @@ function App() {
       aantalTekort: tekort.length,
       totaalTekort: tekort.reduce(function (sm, c) { return sm + c.tekort; }, 0),
       bezetting: bezetting,
+      kpi: {
+        dekking: kpiVereist > 0 ? Math.round(kpiIngepland / kpiVereist * 100) : null,
+        uren: kpiCapH > 0 ? Math.round(kpiSchedH / kpiCapH * 100) : null,
+        overCellen: overMax.length,
+        ingepland: kpiIngepland,
+        vereist: kpiVereist
+      },
       gegenereerdOp: new Date().toISOString(),
       door: user
     };
