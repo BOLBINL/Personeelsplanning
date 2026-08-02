@@ -1426,7 +1426,7 @@ function App() {
       });
       if (!m) return;
       var _has = function (arr) { return arr.some(function (w) { return stateRaw.indexOf(w) >= 0; }); };
-      var status = _has(['reject', 'afgekeur', 'declin', 'denied', 'cancel', 'geannuleer', 'withdraw', 'ingetrokken', 'delete', 'verwijder']) ? 'Rejected' : _has(['approv', 'goedgekeur', 'accept']) ? 'Approved' : _has(['pend', 'submit', 'aangevraag', 'ingedien', 'new', 'nieuw', 'open']) ? 'Pending' : 'Rejected';
+      var status = _has(['reject', 'afgekeur', 'declin', 'denied', 'cancel', 'geannuleer', 'withdraw', 'planning bewerken', 'delete', 'verwijder']) ? 'Rejected' : _has(['approv', 'goedgekeur', 'accept']) ? 'Approved' : _has(['pend', 'submit', 'aangevraag', 'ingedien', 'new', 'nieuw', 'open']) ? 'Pending' : 'Rejected';
       if (status === 'Rejected') return;
       var _vanD = String(van).slice(0, 10);
       var _totD = String(tot).slice(0, 10);
@@ -2121,7 +2121,7 @@ function App() {
     });
   };
   const _bewerkGeblokkeerd = () => {
-    if (pub[dept + '|' + wkKey]) { ping('Planning is gepubliceerd \u2014 druk Ingetrokken om te bewerken', 'warn'); return true; }
+    if (pub[dept + '|' + wkKey]) { ping('Planning is gepubliceerd \u2014 druk planning bewerken om te bewerken', 'warn'); return true; }
     return false;
   };
   const doAssign = m => {
@@ -3550,7 +3550,7 @@ function App() {
     n: "precision_manufacturing"
   })), React.createElement("h1", null, "Biscuit International"), React.createElement("div", {
     className: "cap"
-  }, "INDUSTRIAL PLANNING")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "PERSONEEL PLANNING")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
