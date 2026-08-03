@@ -2034,6 +2034,40 @@ function App() {
       .split(/[;,\s]+/)
       .map(function (x) { return x.trim(); })
       .filter(function (x) { return x.indexOf('@') > 0; });
+    var _DAGL = { ma: 'Ma', di: 'Di', wo: 'Wo', do: 'Do', vr: 'Vr', za: 'Za', zo: 'Zo' };
+    var _MND = { '01': 'jan', '02': 'feb', '03': 'mrt', '04': 'apr', '05': 'mei', '06': 'jun', '07': 'jul', '08': 'aug', '09': 'sep', '10': 'okt', '11': 'nov', '12': 'dec' };
+    var _dagLbl = function (dy) { var iso = dy.iso || ''; return (_DAGL[dy.k] || dy.k) + (iso ? ' ' + (+iso.slice(8, 10)) + ' ' + (_MND[iso.slice(5, 7)] || '') : ''); };
+    var _actDays = days.filter(function (dy) { return lines.some(function (L) { return lijnShifts(L).some(function (sh) { var c = info(L, sh.id, dy.k); return c && (c.req > 0 || c.actief > 0); }); }); });
+    var _thead = '<tr style="background:#0f1428;color:#fff;text-align:left"><th style="padding:6px 10px">Lijn / Shift</th>';
+    _actDays.forEach(function (dy) { _thead += '<th style="padding:6px 8px;text-align:center;white-space:nowrap">' + _dagLbl(dy) + '</th>'; });
+    _thead += '</tr>';
+    var _tbody = '';
+    lines.forEach(function (L) {
+      lijnShifts(L).forEach(function (sh) {
+        var _lbl = (sh.id === 'O' ? 'Ochtend' : sh.id === 'M' ? 'Middag' : sh.id === 'N' ? 'Nacht' : sh.id);
+        var _cells = '', _any = false;
+        _actDays.forEach(function (dy) {
+          var c = info(L, sh.id, dy.k);
+          if (!c || (c.req === 0 && c.actief === 0)) { _cells += '<td style="padding:5px 8px;border-bottom:1px solid #eef0f4;text-align:center;color:#c8ccd4">\u2013</td>'; return; }
+          _any = true;
+          var _col = c.actief < c.req ? '#b02a37' : (c.actief > c.cap ? '#b26a00' : '#2e7d32');
+          var _bg = c.actief < c.req ? '#fdecec' : (c.actief > c.cap ? '#fff4e6' : '#eefaf0');
+          _cells += '<td style="padding:5px 8px;border-bottom:1px solid #eef0f4;text-align:center;background:' + _bg + ';color:' + _col + ';font-weight:700">' + c.actief + '/' + c.req + '</td>';
+        });
+        if (_any) _tbody += '<tr><td style="padding:5px 10px;border-bottom:1px solid #eef0f4;white-space:nowrap"><b>' + L.lijn + '</b> \u00b7 ' + _lbl + '</td>' + _cells + '</tr>';
+      });
+    });
+    var roosterHtml = '<div style="overflow-x:auto"><table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px"><thead>' + _thead + '</thead><tbody>' + _tbody + '</tbody></table></div>';
+    if (overMax.length) {
+      var _lijst = '<div style="margin-top:12px"><div style="font-weight:700;margin-bottom:4px;font-size:13px">Boven MR-max \u2014 reden &amp; wie</div>';
+      overMax.forEach(function (o) {
+        var _red = (o.redenen && o.redenen.length) ? o.redenen.join(', ') : '';
+        var _wie = (o.wie && o.wie.length) ? o.wie.join(', ') : '';
+        _lijst += '<div style="padding:3px 0;border-bottom:1px solid #f2f3f6;font-size:12px"><span style="color:#b26a00;font-weight:700">\u26a0</span> ' + o.lijn + ' \u00b7 ' + o.shiftLabel + ' \u00b7 ' + o.dag + ' ' + (o.datum || '') + ' (+' + o.over + ')' + (_red ? ' \u2014 <b>' + _red + '</b>' : '') + (_wie ? ' \u2014 ' + _wie : '') + '</div>';
+      });
+      _lijst += '</div>';
+      roosterHtml += _lijst;
+    }
     return {
       afd: dept,
       week: week,
@@ -2049,6 +2083,7 @@ function App() {
       aantalTekort: tekort.length,
       totaalTekort: tekort.reduce(function (sm, c) { return sm + c.tekort; }, 0),
       bezetting: bezetting,
+      roosterHtml: roosterHtml,
       kpi: {
         overCellen: overMax.length,
         ingepland: kpiIngepland,
