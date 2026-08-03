@@ -1999,15 +1999,18 @@ function App() {
         });
       });
     });
-    var bezetting = [], kpiIngepland = 0, kpiVereist = 0, kpiSchedH = 0, kpiCapH = 0;
+    var bezetting = [], kpiIngepland = 0, kpiVereist = 0;
     lines.forEach(function (L) {
       (SHIFTS || []).slice(0, L.ploegen || L.shiften || 2).forEach(function (sh) {
         days.forEach(function (dy) {
           var c = info(L, sh.id, dy.k);
           if (!c || (c.req === 0 && c.actief === 0)) return;
-          kpiIngepland += c.actief; kpiVereist += c.req; kpiSchedH += c.actief * c.uren; kpiCapH += c.cap * c.uren;
+          kpiIngepland += c.actief; kpiVereist += c.req;
           var dO = days.find(function (x) { return x.k === dy.k; });
-          bezetting.push({ lijn: L.lijn, shift: sh.id, shiftLabel: (sh.id === 'O' ? 'Ochtend' : sh.id === 'M' ? 'Middag' : sh.id === 'N' ? 'Nacht' : sh.id), dag: dy.k, datum: dO ? dO.iso : null, basis: c.req, max: c.cap, gepland: c.actief, tekort: c.tekort });
+          var _st = SHIFT_TIMES[sh.id] || {};
+          var _reden = '';
+          if (c.list) { c.list.forEach(function (a) { if (a.overReason && _reden.indexOf(a.overReason) < 0) _reden = _reden ? _reden + ', ' + a.overReason : a.overReason; }); }
+          bezetting.push({ lijn: L.lijn, shift: sh.id, shiftLabel: (sh.id === 'O' ? 'Ochtend' : sh.id === 'M' ? 'Middag' : sh.id === 'N' ? 'Nacht' : sh.id), dag: dy.k, datum: dO ? dO.iso : null, start: _st.s || '', eind: _st.e || '', basis: c.req, max: c.cap, gepland: c.actief, tekort: c.tekort, reden: _reden });
         });
       });
     });
@@ -2047,8 +2050,6 @@ function App() {
       totaalTekort: tekort.reduce(function (sm, c) { return sm + c.tekort; }, 0),
       bezetting: bezetting,
       kpi: {
-        dekking: kpiVereist > 0 ? Math.round(kpiIngepland / kpiVereist * 100) : null,
-        uren: kpiCapH > 0 ? Math.round(kpiSchedH / kpiCapH * 100) : null,
         overCellen: overMax.length,
         ingepland: kpiIngepland,
         vereist: kpiVereist
@@ -3641,7 +3642,7 @@ function App() {
       n: "refresh"
     })))), React.createElement("div", {
       className: "kpis rich"
-    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, (function () { var _tog = function () { setBdOpen(function (v) { return !v; }); }; var _short = (kpi.bd || []).filter(function (r) { return r.tekort > 0; }).map(function (r) { return r.lijn + " " + r.shiftLabel + " (" + r.tekort + ")"; }).join(", "); var _big, _cls, _icon; if (kpi.over > 0) { _big = kpi.over + " te veel"; _cls = "over"; _icon = "groups"; } else if (kpi.o > 0) { _big = kpi.o + " tekort"; _cls = "open"; _icon = "warning"; } else { _big = "OK"; _cls = ""; _icon = "verified"; } var _sub = kpi.o > 0 ? ("\u26a0 " + _short + " tekort") : (kpi.over > 0 ? ("afdeling overbezet \u00b7 " + dept) : "binnen norm"); return { k: "Bezetting", v: _big, sub: _sub, icon: _icon, cls: _cls, onClick: _tog }; })(), { k: "Uren \u00b7 dekking", v: kpi.arbeidH + " / " + kpi.capH + "u", sub: (kpi.nettoPct == null ? "—" : kpi.nettoPct + "% van MR-max"), icon: "schedule", cls: "" }].map(function (m, _mi) {
+    }, [{ k: "Bezetting", v: (kpi.coverage == null ? "—" : kpi.coverage + "%"), sub: kpi.s + "/" + kpi.req + " vereist", icon: "verified", cls: (kpi.coverage != null && kpi.coverage > 100 ? "open" : "") }, { k: "Ingepland", v: kpi.s, sub: "van " + kpi.req + " vereist", icon: "groups", cls: "" }, (function () { var _tog = function () { setBdOpen(function (v) { return !v; }); }; var _short = (kpi.bd || []).filter(function (r) { return r.tekort > 0; }).map(function (r) { return r.lijn + " " + r.shiftLabel + " (" + r.tekort + ")"; }).join(", "); var _big, _cls, _icon; if (kpi.over > 0) { _big = kpi.over + " te veel"; _cls = "over"; _icon = "groups"; } else if (kpi.o > 0) { _big = kpi.o + " tekort"; _cls = "open"; _icon = "warning"; } else { _big = "OK"; _cls = ""; _icon = "verified"; } var _sub = kpi.o > 0 ? ("\u26a0 " + _short + " tekort") : (kpi.over > 0 ? ("afdeling overbezet \u00b7 " + dept) : "binnen norm"); return { k: "Bezetting", v: _big, sub: _sub, icon: _icon, cls: _cls, onClick: _tog }; })()].map(function (m, _mi) {
       return React.createElement("div", {
         key: _mi,
         className: "card kpi " + m.cls,
