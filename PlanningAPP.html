@@ -2041,6 +2041,8 @@ function App() {
     var _thead = '<tr style="background:#0f1428;color:#fff;text-align:left"><th style="padding:6px 10px">Lijn / Shift</th>';
     _actDays.forEach(function (dy) { _thead += '<th style="padding:6px 8px;text-align:center;white-space:nowrap">' + _dagLbl(dy) + '</th>'; });
     _thead += '</tr>';
+    var _overMap = {};
+    overMax.forEach(function (o) { _overMap[o.lijn + '|' + o.shift + '|' + o.dag] = o; });
     var _tbody = '';
     lines.forEach(function (L) {
       lijnShifts(L).forEach(function (sh) {
@@ -2050,24 +2052,17 @@ function App() {
           var c = info(L, sh.id, dy.k);
           if (!c || (c.req === 0 && c.actief === 0)) { _cells += '<td style="padding:5px 8px;border-bottom:1px solid #eef0f4;text-align:center;color:#c8ccd4">\u2013</td>'; return; }
           _any = true;
-          var _col = c.actief < c.req ? '#b02a37' : (c.actief > c.cap ? '#b26a00' : '#2e7d32');
-          var _bg = c.actief < c.req ? '#fdecec' : (c.actief > c.cap ? '#fff4e6' : '#eefaf0');
-          _cells += '<td style="padding:5px 8px;border-bottom:1px solid #eef0f4;text-align:center;background:' + _bg + ';color:' + _col + ';font-weight:700">' + c.actief + '/' + c.req + '</td>';
+          var _over = c.actief > c.cap;
+          var _col = c.actief < c.req ? '#1e5fbf' : (_over ? '#b02a37' : '#2e7d32');
+          var _bg = c.actief < c.req ? '#eaf1fd' : (_over ? '#fdecec' : '#eefaf0');
+          var _rw = '';
+          if (_over) { var _o = _overMap[L.lijn + '|' + sh.id + '|' + dy.k]; if (_o) { var _r = (_o.redenen && _o.redenen.length) ? _o.redenen.join(', ') : ''; var _w = (_o.wie && _o.wie.length) ? _o.wie.join(', ') : ''; var _rwtxt = [_r, _w].filter(function (x) { return x; }).join(' \u2014 '); if (_rwtxt) _rw = '<div style="font-size:10px;font-weight:400;white-space:normal;max-width:170px;margin:2px auto 0;line-height:1.25">' + _rwtxt + '</div>'; } }
+          _cells += '<td style="padding:5px 8px;border-bottom:1px solid #eef0f4;text-align:center;vertical-align:top;background:' + _bg + ';color:' + _col + '"><div style="font-weight:700">' + c.actief + '/' + c.req + '</div>' + _rw + '</td>';
         });
         if (_any) _tbody += '<tr><td style="padding:5px 10px;border-bottom:1px solid #eef0f4;white-space:nowrap"><b>' + L.lijn + '</b> \u00b7 ' + _lbl + '</td>' + _cells + '</tr>';
       });
     });
     var roosterHtml = '<div style="overflow-x:auto"><table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px"><thead>' + _thead + '</thead><tbody>' + _tbody + '</tbody></table></div>';
-    if (overMax.length) {
-      var _lijst = '<div style="margin-top:12px"><div style="font-weight:700;margin-bottom:4px;font-size:13px">Boven MR-max \u2014 reden &amp; wie</div>';
-      overMax.forEach(function (o) {
-        var _red = (o.redenen && o.redenen.length) ? o.redenen.join(', ') : '';
-        var _wie = (o.wie && o.wie.length) ? o.wie.join(', ') : '';
-        _lijst += '<div style="padding:3px 0;border-bottom:1px solid #f2f3f6;font-size:12px"><span style="color:#b26a00;font-weight:700">\u26a0</span> ' + o.lijn + ' \u00b7 ' + o.shiftLabel + ' \u00b7 ' + o.dag + ' ' + (o.datum || '') + ' (+' + o.over + ')' + (_red ? ' \u2014 <b>' + _red + '</b>' : '') + (_wie ? ' \u2014 ' + _wie : '') + '</div>';
-      });
-      _lijst += '</div>';
-      roosterHtml += _lijst;
-    }
     return {
       afd: dept,
       week: week,
