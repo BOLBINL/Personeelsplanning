@@ -727,7 +727,8 @@ function isoWeekOf(y, m, dd) {
 }
 const cellK = (d, l, s, wk, g) => [d, l, s, wk, g].join('|');
 let _u = 100;
-const uid = () => 'a' + ++_u;
+const uid = () => 'a' + Date.now().toString(36) + (++_u).toString(36);
+function dedupePgIds(arr) { var seen = {}; return (arr || []).map(function (p) { var id = p && p.id; if (!id || seen[id]) { id = uid(); } seen[id] = 1; return Object.assign({}, p, { id: id }); }); }
 const LS_PLAN = 'bl_plan_v4',
   LS_CFG = 'bl_cfg_v4',
   LS_AG = 'bl_ag_v4',
@@ -1159,7 +1160,7 @@ function App() {
   const [mgrMails, setMgrMails] = useState(() => lsGet('bl_mgrmails_v4', {}));
   const [mailOpties, setMailOpties] = useState(() => lsGet('bl_mailopties_v4', { overmax: true, tekort: false, altijd: false }));
   const [mailAfd, setMailAfd] = useState(() => lsGet('bl_mailafd_v4', {}));
-  const [productgroepen, setProductgroepen] = useState(() => { var _pg = lsGet(LS_PG, []); return Array.isArray(_pg) ? _pg : []; });
+  const [productgroepen, setProductgroepen] = useState(() => { var _pg = lsGet(LS_PG, []); return dedupePgIds(Array.isArray(_pg) ? _pg : []); });
   const heeftMR = dep => (mrAfd[dep] !== undefined ? !!mrAfd[dep] : ((cfg[dep] || []).length > 0));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
   const [redenen, setRedenen] = useState(() => lsGet(LS_RED, DEFAULT_REDENEN));
@@ -1684,7 +1685,7 @@ function App() {
       if (dat.mrAfd) setMrAfd(dat.mrAfd);
       if (dat.mgrMails) setMgrMails(dat.mgrMails);
       if (dat.mailAfd) setMailAfd(dat.mailAfd);
-      if (dat.productgroepen) setProductgroepen(Array.isArray(dat.productgroepen) ? dat.productgroepen : []);
+      if (dat.productgroepen) setProductgroepen(dedupePgIds(Array.isArray(dat.productgroepen) ? dat.productgroepen : []));
       if (dat.pubMR) setPubMR(dat.pubMR);
       if (dat.weekOpm) setWeekOpm(dat.weekOpm);
       if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
@@ -2994,7 +2995,7 @@ function App() {
       if (dat.mrAfd) setMrAfd(dat.mrAfd);
       if (dat.mgrMails) setMgrMails(dat.mgrMails);
       if (dat.mailAfd) setMailAfd(dat.mailAfd);
-        if (dat.productgroepen) setProductgroepen(Array.isArray(dat.productgroepen) ? dat.productgroepen : []);
+        if (dat.productgroepen) setProductgroepen(dedupePgIds(Array.isArray(dat.productgroepen) ? dat.productgroepen : []));
         if (dat.pubMR) setPubMR(dat.pubMR);
         if (dat.weekOpm) setWeekOpm(dat.weekOpm);
         if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
