@@ -2528,7 +2528,7 @@ function App() {
               var bur = a.bureau || 'Uitzend';
               var ur = perUitzend[bur] || (perUitzend[bur] = { naam: bur, cellen: {} });
               var arr = ur.cellen[day.k] || (ur.cellen[day.k] = []);
-              arr.push({ start: afgeleideTijd(a, _ck).start || a.start || '—', kp: a.kostplaats || null, lijnKp: line.kostplaats || null });
+              arr.push({ start: afgeleideTijd(a, _ck).start || a.start || '—', vorigeDag: (a.vorigeDag === true), kp: a.kostplaats || null, lijnKp: line.kostplaats || null });
               return;
             }
             if (a.type !== 'vast' || !a.empId) return;
@@ -2537,7 +2537,7 @@ function App() {
             var wt = getWerktijden(e, day.k, week, templates) || {};
             var start = afgeleideTijd(a, _ck).start || a.start || wt.start || e.starttijd || '';
             var rec = perPersoon[a.empId] || (perPersoon[a.empId] = { naam: e.naam, cellen: {} });
-            rec.cellen[day.k] = { start: start, lijn: line.lijn, kp: a.kostplaats || null, lijnKp: line.kostplaats || null };
+            rec.cellen[day.k] = { start: start, vorigeDag: (a.vorigeDag === true || (wt && wt.vorigeDag === true)), lijn: line.lijn, kp: a.kostplaats || null, lijnKp: line.kostplaats || null };
           });
         });
         var vasteRijen = Object.keys(perPersoon).map(function (id) { return perPersoon[id]; }).sort(function (a, b) { return a.naam.localeCompare(b.naam); });
@@ -2565,12 +2565,13 @@ function App() {
       var c = rec.cellen[day.k];
       var vl = isOpVerlof(rec.naam, day.iso);
       if (c) {
+        var _vdl = ''; if (c.vorigeDag) { try { var _vdd = new Date(day.iso + 'T00:00:00'); _vdd.setDate(_vdd.getDate() - 1); _vdl = ['zo','ma','di','wo','do','vr','za'][_vdd.getDay()]; } catch (e) { _vdl = 'vorige'; } }
         var uzcls = c.uz ? ' uz' : '';
         var uzlab = c.uz ? '<div class="uzlbl">uitzend</div>' : '';
         var extra = '';
         if (vl && vl.dagdeel) extra = '<div class="sub part">' + (vl.vanT && vl.totT ? esc(vl.vanT + '-' + vl.totT) : esc((vl.uren || '') + 'u')) + ' vrij</div>';
         var kpAfw = c.kp && c.kp !== c.lijnKp ? '<div class="kpbadge">\u2192 ' + esc(kpLabel(c.kp)) + '</div>' : '';
-        return '<td class="on' + uzcls + '"><div class="tijd">' + esc(c.start || '\u2014') + '</div>' + kpAfw + uzlab + extra + '</td>';
+        return '<td class="on' + uzcls + '"><div class="tijd">' + (c.vorigeDag ? '<span style="color:#b06a00;font-weight:800">\u2190 ' + _vdl + ' </span>' : '') + esc(c.start || '\u2014') + '</div>' + kpAfw + uzlab + extra + '</td>';
       }
       if (vl && vl.dagdeel) return '<td class="part"><div class="sub">' + esc((vl.uren || '') + 'u') + '</div><div class="mini">deels vrij</div></td>';
       if (vl && !vl.dagdeel) { var t = matchVerlofType(vl.reden, verlofTypes); var lab = t ? t.label : 'Vrij'; var isVak = /vakantie|vacation/i.test(lab); return '<td class="' + (isVak ? 'vak' : 'vrij') + '"><div class="mini">' + esc(lab) + '</div></td>'; }
