@@ -1436,6 +1436,8 @@ function App() {
     }
     var list = root && Array.isArray(root.ptorequests) ? root.ptorequests : Array.isArray(root) ? root : [];
     var out = [];
+    var _deletedPer = {};
+    list.forEach(function (it) { if (!it || typeof it !== 'object') return; var e2 = it.employee || {}; var s2 = String(it.pto_details && it.pto_details.request_state || '').toLowerCase(); if (s2.indexOf('delet') >= 0 || s2.indexOf('verwijder') >= 0 || s2.indexOf('cancel') >= 0 || s2.indexOf('geannuleer') >= 0) { var k2 = (e2.account_id != null ? String(e2.account_id) : (e2.full_name || '')) + '|' + (it.from_date || '') + '|' + (it.to_date || it.from_date || ''); _deletedPer[k2] = 1; } });
     list.forEach(function (item) {
       if (!item || typeof item !== 'object') return;
       var emp = item.employee || {};
@@ -1467,6 +1469,7 @@ function App() {
       var _has = function (arr) { return arr.some(function (w) { return stateRaw.indexOf(w) >= 0; }); };
       var status = _has(['reject', 'afgekeur', 'declin', 'denied', 'cancel', 'geannuleer', 'withdraw', 'planning bewerken', 'delete', 'verwijder']) ? 'Rejected' : _has(['approv', 'goedgekeur', 'accept']) ? 'Approved' : _has(['pend', 'submit', 'aangevraag', 'ingedien', 'new', 'nieuw', 'open']) ? 'Pending' : 'Rejected';
       if (status === 'Rejected') return;
+      if (_deletedPer[(id || naam) + '|' + van + '|' + tot]) return;
       var _vanD = String(van).slice(0, 10);
       var _totD = String(tot).slice(0, 10);
       var _dagdeel = _vanD === _totD && (_isPartial || uren != null && uren > 0 && uren < 7.2 || !!(vanT && totT));
@@ -1485,14 +1488,15 @@ function App() {
     });
     return out;
   };
-  const mergeVerlof = (prev, recs) => {
+  const mergeVerlof = (prev, recs, winVan, winTot) => {
     var pers = function (r) { return r.id || r.naam; };
     var key = function (r) { return pers(r) + '|' + r.van + '|' + r.tot + '|' + r.reden; };
     var overlap = function (a, b) { return pers(a) === pers(b) && a.van <= b.tot && b.van <= a.tot; };
+    var inWin = function (r) { return winVan && winTot && String(r.van) <= winTot && winVan <= String(r.tot); };
     // Drop a stored record only if the fetch returned a record for the SAME person whose
     // date-range overlaps it. Records the fetch didn't touch (other people, other periods,
     // non-overlapping leave) are kept. Then add the fresh records, de-duplicated.
-    var kept = prev.filter(function (old) { return !recs.some(function (nw) { return overlap(old, nw); }); });
+    var kept = prev.filter(function (old) { if (inWin(old)) return false; return !recs.some(function (nw) { return overlap(old, nw); }); });
     var seen = {};
     kept.forEach(function (r) { seen[key(r)] = 1; });
     recs.forEach(function (r) { var k = key(r); if (!seen[k]) { seen[k] = 1; kept.push(r); } });
@@ -1544,7 +1548,7 @@ function App() {
         return;
       }
       setVerlof(function (prev) {
-        return vervang ? recs : mergeVerlof(prev, recs);
+        return vervang ? recs : mergeVerlof(prev, recs, datVan, datTot);
       });
       logAction('VERLOF_OPGEHAALD', {
         aantal: recs.length
