@@ -17,7 +17,7 @@
   .app{display:flex;min-height:100vh;}
   .side{width:210px;flex-shrink:0;background:var(--navy);display:flex;flex-direction:column;padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto;}
   .brand{display:flex;flex-direction:column;align-items:center;padding:0 14px 18px;border-bottom:1px solid #252c47;}
-  .logo{width:56px;height:56px;border-radius:50%;background:#e9e6df;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,.4);}
+  .logo{width:100%;max-width:180px;height:auto;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.35);padding:12px 14px;box-sizing:border-box;margin-bottom:8px;}
   .logo .ms{font-size:28px;color:#7a7f92;}
   .brand h1{color:var(--gold);font-size:17px;font-weight:800;text-align:center;margin:9px 0 2px;line-height:1.15;}
   .brand .cap{color:#7a8099;font-size:8.5px;letter-spacing:.15em;}
@@ -3803,9 +3803,7 @@ function App() {
     className: "brand"
   }, React.createElement("div", {
     className: "logo"
-  }, React.createElement(I, {
-    n: "precision_manufacturing"
-  })), React.createElement("h1", null, "Biscuit International"), React.createElement("div", {
+  }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Biscuit International"), React.createElement("div", {
     className: "cap"
   }, "PERSONEEL PLANNING")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
