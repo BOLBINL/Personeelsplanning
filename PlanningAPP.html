@@ -1472,7 +1472,7 @@ function App() {
       if (_deletedPer[(id || naam) + '|' + van + '|' + tot]) return;
       var _vanD = String(van).slice(0, 10);
       var _totD = String(tot).slice(0, 10);
-      var _dagdeel = _vanD === _totD && (_isPartial || uren != null && uren > 0 && uren < 7.2 || !!(vanT && totT));
+      var _dagdeel = _vanD === _totD && (_isPartial || uren != null && uren > 0 && uren < 7.2 || (vanT && totT && vanT !== totT));
       out.push({
         naam: m.naam,
         id: m.id,
