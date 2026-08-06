@@ -1240,7 +1240,8 @@ function App() {
     save: '',
     verlof: '',
     company: '',
-    notify: ''
+    notify: '',
+    partitie: false
   }));
   const [syncInfo, setSyncInfo] = useState('');
   const [templates, setTemplates] = useState(() => lsGet('bl_templates_v4', [{
@@ -1624,6 +1625,33 @@ function App() {
       weekOpm: weekOpm
     }
   });
+  // ── Partitie-helpers (Fase 1) — planning per afdeling, config gedeeld ──
+  // Nog niet bedraad: buildBlob blijft de enige actieve serializer tot Fase 2.
+  const _filterByDept = (obj, d) => {
+    var out = {};
+    Object.keys(obj || {}).forEach(function (k) { if (k.split('|')[0] === d) out[k] = obj[k]; });
+    return out;
+  };
+  const buildPlanningBlob = (d) => ({
+    version: lsGet('bl_ver_planning_' + d, 0),
+    savedAt: new Date().toISOString(),
+    savedBy: user,
+    partition: 'planning_' + d,
+    afdeling: d,
+    data: { plan: _filterByDept(plan, d), pub: _filterByDept(pub, d) }
+  });
+  const buildConfigBlob = () => ({
+    version: lsGet('bl_ver_config', 0),
+    savedAt: new Date().toISOString(),
+    savedBy: user,
+    partition: 'config',
+    data: {
+      cfg: cfg, mrAfd: mrAfd, productgroepen: productgroepen, agencies: agencies,
+      redenen: redenen, kostplaatsen: kostplaatsen, verlofTypes: verlofTypes,
+      skills: skills, templates: templates, mgrMails: mgrMails, mailAfd: mailAfd,
+      weekOpm: weekOpm, employees: employees, pubMR: pubMR
+    }
+  });
   const saveState = (overrideBlob, stil) => {
     if (!flow.save) {
       if (!stil) ping('Geen SAVE-flow URL ingesteld', 'warn');
@@ -1666,6 +1694,44 @@ function App() {
     });
   };
   const _autoArm = React.useRef(false);
+  // ── Partitie-bewuste opslag (Fase 2) — nieuw pad naast saveState; nog niet bedraad ──
+  // Verwacht een blob van buildPlanningBlob(d) of buildConfigBlob(): draagt .partition,
+  // eigen .version en (planning) .afdeling. Schrijft de versie terug naar een
+  // partitie-specifieke localStorage-sleutel i.p.v. de gedeelde bl_ver_v4.
+  const savePartition = (blob, stil) => {
+    if (!flow.save) { if (!stil) ping('Geen SAVE-flow URL ingesteld', 'warn'); return; }
+    if (!blob || !blob.partition) { if (!stil) ping('Opslaan zonder partition-veld overgeslagen', 'warn'); return; }
+    var part = blob.partition;
+    var verKey = part === 'config' ? 'bl_ver_config'
+      : (part.slice(0, 9) === 'planning_' ? 'bl_ver_planning_' + (blob.afdeling || part.slice(9)) : 'bl_ver_v4');
+    fetch(flow.save, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(blob)
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json().catch(function () { return {}; });
+    }).then(function (j) {
+      if (j && j.conflict) {
+        setConflict(true);
+        _autoArm.current = false;                       // pauzeer auto-opslaan tot herladen
+        setSyncInfo('\u26a0 Conflict (' + part + ') \u2014 iemand anders sloeg op. Klik "Nu laden".');
+        ping('Conflict op ' + part + ': nieuwere versie op SharePoint \u2014 laad eerst opnieuw', 'block');
+        return;
+      }
+      setConflict(false);
+      var nv = j && j.version != null ? j.version : (blob.version || 0) + 1;
+      try { localStorage.setItem(verKey, JSON.stringify(nv)); } catch (e) {}
+      setSyncInfo((stil ? 'Auto-opgeslagen ' : 'Opgeslagen ') + part + ' ' + new Date().toLocaleTimeString() + ' (v' + nv + ')');
+      logAction('PARTITIE_OPGESLAGEN', { partition: part, version: nv, automatisch: !!stil });
+      if (!stil) ping('Opgeslagen: ' + part);
+    }).catch(function (e) {
+      setSyncInfo('\u26a0 Opslaan mislukt (' + part + '): ' + e.message);
+      if (!stil) ping('Opslaan mislukt (' + part + '): ' + e.message, 'block');
+    });
+  };
+  // Schakelaar Fase 3-5: partitiemodus. Leeg/false = huidig gedrag (één blob).
+  const partitieAan = !!(flow && flow.partitie);
   const laadVanSharePoint = (guard) => {
     if (!flow.load) {
       ping('Geen LOAD-flow URL ingesteld', 'warn');
@@ -1737,19 +1803,93 @@ function App() {
   // skills, redenen, kostplaatsen, agencies, verlofTypes, verlof, plan
   // en pub uit j.data — geen gedupliceerde logica.
   // ─────────────────────────────────────────────────────────────
+  // ── Fase 4 — partitie-laden: mergen i.p.v. wholesale replace ──
+  const _mergeByDept = (setter, incoming, d) => {
+    setter(function (prev) {
+      var out = {};
+      Object.keys(prev || {}).forEach(function (k) { if (k.split('|')[0] !== d) out[k] = prev[k]; }); // andere afdelingen behouden
+      Object.keys(incoming || {}).forEach(function (k) { out[k] = incoming[k]; });                     // eigen afdeling vervangen
+      return out;
+    });
+  };
+  const _applyConfig = (dat) => {
+    if (!dat) return;
+    if (dat.cfg) setCfg(normCfg(dat.cfg));
+    if (dat.mrAfd) setMrAfd(dat.mrAfd);
+    if (dat.productgroepen) setProductgroepen(dedupePgIds(Array.isArray(dat.productgroepen) ? dat.productgroepen : []));
+    if (dat.agencies) setAgencies(dat.agencies);
+    if (dat.redenen) setRedenen(dat.redenen);
+    if (dat.kostplaatsen) setKostplaatsen(dat.kostplaatsen);
+    if (dat.verlofTypes) setVerlofTypes(dat.verlofTypes);
+    if (dat.skills) setSkills(dat.skills);
+    if (dat.templates) setTemplates(dat.templates.map(normalizeTemplate));
+    if (dat.mgrMails) setMgrMails(dat.mgrMails);
+    if (dat.mailAfd) setMailAfd(dat.mailAfd);
+    if (dat.weekOpm) setWeekOpm(dat.weekOpm);
+    if (dat.employees) setEmployees(dat.employees);
+    if (dat.pubMR) setPubMR(dat.pubMR);
+  };
+  const laadPlanning = (d) => {
+    if (!flow.load) return Promise.resolve();
+    return fetch(flow.load, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partition: 'planning_' + d, afdeling: d }) })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) {
+        var dat = (j && j.data) ? j.data : j;
+        if (dat && dat.plan) _mergeByDept(setPlan, dat.plan, d);
+        if (dat && dat.pub) _mergeByDept(setPub, dat.pub, d);
+        if (j && j.version != null) { try { localStorage.setItem('bl_ver_planning_' + d, JSON.stringify(j.version)); } catch (e) {} }
+      });
+  };
+  const laadConfig = () => {
+    if (!flow.load) return Promise.resolve();
+    return fetch(flow.load, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partition: 'config' }) })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) {
+        var dat = (j && j.data) ? j.data : j;
+        _applyConfig(dat);
+        if (j && j.version != null) { try { localStorage.setItem('bl_ver_config', JSON.stringify(j.version)); } catch (e) {} }
+      });
+  };
   const _booted = React.useRef(false);
   useEffect(() => {
     if (_booted.current) return;              // voorkomt dubbele fetch in React StrictMode
     _booted.current = true;
     if (flow && flow.load && flow.load.trim()) {
       setSyncInfo('Laden vanuit SharePoint…');
-      laadVanSharePoint(true);                // guarded: overschrijft NIET als de cloud leger is dan lokaal
+      if (partitieAan) {
+        Promise.all([laadConfig(), laadPlanning(dept)]).then(function () { _autoArm.current = true; setConflict(false); }).catch(function (e) { _autoArm.current = true; ping('Partitie-laden mislukt: ' + e.message, 'block'); });
+      } else {
+        laadVanSharePoint(true);              // guarded: overschrijft NIET als de cloud leger is dan lokaal
+      }
     } else {
       _autoArm.current = true;
       setSyncInfo('Lokale modus — geen LOAD-flow ingesteld');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Fase 5 — config-poll (bijna-live): pikt config-wijzigingen van de 3e persoon op zonder de planning te raken.
+  useEffect(() => {
+    if (!partitieAan) return;
+    if (!flow.load) return;
+    var iv = setInterval(function () {
+      if (conflict) return;                       // niet pollen tijdens een conflict
+      fetch(flow.load, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partition: 'config', peek: true }) })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) {
+          var lokaal = lsGet('bl_ver_config', 0);
+          if (!(j && j.version != null && j.version > lokaal)) return;   // geen nieuwere config
+          var dat = (j && j.data) ? j.data : j;
+          if (!dat) return;
+          var door = dat.savedBy || (j && j.savedBy) || 'iemand';
+          _applyConfig(dat);                                             // normen/instellingen overnemen; toewijzingen blijven staan
+          try { localStorage.setItem('bl_ver_config', JSON.stringify(j.version)); } catch (e) {}
+          ping('SAP MR / instellingen bijgewerkt door ' + door + ' \u2014 normen herberekend', 'warn');
+          setSyncInfo('Config bijgewerkt (v' + j.version + ') door ' + door);
+        }).catch(function () {});
+    }, 20000);
+    return function () { clearInterval(iv); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partitieAan, flow.load, conflict]);
 
   // ────────────────────────────────────────────────────────────
   // IDENTITEIT — leest de ingelogde SharePoint-gebruiker (patroon van het INK-dashboard).
@@ -3145,7 +3285,11 @@ function App() {
   // eerste load klaar is (anders zou een halfgeladen staat de cloud overschrijven).
   // Bij een versieconflict pauzeert het tot je opnieuw laadt.
   const _autoTimer = React.useRef(null);
+  const _planTimer = React.useRef(null);
+  const _cfgTimer = React.useRef(null);
+  // Legacy auto-opslaan (één blob) — alleen actief als partitiemodus UIT staat.
   useEffect(() => {
+    if (partitieAan) return;
     if (!autoSave) return;
     if (!_autoArm.current) return;
     if (!flow.save) return;
@@ -3154,6 +3298,28 @@ function App() {
     return function () { if (_autoTimer.current) clearTimeout(_autoTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, cfg, employees, verlof, pub, skills, templates, agencies, kostplaatsen, redenen, verlofTypes, autoSave]);
+  // Fase 3 — auto-opslaan PLANNING per afdeling: schrijft alleen het eigen afdeling-bestand.
+  useEffect(() => {
+    if (!partitieAan) return;
+    if (!autoSave) return;
+    if (!_autoArm.current) return;
+    if (!flow.save) return;
+    if (_planTimer.current) clearTimeout(_planTimer.current);
+    _planTimer.current = setTimeout(function () { savePartition(buildPlanningBlob(dept), true); }, 2500);
+    return function () { if (_planTimer.current) clearTimeout(_planTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, pub, dept, autoSave, partitieAan]);
+  // Fase 3 — auto-opslaan CONFIG (gedeeld): raakt de planning-bestanden NIET aan.
+  useEffect(() => {
+    if (!partitieAan) return;
+    if (!autoSave) return;
+    if (!_autoArm.current) return;
+    if (!flow.save) return;
+    if (_cfgTimer.current) clearTimeout(_cfgTimer.current);
+    _cfgTimer.current = setTimeout(function () { savePartition(buildConfigBlob(), true); }, 2500);
+    return function () { if (_cfgTimer.current) clearTimeout(_cfgTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfg, mrAfd, productgroepen, agencies, redenen, kostplaatsen, verlofTypes, skills, templates, mgrMails, mailAfd, weekOpm, employees, pubMR, autoSave, partitieAan]);
 
   const ctxKopieer = (key, id) => {
     var a = (plan[key] || []).find(x => x.id === id);
