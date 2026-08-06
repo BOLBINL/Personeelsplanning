@@ -2754,16 +2754,18 @@ function App() {
               var bur = a.bureau || 'Uitzend';
               var ur = perUitzend[bur] || (perUitzend[bur] = { naam: bur, cellen: {} });
               var arr = ur.cellen[day.k] || (ur.cellen[day.k] = []);
-              arr.push({ start: afgeleideTijd(a, _ck).start || a.start || '—', vorigeDag: (a.vorigeDag === true), kp: a.kostplaats || null, lijnKp: line.kostplaats || null });
+              var _uat = afgeleideTijd(a, _ck); arr.push({ start: _uat.start || a.start || '—', eind: _uat.eind || a.eind || '', vorigeDag: (a.vorigeDag === true), kp: a.kostplaats || null, lijnKp: line.kostplaats || null });
               return;
             }
             if (a.type !== 'vast' || !a.empId) return;
             var e = empById[a.empId];
             if (!e) return;
             var wt = getWerktijden(e, day.k, week, templates) || {};
-            var start = afgeleideTijd(a, _ck).start || a.start || wt.start || e.starttijd || '';
+            var _at = afgeleideTijd(a, _ck);
+            var start = _at.start || a.start || wt.start || e.starttijd || '';
+            var eind = _at.eind || a.eind || wt.eind || '';
             var rec = perPersoon[a.empId] || (perPersoon[a.empId] = { naam: e.naam, cellen: {} });
-            rec.cellen[day.k] = { start: start, vorigeDag: (a.vorigeDag === true || (wt && wt.vorigeDag === true)), lijn: line.lijn, kp: a.kostplaats || null, lijnKp: line.kostplaats || null };
+            rec.cellen[day.k] = { start: start, eind: eind, vorigeDag: (a.vorigeDag === true || (wt && wt.vorigeDag === true)), lijn: line.lijn, kp: a.kostplaats || null, lijnKp: line.kostplaats || null };
           });
         });
         var vasteRijen = Object.keys(perPersoon).map(function (id) { return perPersoon[id]; }).sort(function (a, b) { return a.naam.localeCompare(b.naam); });
@@ -2773,7 +2775,7 @@ function App() {
           werkdagen.forEach(function (d) { var arr = src.cellen[d.k] || []; if (arr.length > maxN) maxN = arr.length; });
           for (var ri = 0; ri < maxN; ri++) {
             var cellen = {};
-            werkdagen.forEach(function (d) { var arr = src.cellen[d.k] || []; if (arr[ri]) cellen[d.k] = { start: arr[ri].start, uz: true, lijn: line.lijn, kp: arr[ri].kp, lijnKp: arr[ri].lijnKp }; });
+            werkdagen.forEach(function (d) { var arr = src.cellen[d.k] || []; if (arr[ri]) cellen[d.k] = { start: arr[ri].start, eind: arr[ri].eind, uz: true, lijn: line.lijn, kp: arr[ri].kp, lijnKp: arr[ri].lijnKp }; });
             uzRijen.push({ naam: 'Uitzend · ' + bur, uz: true, cellen: cellen });
           }
         });
@@ -2797,7 +2799,7 @@ function App() {
         var extra = '';
         if (vl && vl.dagdeel) extra = '<div class="sub part">' + (vl.vanT && vl.totT ? esc(vl.vanT + '-' + vl.totT) : esc((vl.uren || '') + 'u')) + ' vrij</div>';
         var kpAfw = c.kp && c.kp !== c.lijnKp ? '<div class="kpbadge">\u2192 ' + esc(kpLabel(c.kp)) + '</div>' : '';
-        return '<td class="on' + uzcls + '"><div class="tijd">' + (c.vorigeDag ? '<span style="color:#b06a00;font-weight:800">\u2190 ' + _vdl + ' </span>' : '') + esc(c.start || '\u2014') + '</div>' + kpAfw + uzlab + extra + '</td>';
+        return '<td class="on' + uzcls + '"><div class="tijd">' + (c.vorigeDag ? '<span style="color:#b06a00;font-weight:800">\u2190 ' + _vdl + ' </span>' : '') + esc(c.start || '\u2014') + (c.eind ? '<span style="color:#6b7280;font-weight:600"> – ' + esc(c.eind) + '</span>' : '') + '</div>' + kpAfw + uzlab + extra + '</td>';
       }
       if (vl && vl.dagdeel) return '<td class="part"><div class="sub">' + esc((vl.uren || '') + 'u') + '</div><div class="mini">deels vrij</div></td>';
       if (vl && !vl.dagdeel) { var t = matchVerlofType(vl.reden, verlofTypes); var lab = t ? t.label : 'Vrij'; var isVak = /vakantie|vacation/i.test(lab); return '<td class="' + (isVak ? 'vak' : 'vrij') + '"><div class="mini">' + esc(lab) + '</div></td>'; }
