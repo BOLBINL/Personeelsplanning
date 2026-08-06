@@ -2359,6 +2359,7 @@ function App() {
       pauze: emp.pauze || '1:03',
       eind: eind,
       anker: (_pv && _pv.afgeleid) ? { naam: _pv.ankerNaam, eind: _pv.ankerEind, overlap: _pv.overlap } : null,
+      afgeleidStart: st,
       kostplaats: line.kostplaats || ''
     });
   };
@@ -2378,6 +2379,7 @@ function App() {
         ziek: false,
         start: m.start,
         eind: m.eind,
+        tijdVast: (m.afgeleidStart != null && m.start !== m.afgeleidStart) || undefined,
         overReason: m.overReason || null,
         kostplaats: m.kostplaats || null,
         vorigeDag: (m.vorigeDag === true),
