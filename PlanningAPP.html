@@ -1908,6 +1908,10 @@ function App() {
       ping('Geen LOAD-flow URL ingesteld', 'warn');
       return;
     }
+    if (partitieAan) {   // Optie A: in partitiemodus nooit de kale GET; gebruik de POST-partitie-laders
+      Promise.all([laadConfig(), laadPlanning(dept)]).then(function () { _autoArm.current = true; setConflict(false); ping('Geladen (partitie)'); }).catch(function (e) { _autoArm.current = false; ping('Laden mislukt - opslaan geblokkeerd tot je opnieuw laadt: ' + e.message, 'block'); });
+      return;
+    }
     fetch(flow.load).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
