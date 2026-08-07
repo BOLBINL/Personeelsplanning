@@ -1413,6 +1413,9 @@ function App() {
     notify: '',
     partitie: false
   }));
+  const [appReady, setAppReady] = useState(false);
+  const [appCfgError, setAppCfgError] = useState('');
+  const [loadDraft, setLoadDraft] = useState(function () { try { return (lsGet('bl_flows_v4', {}).load) || ''; } catch (e) { return ''; } });
   const [syncInfo, setSyncInfo] = useState('');
   const [templates, setTemplates] = useState(() => lsGet('bl_templates_v4', [{
     naam: 'Packaging Line 1 Operator 2plg 36u',
@@ -2038,8 +2041,50 @@ function App() {
         if (j && j.version != null) { try { localStorage.setItem('bl_ver_config', JSON.stringify(j.version)); } catch (e) {} }
       });
   };
+  // === Gate + auto-config (appconfig.json) ===
+  const applyAppConfig = (ac, stale) => {
+    if (!ac) return;
+    setFlow(function (f) {
+      var nf = Object.assign({}, f, {
+        save: ac.save != null ? ac.save : f.save,
+        notify: ac.notify != null ? ac.notify : f.notify,
+        verlof: ac.verlof != null ? ac.verlof : f.verlof,
+        company: ac.company != null ? ac.company : f.company,
+        partitie: !!ac.partitie
+      });
+      try { localStorage.setItem('bl_flows_v4', JSON.stringify(nf)); } catch (e) {}
+      return nf;
+    });
+  };
+  const probeAppConfig = (url) => {
+    var u = (url || '').trim();
+    if (!u) { setAppCfgError(''); return; }
+    setAppCfgError('');
+    setFlow(function (f) { var nf = Object.assign({}, f, { load: u }); try { localStorage.setItem('bl_flows_v4', JSON.stringify(nf)); } catch (e) {} return nf; });
+    fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partition: 'appconfig' }) })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) {
+        var ac = (j && j.data) ? j.data : j;
+        applyAppConfig(ac, false);
+        try { localStorage.setItem('bl_appconfig_cache', JSON.stringify(ac)); } catch (e) {}
+        setAppReady(true);
+      })
+      .catch(function (e) {
+        var cached = null; try { cached = JSON.parse(localStorage.getItem('bl_appconfig_cache') || 'null'); } catch (er) {}
+        if (cached) { applyAppConfig(cached, true); ping('Instellingen mogelijk verouderd - centrale config niet bereikbaar', 'warn'); setAppReady(true); }
+        else { setAppCfgError('Geen verbinding met de planningsomgeving. Controleer de LOAD-flow URL. (' + e.message + ')'); }
+      });
+  };
+  const _appBooted = React.useRef(false);
+  useEffect(() => {
+    if (_appBooted.current) return;
+    _appBooted.current = true;
+    probeAppConfig((flow.load || '').trim());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const _booted = React.useRef(false);
   useEffect(() => {
+    if (!appReady) return;                     // wacht tot appconfig/gate klaar is
     if (_booted.current) return;              // voorkomt dubbele fetch in React StrictMode
     _booted.current = true;
     if (flow && flow.load && flow.load.trim()) {
@@ -2054,7 +2099,7 @@ function App() {
       setSyncInfo('Lokale modus — geen LOAD-flow ingesteld');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [appReady]);
   // Fase 5 — config-poll (bijna-live): pikt config-wijzigingen van de 3e persoon op zonder de planning te raken.
   useEffect(() => {
     if (!partitieAan) return;
@@ -6213,6 +6258,16 @@ function App() {
   }
   let body;
   if (view === 'planning') body = planningView();else if (view === 'sapmr') body = sapmrView();else if (view === 'personeel') body = personeelView();else if (view === 'uitzend') body = uitzendView();else if (view === 'config') body = configView();else if (view === 'ukg') body = ukgView();else if (view === 'dashboard') body = dashboardView();else body = vakantieView();
+  if (!appReady) {
+    return React.createElement("div", { style: { position: "fixed", inset: 0, background: "#0f1720", color: "#e6edf3", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "-apple-system,Segoe UI,Roboto,sans-serif" } },
+      React.createElement("div", { style: { maxWidth: 460, width: "100%" } },
+        React.createElement("div", { style: { fontSize: 22, fontWeight: 800, marginBottom: 6 } }, "BL Planning"),
+        React.createElement("div", { style: { color: "#9fb0c0", marginBottom: 18, fontSize: 14, lineHeight: 1.5 } }, appCfgError ? appCfgError : "Voer de LOAD-flow URL in om verbinding te maken met de planningsomgeving."),
+        React.createElement("input", { value: loadDraft, onChange: function (e) { setLoadDraft(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter') probeAppConfig(loadDraft); }, placeholder: "https://...LOAD-flow...invoke?...sig=...", style: { width: "100%", padding: 11, borderRadius: 8, border: "1px solid #2a3a49", background: "#0b1118", color: "#e6edf3", fontSize: 13, boxSizing: "border-box", marginBottom: 12 } }),
+        React.createElement("button", { onClick: function () { probeAppConfig(loadDraft); }, style: { padding: "11px 20px", borderRadius: 8, border: 0, background: "#58a6ff", color: "#04101f", fontWeight: 700, fontSize: 15, cursor: "pointer" } }, "Verbinden")
+      )
+    );
+  }
   return React.createElement("div", {
     className: "app" + (isMobile ? " mob" : "")
   }, (isMobile ? null : sidebar), (isMobile && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(React.createElement("div", { className: "mobnav" }, React.createElement("div", { className: "mtopbar" }, React.createElement("button", { className: "hamb", onClick: () => setDrawerOpen(true), title: "Menu", "aria-label": "Menu" }, React.createElement(I, { n: "menu" })), React.createElement("div", { className: "mtb-title" }, dept + " \u00b7 wk " + week), React.createElement("div", { className: "mtb-actions" }, React.createElement("button", { onClick: () => laadVanSharePoint(), title: "Verversen (laden)" }, React.createElement(I, { n: "refresh" })), React.createElement("button", { className: (isPub ? "" : "gold"), onClick: publish, title: isPub ? "Publicatie intrekken" : "Publiceren en vergrendelen" }, React.createElement(I, { n: isPub ? "lock_open" : "publish" })), isPub ? React.createElement("button", { onClick: printRooster, title: "Afdrukken / PDF" }, React.createElement(I, { n: "print" })) : null)), drawerOpen ? React.createElement("div", { className: "drawer-ov", onClick: () => setDrawerOpen(false) }) : null, sidebar), document.body) : null), React.createElement("main", {
