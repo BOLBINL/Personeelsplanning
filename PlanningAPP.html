@@ -1864,6 +1864,7 @@ function App() {
     });
   };
   const _autoArm = React.useRef(false);
+  const _cfgFromPoll = React.useRef(false);   // Guard 3: onderdruk 1 config-save na een load/poll (anti ping-pong)
   // ── Partitie-bewuste opslag (Fase 2) — nieuw pad naast saveState; nog niet bedraad ──
   // Verwacht een blob van buildPlanningBlob(d) of buildConfigBlob(): draagt .partition,
   // eigen .version en (planning) .afdeling. Schrijft de versie terug naar een
@@ -1984,6 +1985,7 @@ function App() {
   };
   const _applyConfig = (dat) => {
     if (!dat) return;
+    _cfgFromPoll.current = true;   // Guard 3: deze config kwam van een load/poll, niet van een edit
     if (dat.cfg) setCfg(normCfg(dat.cfg));
     if (dat.mrAfd) setMrAfd(dat.mrAfd);
     if (dat.productgroepen) setProductgroepen(dedupePgIds(Array.isArray(dat.productgroepen) ? dat.productgroepen : []));
@@ -2027,7 +2029,7 @@ function App() {
     if (flow && flow.load && flow.load.trim()) {
       setSyncInfo('Laden vanuit SharePoint…');
       if (partitieAan) {
-        Promise.all([laadConfig(), laadPlanning(dept)]).then(function () { _autoArm.current = true; setConflict(false); }).catch(function (e) { _autoArm.current = true; ping('Partitie-laden mislukt: ' + e.message, 'block'); });
+        Promise.all([laadConfig(), laadPlanning(dept)]).then(function () { _autoArm.current = true; setConflict(false); }).catch(function (e) { _autoArm.current = false; ping('Partitie-laden mislukt - opslaan geblokkeerd tot je opnieuw laadt: ' + e.message, 'block'); });
       } else {
         laadVanSharePoint(true);              // guarded: overschrijft NIET als de cloud leger is dan lokaal
       }
@@ -3476,6 +3478,7 @@ function App() {
     if (!autoSave) return;
     if (!_autoArm.current) return;
     if (!flow.save) return;
+    if (Object.keys(_filterByDept(plan, dept)).length === 0) return;   // Guard 1: nooit een lege afdeling-planning over de cloud schrijven
     if (_planTimer.current) clearTimeout(_planTimer.current);
     _planTimer.current = setTimeout(function () { savePartition(buildPlanningBlob(dept), true); }, 2500);
     return function () { if (_planTimer.current) clearTimeout(_planTimer.current); };
@@ -3485,8 +3488,10 @@ function App() {
   useEffect(() => {
     if (!partitieAan) return;
     if (!autoSave) return;
+    if (_cfgFromPoll.current) { _cfgFromPoll.current = false; return; }   // Guard 3: niet terugschrijven wat de poll/boot net ophaalde
     if (!_autoArm.current) return;
     if (!flow.save) return;
+    if (!employees || employees.length === 0) return;   // Guard 1: nooit lege config over de cloud schrijven
     if (_cfgTimer.current) clearTimeout(_cfgTimer.current);
     _cfgTimer.current = setTimeout(function () { savePartition(buildConfigBlob(), true); }, 2500);
     return function () { if (_cfgTimer.current) clearTimeout(_cfgTimer.current); };
