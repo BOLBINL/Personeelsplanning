@@ -1823,6 +1823,18 @@ function App() {
     }
   });
   const saveState = (overrideBlob, stil) => {
+    if (partitieAan) {   // Optie A: opslaan gaat via partities (config + eigen afdeling), nooit de oude hele-blob zonder partition
+      var _d = (overrideBlob && overrideBlob.data) ? overrideBlob.data : null;
+      var _cfgB = _d
+        ? { version: lsGet('bl_ver_config', 0), savedAt: new Date().toISOString(), savedBy: user, partition: 'config', data: { cfg: _d.cfg, mrAfd: _d.mrAfd, productgroepen: _d.productgroepen, agencies: _d.agencies, redenen: _d.redenen, kostplaatsen: _d.kostplaatsen, verlofTypes: _d.verlofTypes, skills: _d.skills, templates: _d.templates, mgrMails: _d.mgrMails, mailAfd: _d.mailAfd, weekOpm: _d.weekOpm, employees: _d.employees, pubMR: _d.pubMR } }
+        : buildConfigBlob();
+      var _plB = _d
+        ? { version: lsGet('bl_ver_planning_' + dept, 0), savedAt: new Date().toISOString(), savedBy: user, partition: 'planning_' + dept, afdeling: dept, data: { plan: _filterByDept(_d.plan || {}, dept), pub: _filterByDept(_d.pub || {}, dept) } }
+        : buildPlanningBlob(dept);
+      savePartition(_cfgB, stil);
+      savePartition(_plB, stil);
+      return;
+    }
     if (!flow.save) {
       if (!stil) ping('Geen SAVE-flow URL ingesteld', 'warn');
       return;
