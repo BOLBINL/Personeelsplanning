@@ -2020,12 +2020,24 @@ function App() {
     if (dat.employees) setEmployees(dat.employees);
     if (dat.pubMR) setPubMR(dat.pubMR);
   };
+  const _deepUnwrap = (j) => {
+    var CK = ['cfg', 'employees', 'plan', 'pub', 'mrAfd', 'productgroepen', 'agencies', 'redenen', 'kostplaatsen', 'verlofTypes', 'skills'];
+    var d = j, guard = 0;
+    while (guard < 8) {
+      if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { return d; } guard++; continue; }
+      if (!d || typeof d !== 'object') return d;
+      if (CK.some(function (k) { return d[k] != null; })) return d;   // dit niveau is de echte inhoud
+      if (d.data != null) { d = d.data; guard++; continue; }          // pel een wrapper-laag af
+      return d;
+    }
+    return d;
+  };
   const laadPlanning = (d) => {
     if (!flow.load) return Promise.resolve();
     return fetch(flow.load, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partition: 'planning_' + d, afdeling: d }) })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (j) {
-        var dat = (j && j.data) ? j.data : j;
+        var dat = _deepUnwrap(j);
         if (dat && dat.plan) _mergeByDept(setPlan, dat.plan, d);
         if (dat && dat.pub) _mergeByDept(setPub, dat.pub, d);
         if (j && j.version != null) { try { localStorage.setItem('bl_ver_planning_' + d, JSON.stringify(j.version)); } catch (e) {} }
@@ -2036,7 +2048,7 @@ function App() {
     return fetch(flow.load, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ partition: 'config' }) })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (j) {
-        var dat = (j && j.data) ? j.data : j;
+        var dat = _deepUnwrap(j);
         _applyConfig(dat);
         if (j && j.version != null) { try { localStorage.setItem('bl_ver_config', JSON.stringify(j.version)); } catch (e) {} }
       });
@@ -2111,7 +2123,7 @@ function App() {
         .then(function (j) {
           var lokaal = lsGet('bl_ver_config', 0);
           if (!(j && j.version != null && j.version > lokaal)) return;   // geen nieuwere config
-          var dat = (j && j.data) ? j.data : j;
+          var dat = _deepUnwrap(j);
           if (!dat) return;
           var door = dat.savedBy || (j && j.savedBy) || 'iemand';
           _applyConfig(dat);                                             // normen/instellingen overnemen; toewijzingen blijven staan
