@@ -3046,14 +3046,14 @@ function App() {
             var sh = null; for (var q = 0; q < shs.length; q++) { if (shs[q].id === sid) { sh = shs[q]; break; } }
             if (!sh || (!(Array.isArray(sh.pgs) && sh.pgs.length) && sh.basis == null && sh.max == null)) { var _lk = afd + '|' + L.lijn + '|' + sid + '|' + wkKey + '|' + d.k; var _lt = dagOpm[_lk]; return _lt ? '<td class="on"><div class="celopm">\uD83D\uDCAC ' + esc(_lt) + '</div></td>' : '<td class="leeg"></td>'; }
             var _mn = sh.basis, _mx = sh.max; var mr = (_mn != null && _mx != null && _mn !== _mx) ? (_mn + '\u2013' + _mx) : (_mx != null ? _mx : (_mn != null ? _mn : ''));
-            var prod = (sh.pgs || []).map(function (pid) { var pm = pgMrVoor(pid, afd, L.lijn); var _mi = (sh.pgMeta && sh.pgMeta[pid]) || {}; var _hasU = (_mi.uren !== '' && _mi.uren != null); var _box = (_hasU || _mi.opm) ? ('<div class="pbox">' + (_hasU ? '<span class="puren">' + _mi.uren + ' u</span>' : '') + (_mi.opm ? '<span class="popm">' + esc(_mi.opm) + '</span>' : '') + '</div>') : ''; return '<div class="prow"><div class="pname">' + esc(pgNaam(pid)) + (pm != null ? ' <span class="pgmr">(' + pm + ')</span>' : '') + '</div>' + _box + '</div>'; }).join('');
+            var prod = (sh.pgs || []).map(function (pid) { var pm = pgMrVoor(pid, afd, L.lijn); var _pgN = productgroepen.find(function (pp) { return pp.id === pid; }); var _nm = pgNaam(pid); if (_pgN && _pgN.mrCode) { _nm = _nm.split(' · ' + _pgN.mrCode).join('').replace(/\s+$/, ''); } var _mi = (sh.pgMeta && sh.pgMeta[pid]) || {}; var _hasU = (_mi.uren !== '' && _mi.uren != null); var _box = (_hasU || _mi.opm) ? ('<div class="pbox">' + (_hasU ? '<span class="puren">' + _mi.uren + ' u</span>' : '') + (_mi.opm ? '<span class="popm">' + esc(_mi.opm) + '</span>' : '') + '</div>') : ''; return '<div class="prow"><div class="pname">' + esc(_nm) + (pm != null ? ' <span class="pgmr">(' + pm + ')</span>' : '') + '</div>' + _box + '</div>'; }).join('');
             return '<td class="on">' + prod + '<div class="mr">Benodigd personeel: ' + esc(mr) + '</div>' + (dagOpm[afd + '|' + L.lijn + '|' + sh.id + '|' + wkKey + '|' + d.k] ? '<div class="celopm">\uD83D\uDCAC ' + esc(dagOpm[afd + '|' + L.lijn + '|' + sh.id + '|' + wkKey + '|' + d.k]) + '</div>' : '') + '</td>';
           }).join('');
           return '<tr class="datarow"><td class="nm">' + esc(shDef.naam || sid) + '</td>' + cells + '</tr>';
         }).join('');
         return lijnHdr + shiftRows;
       }).join('');
-      var dagTot = actDagen.map(function (d) { var t = 0; lijnen.forEach(function (L) { mrShiften(L, d).forEach(function (sh) { if (Array.isArray(sh.pgs) && sh.pgs.length) { var m = sh.max != null ? sh.max : (sh.basis != null ? sh.basis : 0); t += (+m || 0); } }); }); return t; });
+      var dagTot = actDagen.map(function (d) { var t = 0; lijnen.forEach(function (L) { if (normSap(L.sap) === 'X') return; mrShiften(L, d).forEach(function (sh) { if (Array.isArray(sh.pgs) && sh.pgs.length) { var m = sh.max != null ? sh.max : (sh.basis != null ? sh.basis : 0); t += (+m || 0); } }); }); return t; });
       var totRow = '<tr class="totaalrow"><td class="nm">Totaal benodigd personeel</td>' + dagTot.map(function (t) { return '<td class="tot">' + t + '</td>'; }).join('') + '</tr>';
       if (!lijnRows.replace(/\s/g, '')) return '';
       var pub = !!pubMR[mrPubKey(afd)];
