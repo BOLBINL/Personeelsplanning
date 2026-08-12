@@ -3995,7 +3995,7 @@ function App() {
           React.createElement("button", { className: "btn " + (!!pubMR[mrPubKey(afd)] ? "" : "gold"), style: { marginLeft: 'auto', padding: '4px 10px', fontSize: 16 }, onClick: function () { publishMR(afd); } }, React.createElement(I, { n: (!!pubMR[mrPubKey(afd)] ? "lock_open" : "publish") }), (!!pubMR[mrPubKey(afd)] ? "Intrekken" : (mrWeekMode ? "Publiceer week " + week : "Publiceer standaard")))),
         React.createElement("div", { style: { fontSize: 14, color: '#5b6070', marginBottom: 8 } }, "Klik een cel om te selecteren, klik dan een productgroep links \u2014 of sleep een groep naar een cel. Een groep mag meerdere keren."),
         React.createElement("div", { style: { display: 'flex', gap: 12, alignItems: 'flex-start' } },
-          React.createElement("div", { style: { minWidth: 168, maxWidth: 190, position: 'sticky', top: 8 } },
+          React.createElement("div", { style: { minWidth: 168, maxWidth: 190, position: 'sticky', top: 66, maxHeight: 'calc(100vh - 84px)', overflowY: 'auto' } },
             React.createElement("div", { style: { fontSize: 14, fontWeight: 700, marginBottom: 6 } }, "Beschikbare productgroepen"),
             React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 8 } },
               lijnen.map(function (lj) { var act = lj.lijn === selLijn; return React.createElement("button", { key: lj.lijn, title: lj.lijn, onClick: function () { setGridLijn(function (prev) { var n = Object.assign({}, prev); n[afd] = lj.lijn; return n; }); }, style: { fontSize: 13, padding: '2px 7px', borderRadius: 6, border: '1px solid ' + (act ? '#b8860b' : '#ddd'), background: act ? '#f6e2b3' : '#fff', cursor: 'pointer', fontWeight: act ? 700 : 400 } }, lj.lijn.replace('Lijn ', 'L') + (lj.sap ? '\u00b7' + lj.sap : '')); })),
@@ -4276,7 +4276,7 @@ function App() {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v8")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -4568,7 +4568,7 @@ function App() {
               vorigeDag: (a.vorigeDag === true)
             });
           }
-        }, lbl + (_et.start ? " " + _et.start : "") + (a.type === 'uitzend' ? ' ·uz' : '')), React.createElement("span", {
+        }, lbl + (_et.start ? " " + _et.start : "") + (a.tijdVast ? " 🔒" : "") + (a.type === 'uitzend' ? ' ·uz' : '')), React.createElement("span", {
           className: "acts"
         }, a.type === 'vast' ? React.createElement("button", {
           onClick: () => toggleSick(c.key, a.id),
