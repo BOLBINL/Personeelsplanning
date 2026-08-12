@@ -3053,7 +3053,7 @@ function App() {
     var alleAfd = Object.keys(cfg).filter(heeftMR);
     var paginas = alleAfd.map(function (afd) {
       var lijnen = cfg[afd] || [];
-      var actDagen = days.filter(function (d) { return lijnen.some(function (L) { return heeftProd(L, d); }); });
+      var actDagen = days.filter(function (d) { return lijnen.some(function (L) { return heeftProd(L, d) || SHIFTS.some(function (sx) { return !!dagOpm[afd + '|' + L.lijn + '|' + sx.id + '|' + wkKey + '|' + d.k]; }); }); });
       if (!actDagen.length) return '';
       var head = '<th class="lh">Lijn / Ploeg</th>' + actDagen.map(function (d) { return '<th>' + esc(d.lbl) + '<span class="dt">' + esc(d.dt) + '</span></th>'; }).join('');
       var lijnRows = lijnen.map(function (L) {
