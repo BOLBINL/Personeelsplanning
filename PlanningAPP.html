@@ -3189,7 +3189,7 @@ function App() {
     const dagBezet = {};
     Object.keys(plan).forEach(k => { const p = k.split('|'); if (p[0] === tDept && p[3] === tWk && p[4] === tDag) { (plan[k] || []).forEach(a => { if (a.empId) dagBezet[a.empId] = 1; }); } });
     const list = (plan[targetKey] || []).slice();
-    let placed = 0; const skip = [];
+    let placed = 0; const skip = []; const _nieuw = [];
     items.forEach(it => {
       const d = it.dienst;
       if (d.type !== 'vast' || !d.empId) return;
@@ -3198,12 +3198,11 @@ function App() {
       if (emp && (isOpVerlof(emp.naam, iso) || emp.status === 'Ziek')) { skip.push(nm + ' (verlof/ziek)'); return; }
       if (emp && !getWerktijden(emp, tDag, week, templates)) { skip.push(nm + ' (geen werkdag)'); return; }
       if (dagBezet[d.empId] || list.some(a => a.empId === d.empId)) { skip.push(nm + ' (al gepland die dag)'); return; }
-      var _telNu = list.filter(function (a) { return !a.ziek; }).length;
-      var _over = _telNu >= _maxN;
-      list.push({ id: uid(), empId: d.empId, type: 'vast', ziek: false, start: d.start, eind: d.eind, kostplaats: d.kostplaats, overReason: (_over && d.overReason) ? d.overReason : null, door: user, ts: new Date().toISOString() });
+      var _nd = { id: uid(), empId: d.empId, type: 'vast', ziek: false, start: d.start, eind: d.eind, kostplaats: d.kostplaats, overReason: d.overReason || null, door: user, ts: new Date().toISOString() };
+      list.push(_nd); _nieuw.push(_nd);
       dagBezet[d.empId] = 1; placed++;
     });
-    if (placed) setPlan(prev => Object.assign({}, prev, { [targetKey]: list }));
+    if (placed) { if (list.filter(function (a) { return !a.ziek; }).length <= _maxN) { _nieuw.forEach(function (a) { a.overReason = null; }); } setPlan(prev => Object.assign({}, prev, { [targetKey]: list })); }
     logAction('PLAK', { dag: tDag, geplaatst: placed, overgeslagen: skip.length });
     var msg = placed + ' geplakt op ' + tDag;
     if (skip.length) msg += ' \u2014 ' + skip.length + ' overgeslagen: ' + skip.join(', ');
@@ -4274,7 +4273,7 @@ function App() {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v14")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v15")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
