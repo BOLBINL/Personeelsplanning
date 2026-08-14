@@ -2586,11 +2586,14 @@ function App() {
     const emp = employees.find(e => e.id === m.empId);
     setPlan(p => {
       const n = Object.assign({}, p);
+      var _gaOch = false;
+      try { var _pp = m.key.split('|'); var _ln = (cfg[_pp[0]] || []).find(function (l) { return l.lijn === _pp[1]; }); var _rn = _ln ? shiftNorm(_ln, _pp[4], isoFor(_pp[4]), _pp[2], !!pubMR[_pp[0] + '|' + _pp[3]]) : null; var _tel = (p[m.key] || []).filter(function (a) { return !a.ziek; }).length; _gaOch = !!(_rn && _rn.max != null && _tel >= _rn.max); } catch (e) {}
       n[m.key] = (p[m.key] || []).concat([{
         id: uid(),
         empId: m.empId,
         type: 'vast',
         ziek: false,
+        geenAnker: _gaOch,
         start: m.start,
         eind: m.eind,
         tijdVast: (m.afgeleidStart != null && m.start !== m.afgeleidStart),
@@ -2667,6 +2670,7 @@ function App() {
     }
     (plan[prevKey] || []).forEach(function (b) {
       if (b.ziek) return;
+      if (b.geenAnker) return;
       if (isOchtend) { if (b.vorigeDag !== true) return; }
       var inf = infoVan(b);
       if (!inf) return;
@@ -2678,9 +2682,7 @@ function App() {
     var pr = rr.overdracht.perRol || {};
     Object.keys(perFunc).forEach(function (f) {
       var grp = perFunc[f];
-      var ends = grp.ends.slice();
-      if (ends.length > grp.avond.length) { ends = ends.slice().sort(function (x, y) { return (x.ts || '') < (y.ts || '') ? -1 : ((x.ts || '') > (y.ts || '') ? 1 : 0); }).slice(0, grp.avond.length); }
-      ends = ends.sort(function (x, y) { return y.min - x.min; });
+      var ends = grp.ends.slice().sort(function (x, y) { return y.min - x.min; });
       grp.avond.forEach(function (a, i) {
         if (i >= ends.length) return;
         var ovl = overlapVoor(a);
@@ -3179,6 +3181,11 @@ function App() {
     const items = klembord.filter(it => { const sp = it.srcKey.split('|'); return sp[0] === tp[0] && sp[3] === tp[3] && it.srcKey !== targetKey; });
     if (!items.length) { ping('Niets op klembord voor deze week.'); return; }
     const iso = isoOfDay(tDag);
+    const tLijn = tp[1];
+    const _line = (cfg[tDept] || []).find(function (l) { return l.lijn === tLijn; });
+    const _rn = _line ? shiftNorm(_line, tDag, iso, tp[2], !!pubMR[tDept + '|' + tWk]) : null;
+    if (!_rn || _rn.runs === false || !(_rn.max > 0)) { ping('Geen SAP MR-planning op ' + tDag + ' (' + tLijn + ') — niet geplakt'); return; }
+    const _maxN = _rn.max || 0;
     const dagBezet = {};
     Object.keys(plan).forEach(k => { const p = k.split('|'); if (p[0] === tDept && p[3] === tWk && p[4] === tDag) { (plan[k] || []).forEach(a => { if (a.empId) dagBezet[a.empId] = 1; }); } });
     const list = (plan[targetKey] || []).slice();
@@ -3191,7 +3198,9 @@ function App() {
       if (emp && (isOpVerlof(emp.naam, iso) || emp.status === 'Ziek')) { skip.push(nm + ' (verlof/ziek)'); return; }
       if (emp && !getWerktijden(emp, tDag, week, templates)) { skip.push(nm + ' (geen werkdag)'); return; }
       if (dagBezet[d.empId] || list.some(a => a.empId === d.empId)) { skip.push(nm + ' (al gepland die dag)'); return; }
-      list.push({ id: uid(), empId: d.empId, type: 'vast', ziek: false, start: d.start, eind: d.eind, kostplaats: d.kostplaats, door: user, ts: new Date().toISOString() });
+      var _telNu = list.filter(function (a) { return !a.ziek; }).length;
+      var _over = _telNu >= _maxN;
+      list.push({ id: uid(), empId: d.empId, type: 'vast', ziek: false, start: d.start, eind: d.eind, kostplaats: d.kostplaats, overReason: (_over && d.overReason) ? d.overReason : null, door: user, ts: new Date().toISOString() });
       dagBezet[d.empId] = 1; placed++;
     });
     if (placed) setPlan(prev => Object.assign({}, prev, { [targetKey]: list }));
@@ -4265,7 +4274,7 @@ function App() {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v12")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v14")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
