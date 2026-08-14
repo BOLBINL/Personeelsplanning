@@ -3168,7 +3168,7 @@ function App() {
       const i = k.lastIndexOf('::');
       const ckey = k.slice(0, i), did = k.slice(i + 2);
       const a = (plan[ckey] || []).find(x => x.id === did);
-      if (a) items.push({ srcKey: ckey, dienst: { empId: a.empId, type: a.type, start: a.start, eind: a.eind, kostplaats: a.kostplaats, ziek: a.ziek, bureau: a.bureau } });
+      if (a) items.push({ srcKey: ckey, dienst: { empId: a.empId, type: a.type, start: a.start, eind: a.eind, kostplaats: a.kostplaats, ziek: a.ziek, bureau: a.bureau, overReason: a.overReason || null } });
     });
     setKlembord(items);
     setSelChips({});
@@ -3555,7 +3555,7 @@ function App() {
   const ctxKopieer = (key, id) => {
     var a = (plan[key] || []).find(x => x.id === id);
     if (!a) return;
-    setKlembord([{ srcKey: key, dienst: { empId: a.empId, type: a.type, start: a.start, eind: a.eind, kostplaats: a.kostplaats, ziek: a.ziek } }]);
+    setKlembord([{ srcKey: key, dienst: { empId: a.empId, type: a.type, start: a.start, eind: a.eind, kostplaats: a.kostplaats, ziek: a.ziek, overReason: a.overReason || null } }]);
     ping('Gekopieerd naar klembord \u2014 plak op een cel'); setCtxMenu(null);
   };
   const ctxBewerk = (key, id) => {
@@ -4273,7 +4273,7 @@ function App() {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v15")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v16")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
