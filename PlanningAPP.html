@@ -1293,6 +1293,14 @@ function getNLFeestdagen(y) {
 }
 function App() {
   const [view, setView] = useState('planning');
+  const _scrollPos = React.useRef({});
+  useEffect(function () {
+    var _t = (_scrollPos.current[view] != null) ? _scrollPos.current[view] : 0;
+    var _raf = requestAnimationFrame(function () { window.scrollTo(0, _t); });
+    var _onSc = function () { _scrollPos.current[view] = window.scrollY; };
+    window.addEventListener('scroll', _onSc, { passive: true });
+    return function () { cancelAnimationFrame(_raf); window.removeEventListener('scroll', _onSc); };
+  }, [view]);
   const [dept, setDept] = useState('Packaging');
   const [beschAlleenAfd, setBeschAlleenAfd] = useState(true);
   const [week, setWeek] = useState(() => NOW_WK.week);
@@ -4332,7 +4340,7 @@ function App() {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v28")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v30")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -4542,7 +4550,7 @@ function App() {
       className: "sap"
     }, "SAP " + line.sap), React.createElement("span", {
       className: "mr"
-    }, (function () { var mn = null, mx = null; days.forEach(function (_d) { dagShiften(line, _d.k, _d.iso, isPubMR).forEach(function (_s) { var sn = shiftNorm(line, _d.k, _d.iso, _s.id, isPubMR); if (sn && sn.runs) { if (sn.basis != null) mn = (mn == null) ? sn.basis : Math.min(mn, sn.basis); if (sn.max != null) mx = (mx == null) ? sn.max : Math.max(mx, sn.max); } }); }); if (mn == null && mx == null) return "geen MR"; return (mn != null && mx != null && mn !== mx) ? ("MR " + mn + "–" + mx) : ("MR " + (mx != null ? mx : mn)); })())), (function () { var _ws = {}; days.forEach(function (_d) { dagShiften(line, _d.k, _d.iso).forEach(function (_s) { _ws[_s.id] = 1; }); }); return SHIFTS.filter(function (_s) { return _ws[_s.id]; }).sort(function (a, b) { var o = { N: 0, O: 1, M: 2, P4: 3, P5: 4 }; return ((a.id in o) ? o[a.id] : 9) - ((b.id in o) ? o[b.id] : 9); }); })().map(sh => React.createElement("div", {
+    }, (function () { var mn = null, mx = null; days.forEach(function (_d) { dagShiften(line, _d.k, _d.iso, isPubMR).forEach(function (_s) { var sn = shiftNorm(line, _d.k, _d.iso, _s.id, isPubMR); if (sn && sn.runs) { if (sn.basis != null) mn = (mn == null) ? sn.basis : Math.min(mn, sn.basis); if (sn.max != null) mx = (mx == null) ? sn.max : Math.max(mx, sn.max); } }); }); if (mn == null && mx == null) return "geen MR"; return (mn != null && mx != null && mn !== mx) ? ("MR " + mn + "–" + mx) : ("MR " + (mx != null ? mx : mn)); })())), (function () { var _ws = {}; days.forEach(function (_d) { gridShiften(line, _d.k, _d.iso).forEach(function (_s) { if (Array.isArray(_s.pgs) && _s.pgs.length) _ws[_s.id] = 1; }); SHIFTS.forEach(function (_s) { if ((plan[cellK(dept, line.lijn, _s.id, wkKey, _d.k)] || []).length) _ws[_s.id] = 1; }); }); return SHIFTS.filter(function (_s) { return _ws[_s.id]; }).sort(function (a, b) { var o = { N: 0, O: 1, M: 2, P4: 3, P5: 4 }; return ((a.id in o) ? o[a.id] : 9) - ((b.id in o) ? o[b.id] : 9); }); })().map(sh => React.createElement("div", {
       key: sh.id,
       className: "grow srow"
     }, React.createElement("div", {
