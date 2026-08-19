@@ -827,7 +827,7 @@ function importPgUitRijen(rijen, cfg, bestaande) {
     if (SKIP_PREFIX[prefix]) { addSkip(prefix + ' — ' + SKIP_PREFIX[prefix]); return; }
     var sap = PREFIX_SAP[prefix]; if (!sap) { addSkip('Onbekende lijn-prefix "' + (prefix || '∅') + '"'); return; }
     var line = lineBySap(sap); if (!line) { addSkip('Geen Packaging-lijn met SAP-code ' + sap); return; }
-    var jNum = Number(String(r.j == null ? '' : r.j).replace(',', '.')); if (!isFinite(jNum) || String(r.j).trim() === '') { addSkip('Geen FTE (kolom J leeg)'); return; }
+    var jNum = Number(String(r.j == null ? '' : r.j).replace(',', '.')); if (!isFinite(jNum) || String(r.j).trim() === '') { addSkip('Geen FTE (kolom J leeg)'); return; } if (Math.round(jNum) === 0) { addSkip('FTE 0 — geen bezetting (bv. CMB-code)'); return; }
     var mr = Math.round(jNum), bp = c || h, combo = bp + '|' + mr, nm = (c + ' ' + d).trim() || h;
     var g = perCombo[combo] || (perCombo[combo] = { bp: bp, mr: mr, afd: packDept, line: line.lijn, codes: {}, naam: nm });
     g.codes[h] = 1; if (nm.length > g.naam.length) g.naam = nm;
@@ -2886,7 +2886,7 @@ function App() {
     employees.forEach(function (e) { empById[e.id] = e; });
 
     // Verzamel per shift -> per lijn -> rij per persoon (kolom = werkdag)
-    var shiftBlokken = SHIFTS.filter(function (sh) { return (cfg[dept] || []).some(function (line) { return werkdagen.some(function (day) { return dagShiften(line, day.k, day.iso).some(function (s) { return s.id === sh.id; }); }); }); }).map(function (sh) {
+    var shiftBlokken = SHIFTS.filter(function (sh) { return (cfg[dept] || []).some(function (line) { return werkdagen.some(function (day) { return dagShiften(line, day.k, day.iso).some(function (s) { return s.id === sh.id; }); }); }); }).sort(function (a, b) { var o = { N: 0, O: 1, M: 2, P4: 3, P5: 4 }; return ((a.id in o) ? o[a.id] : 9) - ((b.id in o) ? o[b.id] : 9); }).map(function (sh) {
       var lijnGroepen = (cfg[dept] || []).map(function (line) {
         var perPersoon = {};
         var perUitzend = {};
@@ -4011,7 +4011,7 @@ function App() {
   const gridDelPg = function (afd, li, dagK, iso, shiftId, pgId) { gridWrite(afd, li, dagK, iso, shiftId, function (pgs) { return pgs.filter(function (z) { return z !== pgId; }); }); };
   const gridClearShift = function (afd, li, dagK, iso, shiftId) { var lijn = (cfg[afd] || [])[li]; if (!lijn) return; var eff = gridShiften(lijn, dagK, iso).map(function (x) { return Object.assign({}, x); }); var idx = eff.findIndex(function (x) { return x.id === shiftId; }); if (idx < 0) return; eff[idx] = { id: shiftId, pgs: [] }; setDagNorm(afd, li, dagK, { shiften: eff, ploegen: eff.length }); };
   const gridAddNorm = function (afd, li, dagK, iso, shiftId) { var lijn = (cfg[afd] || [])[li]; if (!lijn) return; var eff = gridShiften(lijn, dagK, iso).map(function (x) { return Object.assign({}, x); }); var idx = eff.findIndex(function (x) { return x.id === shiftId; }); var b = (lijn.basis != null && lijn.basis !== '') ? +lijn.basis : undefined; var m = (lijn.max != null && lijn.max !== '') ? +lijn.max : undefined; if (idx < 0) { eff.push({ id: shiftId, pgs: [], basis: b, max: m }); } else { eff[idx] = Object.assign({}, eff[idx], { basis: b, max: m }); } var ord = SHIFTS.map(function (z) { return z.id; }); eff.sort(function (a, b2) { return ord.indexOf(a.id) - ord.indexOf(b2.id); }); setDagNorm(afd, li, dagK, { shiften: eff, ploegen: eff.length }); };
-  const gridSetMr = function (afd, li, dagK, iso, shiftId, field, val) { var lijn = (cfg[afd] || [])[li]; if (!lijn) return; var eff = gridShiften(lijn, dagK, iso).map(function (x) { return Object.assign({}, x); }); var idx = eff.findIndex(function (x) { return x.id === shiftId; }); if (idx < 0) { eff.push({ id: shiftId, pgs: [] }); idx = eff.length - 1; } var patch = {}; patch[field] = (val === '' ? null : +val); eff[idx] = Object.assign({}, eff[idx], patch); var ord = SHIFTS.map(function (z) { return z.id; }); eff.sort(function (a, b) { return ord.indexOf(a.id) - ord.indexOf(b.id); }); setDagNorm(afd, li, dagK, { shiften: eff, ploegen: eff.length }); };
+  const gridSetMr = function (afd, li, dagK, iso, shiftId, field, val) { var lijn = (cfg[afd] || [])[li]; if (!lijn) return; var eff = gridShiften(lijn, dagK, iso).map(function (x) { return Object.assign({}, x); }); var idx = eff.findIndex(function (x) { return x.id === shiftId; }); if (idx < 0) { eff.push({ id: shiftId, pgs: [] }); idx = eff.length - 1; } var patch = {}; patch[field] = (val === '' ? null : +val); eff[idx] = Object.assign({}, eff[idx], patch); var ord = SHIFTS.map(function (z) { return z.id; }); eff.sort(function (a, b) { return ord.indexOf(a.id) - ord.indexOf(b.id); }); setDagNorm(afd, li, dagK, { shiften: eff, ploegen: eff.length }); var _nm = eff[idx].max; if (_nm == null || +_nm === 0) { var _pk = afd + '|' + lijn.lijn + '|' + shiftId + '|' + wkKey + '|' + dagK; var _cur = plan[_pk] || []; if (_cur.length) { setPlan(function (pp) { var n = Object.assign({}, pp); n[_pk] = []; return n; }); ping(_cur.length + ' persoon/personen vrijgemaakt — geen MR-bezetting meer op ' + lijn.lijn + ' · ' + shiftId + ' · ' + dagK); } } };
   const gridVulStandaard = function (afd, li) { var lijn = (cfg[afd] || [])[li]; if (!lijn) return; var b = lijn.basis != null ? +lijn.basis : 0, m = lijn.max != null ? +lijn.max : 0; var pl = +(lijn.ploegen || lijn.shiften || 2); var ids = SHIFTS.slice(0, pl).map(function (z) { return z.id; }); days.forEach(function (d) { if (['ma', 'di', 'wo', 'do', 'vr'].indexOf(d.k) < 0) return; var cur = gridShiften(lijn, d.k, d.iso).map(function (x) { return Object.assign({}, x); }); ids.forEach(function (sid) { var ex = cur.find(function (x) { return x.id === sid; }); if (!ex) { cur.push({ id: sid, basis: b, max: m }); } else if (ex.basis == null && ex.max == null && !(Array.isArray(ex.pgs) && ex.pgs.length)) { ex.basis = b; ex.max = m; } }); var ord = SHIFTS.map(function (z) { return z.id; }); cur.sort(function (a, bb) { return ord.indexOf(a.id) - ord.indexOf(bb.id); }); setDagNorm(afd, li, d.k, { shiften: cur, ploegen: cur.length }); }); };
   const mrGridCard = () => React.createElement(React.Fragment, null,
     Object.keys(cfg).filter(heeftMR).map(function (afd) {
@@ -4308,7 +4308,7 @@ function App() {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v19")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v23")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -4518,7 +4518,7 @@ function App() {
       className: "sap"
     }, "SAP " + line.sap), React.createElement("span", {
       className: "mr"
-    }, (function () { var mn = null, mx = null; days.forEach(function (_d) { dagShiften(line, _d.k, _d.iso, isPubMR).forEach(function (_s) { var sn = shiftNorm(line, _d.k, _d.iso, _s.id, isPubMR); if (sn && sn.runs) { if (sn.basis != null) mn = (mn == null) ? sn.basis : Math.min(mn, sn.basis); if (sn.max != null) mx = (mx == null) ? sn.max : Math.max(mx, sn.max); } }); }); if (mn == null && mx == null) return "geen MR"; return (mn != null && mx != null && mn !== mx) ? ("MR " + mn + "–" + mx) : ("MR " + (mx != null ? mx : mn)); })())), (function () { var _ws = {}; days.forEach(function (_d) { dagShiften(line, _d.k, _d.iso).forEach(function (_s) { _ws[_s.id] = 1; }); }); return SHIFTS.filter(function (_s) { return _ws[_s.id]; }); })().map(sh => React.createElement("div", {
+    }, (function () { var mn = null, mx = null; days.forEach(function (_d) { dagShiften(line, _d.k, _d.iso, isPubMR).forEach(function (_s) { var sn = shiftNorm(line, _d.k, _d.iso, _s.id, isPubMR); if (sn && sn.runs) { if (sn.basis != null) mn = (mn == null) ? sn.basis : Math.min(mn, sn.basis); if (sn.max != null) mx = (mx == null) ? sn.max : Math.max(mx, sn.max); } }); }); if (mn == null && mx == null) return "geen MR"; return (mn != null && mx != null && mn !== mx) ? ("MR " + mn + "–" + mx) : ("MR " + (mx != null ? mx : mn)); })())), (function () { var _ws = {}; days.forEach(function (_d) { dagShiften(line, _d.k, _d.iso).forEach(function (_s) { _ws[_s.id] = 1; }); }); return SHIFTS.filter(function (_s) { return _ws[_s.id]; }).sort(function (a, b) { var o = { N: 0, O: 1, M: 2, P4: 3, P5: 4 }; return ((a.id in o) ? o[a.id] : 9) - ((b.id in o) ? o[b.id] : 9); }); })().map(sh => React.createElement("div", {
       key: sh.id,
       className: "grow srow"
     }, React.createElement("div", {
@@ -4663,9 +4663,7 @@ function App() {
         overflow: 'hidden',
         textOverflow: 'ellipsis'
       }
-    }, e.naam, (e.isUitzend && e.bureau && bureauAfk[e.bureau] ? React.createElement("span", { style: { marginLeft: 5, fontSize: 10, fontWeight: 700, color: '#8a6d1f', background: '#f6e2b3', borderRadius: 4, padding: '1px 4px' } }, bureauAfk[e.bureau]) : null)), React.createElement("div", {
-      className: "rol"
-    }, e.functie || e.rol), React.createElement("div", {
+    }, e.naam), React.createElement("div", { className: "rol", style: { display: 'flex', alignItems: 'center', gap: 5 } }, React.createElement("span", { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 } }, e.functie || e.rol), (e.isUitzend && e.bureau && bureauAfk[e.bureau] ? React.createElement("span", { style: { flex: '0 0 auto', fontSize: 10, fontWeight: 700, color: '#8a6d1f', background: '#f6e2b3', borderRadius: 4, padding: '1px 5px' } }, bureauAfk[e.bureau]) : null)), React.createElement("div", {
       style: {
         display: "flex",
         gap: 2,
