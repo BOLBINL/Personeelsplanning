@@ -1314,6 +1314,9 @@ function App() {
   const [dagOpm, setDagOpm] = useState(() => lsGet('bl_dagopm_v4', {}));
   const heeftMR = dep => (mrAfd[dep] !== undefined ? !!mrAfd[dep] : ((cfg[dep] || []).length > 0));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
+  const [bureauAfk, setBureauAfk] = useState(() => lsGet('bl_bureau_afk', {}));
+  const [uzBureauFilter, setUzBureauFilter] = useState('');
+  useEffect(function () { try { localStorage.setItem('bl_bureau_afk', JSON.stringify(bureauAfk)); } catch (e) {} }, [bureauAfk]);
   const [redenen, setRedenen] = useState(() => lsGet(LS_RED, DEFAULT_REDENEN));
   const [kostplaatsen, setKostplaatsen] = useState(() => lsGet(LS_KP, DEFAULT_KP));
   const [verlofTypes, setVerlofTypes] = useState(() => lsGet(LS_VT, VERLOF_TYPES));
@@ -1750,7 +1753,7 @@ function App() {
     data: {
       plan: plan,
       cfg: cfg,
-      agencies: agencies,
+      agencies: agencies, bureauAfk: bureauAfk,
       redenen: redenen,
       kostplaatsen: kostplaatsen,
       verlofTypes: verlofTypes,
@@ -1789,7 +1792,7 @@ function App() {
     savedBy: user,
     partition: 'config',
     data: {
-      cfg: cfg, mrAfd: mrAfd, productgroepen: productgroepen, agencies: agencies,
+      cfg: cfg, mrAfd: mrAfd, productgroepen: productgroepen, agencies: agencies, bureauAfk: bureauAfk,
       redenen: redenen, kostplaatsen: kostplaatsen, verlofTypes: verlofTypes,
       skills: skills, templates: templates, mgrMails: mgrMails, mailAfd: mailAfd,
       weekOpm: weekOpm, employees: employees, pubMR: pubMR
@@ -1920,7 +1923,7 @@ function App() {
       }
       if (dat.plan) setPlan(dat.plan);
       if (dat.cfg) setCfg(normCfg(dat.cfg));
-      if (dat.agencies) setAgencies(dat.agencies);
+      if (dat.agencies) setAgencies(dat.agencies); if (dat.bureauAfk) setBureauAfk(dat.bureauAfk);
       if (dat.redenen) setRedenen(dat.redenen);
       if (dat.kostplaatsen) setKostplaatsen(dat.kostplaatsen);
       if (dat.verlofTypes) setVerlofTypes(dat.verlofTypes);
@@ -1978,7 +1981,7 @@ function App() {
     if (dat.cfg) setCfg(normCfg(dat.cfg));
     if (dat.mrAfd) setMrAfd(dat.mrAfd);
     if (dat.productgroepen) setProductgroepen(dedupePgIds(Array.isArray(dat.productgroepen) ? dat.productgroepen : []));
-    if (dat.agencies) setAgencies(dat.agencies);
+    if (dat.agencies) setAgencies(dat.agencies); if (dat.bureauAfk) setBureauAfk(dat.bureauAfk);
     if (dat.redenen) setRedenen(dat.redenen);
     if (dat.kostplaatsen) setKostplaatsen(dat.kostplaatsen);
     if (dat.verlofTypes) setVerlofTypes(dat.verlofTypes);
@@ -3367,7 +3370,7 @@ function App() {
         weekOpm: weekOpm,
         plan: plan,
         cfg: cfg,
-        agencies: agencies,
+        agencies: agencies, bureauAfk: bureauAfk,
         redenen: redenen,
       kostplaatsen: kostplaatsen,
       verlofTypes: verlofTypes,
@@ -3409,7 +3412,7 @@ function App() {
         try { exportJSON(); } catch (e) {}
         if (dat.plan) setPlan(dat.plan);
         if (dat.cfg) setCfg(normCfg(dat.cfg));
-        if (dat.agencies) setAgencies(dat.agencies);
+        if (dat.agencies) setAgencies(dat.agencies); if (dat.bureauAfk) setBureauAfk(dat.bureauAfk);
       if (dat.redenen) setRedenen(dat.redenen);
       if (dat.kostplaatsen) setKostplaatsen(dat.kostplaatsen);
       if (dat.verlofTypes) setVerlofTypes(dat.verlofTypes);
@@ -4271,7 +4274,7 @@ function App() {
     var n = wd.filter(function (dk) { var iso = (days[DAG_K.indexOf(dk)] || {}).iso; return iso && heleDagVrij(e.naam, iso); }).length;
     return n ? { label: n + ' dag' + (n > 1 ? 'en' : '') + ' vrij', bg: '#dcecff', fg: '#245' } : null;
   };
-  const staff = employees.filter(e => e.actief !== false && (e.naam + ' ' + e.rol).toLowerCase().indexOf(zoek.toLowerCase()) >= 0  && (!beschAlleenAfd || (e.afd || '') === dept) && heeftOpenDag(e));
+  const staff = employees.filter(e => e.actief !== false && (e.naam + ' ' + e.rol).toLowerCase().indexOf(zoek.toLowerCase()) >= 0  && (!beschAlleenAfd || (e.afd || '') === dept) && (!uzBureauFilter || (e.bureau || '') === uzBureauFilter) && heeftOpenDag(e));
   const openTemp = useMemo(() => {
     let n = 0;
     Object.keys(plan).forEach(k => {
@@ -4305,7 +4308,7 @@ function App() {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v18")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-12 · v19")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -4623,7 +4626,7 @@ function App() {
       }), klembord.length && klembord.some(it => { const sp = it.srcKey.split('|'), tp = c.key.split('|'); return sp[0] === tp[0] && sp[3] === tp[3] && it.srcKey !== c.key; }) ? React.createElement("button", { key: 'plak', className: "plakbtn", title: "Plak gekopieerde dienst(en) hier (ook van een andere lijn)", onClick: ev => { ev.stopPropagation(); plakOpCel(c.key); } }, "\u21E9 Plak") : null, (c.status !== 'rust' ? React.createElement("button", { key: 'add', className: "addbtn", title: "Medewerker of uitzend toevoegen", onClick: ev => { ev.stopPropagation(); setAddFor(c.key); setAddZoek(''); } }, "+ Toevoegen") : null));
     })))))))), React.createElement("div", {
       className: "card staff"
-    }, React.createElement("div", { className: "staffhead" }, React.createElement("h3", null, "Beschikbaar"), React.createElement("div", {
+    }, React.createElement("div", { className: "staffhead" }, React.createElement("h3", null, "Beschikbaar"), React.createElement("select", { className: "cin", value: uzBureauFilter, onChange: function (e) { setUzBureauFilter(e.target.value); }, style: { fontSize: 12, padding: '2px 6px', marginLeft: 8, maxWidth: 140 } }, React.createElement("option", { value: "" }, "Alle bureaus"), (agencies || []).map(function (ag) { return React.createElement("option", { key: ag, value: ag }, (bureauAfk[ag] ? bureauAfk[ag] + ' \u2014 ' : '') + ag); })), React.createElement("div", {
       className: "search"
     }, React.createElement(I, {
       n: "search"
@@ -4660,7 +4663,7 @@ function App() {
         overflow: 'hidden',
         textOverflow: 'ellipsis'
       }
-    }, e.naam), React.createElement("div", {
+    }, e.naam, (e.isUitzend && e.bureau && bureauAfk[e.bureau] ? React.createElement("span", { style: { marginLeft: 5, fontSize: 10, fontWeight: 700, color: '#8a6d1f', background: '#f6e2b3', borderRadius: 4, padding: '1px 4px' } }, bureauAfk[e.bureau]) : null)), React.createElement("div", {
       className: "rol"
     }, e.functie || e.rol), React.createElement("div", {
       style: {
@@ -5362,7 +5365,7 @@ function App() {
         (agencies || []).map(function (bu, i) {
           var ov = uz.perBureau[bu] || {};
           return React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
-            React.createElement("input", { className: "cin", style: { flex: "0 0 150px" }, value: bu, placeholder: "Bureau", onChange: function (e) { updAg(i, e.target.value); } }),
+            React.createElement("input", { className: "cin", style: { flex: "0 0 150px" }, value: bu, placeholder: "Bureau", onChange: function (e) { updAg(i, e.target.value); } }), React.createElement("input", { className: "cin", style: { flex: "0 0 64px" }, maxLength: 6, value: (bureauAfk[bu] || ''), placeholder: "Afk", title: "Afkorting bureau", onChange: function (e) { var v = e.target.value; setBureauAfk(function (m) { var n = Object.assign({}, m); n[bu] = v; return n; }); } }),
             rolSel(ov.functie, function (v) { setBu(bu, 'functie', v); }, true),
             txt(ov.netto, uz.standaard.netto, function (v) { setBu(bu, 'netto', v); }),
             txt(ov.pauze, uz.standaard.pauze, function (v) { setBu(bu, 'pauze', v); }),
