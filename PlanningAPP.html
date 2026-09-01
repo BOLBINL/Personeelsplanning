@@ -3262,21 +3262,21 @@ const buildMRDoc = function (opts) {
         posReset(elk));
     };
     var panels = {
-      logo: [lbl("Logo"), rangeCtl("Breedte", 'logoW', 40, 260, 120), posCtl('logo'), React.createElement("div", { key: 'lh', style: { fontSize: 11, color: '#8a8f9c', marginTop: 6 } }, "Sleep het logo in het vel om het te verplaatsen.")],
-      titel: [lbl("Titel"), rangeCtl("Grootte", 'titelFont', 12, 72, 30), colCtl('titel', '#19203b'), boldCtl('titel'), posCtl('titel')],
-      wk: [lbl("Datum"), rangeCtl("Grootte", 'wkFont', 8, 40, 16), colCtl('wk', '#7a5c12'), boldCtl('wk'), posCtl('wk')],
-      concept: [lbl("Concept-balk"), React.createElement("label", { key: 'con', style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#4a4f63', marginBottom: 8 } }, React.createElement("input", { type: "checkbox", checked: !pc.conceptOff, onChange: function (e) { setK('conceptOff', e.target.checked ? false : true); } }), React.createElement("span", null, "Balk tonen")), rangeCtl("Grootte", 'conceptFont', 8, 32, 14), colCtl('concept', '#ffffff'), boldCtl('concept'), posCtl('concept')],
-      opm: [lbl("Opmerkingen"), rangeCtl("Grootte", 'opmFont', 8, 40, 16), colCtl('opm', '#3a3109'), boldCtl('opm'), posCtl('opm')],
-      dag: [lbl("Dag-koppen"), rangeCtl("Grootte", 'dagFont', 8, 32, 14), colCtl('dag', '#ffffff'), boldCtl('dag')],
-      lijn: [lbl("Lijn-balk"), rangeCtl("Grootte", 'lijnFont', 10, 40, 15), colCtl('lijn', '#19203b'), boldCtl('lijn')],
-      shift: [lbl("Shift-kolom"), rangeCtl("Grootte", 'shiftFont', 8, 32, 14), colCtl('shift', '#2f7d5f'), boldCtl('shift')],
-      prod: [lbl("Productgroep-tekst"), rangeCtl("Grootte", 'prodFont', 8, 28, 16), colCtl('prod', '#1f2430'), boldCtl('prod')],
-      uren: [lbl("Uren-vakje"), rangeCtl("Grootte", 'urenFont', 8, 24, 12), colCtl('uren', '#1f2430'), boldCtl('uren')],
-      celopm: [lbl("Cel-opmerking"), rangeCtl("Grootte", 'celopmFont', 8, 24, 12), colCtl('celopm', '#8a6d1f'), boldCtl('celopm')],
-      ben: [lbl("Benodigd personeel"), rangeCtl("Grootte", 'benFont', 8, 24, 12), colCtl('ben', '#7a5c12'), boldCtl('ben')],
-      totaal: [lbl("Totaalrij"), rangeCtl("Grootte", 'totaalFont', 12, 40, 20), colCtl('totaal', '#ffffff')],
-      raster: [lbl("Week-raster"), posCtl('raster'), rangeCtl("Linker-kolom breedte", 'kolLinks', 90, 320, 150), rangeCtl("Dag-kolom breedte (0 = auto)", 'kolDag', 0, 340, 0), rangeCtl("Rij-hoogte", 'rijHoogte', 14, 140, 20), React.createElement("div", { key: 'rh', style: { fontSize: 11, color: '#8a8f9c', marginTop: 6 } }, "Smallere linker-kolom = bredere dag-kolommen. Klik op een cel voor dit paneel.")],
-      streep: [lbl("Scheiding-streep"), React.createElement("label", { key: 'str', style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#4a4f63', marginBottom: 8 } }, React.createElement("input", { type: "checkbox", checked: !pc.streepOff, onChange: function (e) { setK('streepOff', e.target.checked ? false : true); } }), React.createElement("span", null, "Streep tonen")), rangeCtl("Dikte", 'streepDik', 1, 12, 3), colCtl('streep', '#19203b'), posCtl('streep')]
+      logo: [lbl("Logo"), rangeCtl("Breedte", 'logoW', 40, 400, 120), posCtl('logo'), React.createElement("div", { key: 'lh', style: { fontSize: 11, color: '#8a8f9c', marginTop: 6 } }, "Sleep het logo in het vel om het te verplaatsen.")],
+      titel: [lbl("Titel"), rangeCtl("Grootte", 'titelFont', 12, 120, 30), colCtl('titel', '#19203b'), boldCtl('titel'), posCtl('titel')],
+      wk: [lbl("Datum"), rangeCtl("Grootte", 'wkFont', 8, 72, 16), colCtl('wk', '#7a5c12'), boldCtl('wk'), posCtl('wk')],
+      concept: [lbl("Concept-balk"), React.createElement("label", { key: 'con', style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#4a4f63', marginBottom: 8 } }, React.createElement("input", { type: "checkbox", checked: !pc.conceptOff, onChange: function (e) { setK('conceptOff', e.target.checked ? false : true); } }), React.createElement("span", null, "Balk tonen")), rangeCtl("Grootte", 'conceptFont', 8, 64, 14), colCtl('concept', '#ffffff'), boldCtl('concept'), posCtl('concept')],
+      opm: [lbl("Opmerkingen"), rangeCtl("Grootte", 'opmFont', 8, 80, 16), colCtl('opm', '#3a3109'), boldCtl('opm'), posCtl('opm')],
+      dag: [lbl("Dag-koppen"), rangeCtl("Grootte", 'dagFont', 8, 80, 14), colCtl('dag', '#ffffff'), boldCtl('dag')],
+      lijn: [lbl("Lijn-balk"), rangeCtl("Grootte", 'lijnFont', 10, 90, 15), colCtl('lijn', '#19203b'), boldCtl('lijn')],
+      shift: [lbl("Shift-kolom"), rangeCtl("Grootte", 'shiftFont', 8, 80, 14), colCtl('shift', '#2f7d5f'), boldCtl('shift')],
+      prod: [lbl("Productgroep-tekst"), rangeCtl("Grootte", 'prodFont', 8, 80, 16), colCtl('prod', '#1f2430'), boldCtl('prod')],
+      uren: [lbl("Uren-vakje"), rangeCtl("Grootte", 'urenFont', 8, 60, 12), colCtl('uren', '#1f2430'), boldCtl('uren')],
+      celopm: [lbl("Cel-opmerking"), rangeCtl("Grootte", 'celopmFont', 8, 60, 12), colCtl('celopm', '#8a6d1f'), boldCtl('celopm')],
+      ben: [lbl("Benodigd personeel"), rangeCtl("Grootte", 'benFont', 8, 60, 12), colCtl('ben', '#7a5c12'), boldCtl('ben')],
+      totaal: [lbl("Totaalrij"), rangeCtl("Grootte", 'totaalFont', 12, 96, 20), colCtl('totaal', '#ffffff')],
+      raster: [lbl("Week-raster"), posCtl('raster'), rangeCtl("Linker-kolom breedte", 'kolLinks', 60, 500, 150), rangeCtl("Dag-kolom breedte (0 = auto)", 'kolDag', 0, 500, 0), rangeCtl("Rij-hoogte", 'rijHoogte', 14, 300, 20), React.createElement("div", { key: 'rh', style: { fontSize: 11, color: '#8a8f9c', marginTop: 6 } }, "Smallere linker-kolom = bredere dag-kolommen. Klik op een cel voor dit paneel.")],
+      streep: [lbl("Scheiding-streep"), React.createElement("label", { key: 'str', style: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#4a4f63', marginBottom: 8 } }, React.createElement("input", { type: "checkbox", checked: !pc.streepOff, onChange: function (e) { setK('streepOff', e.target.checked ? false : true); } }), React.createElement("span", null, "Streep tonen")), rangeCtl("Dikte", 'streepDik', 1, 30, 3), colCtl('streep', '#19203b'), posCtl('streep')]
     };
     var body = pdSel && panels[pdSel] ? panels[pdSel] : [React.createElement("div", { key: 'hint', style: { fontSize: 13, color: '#8a8f9c', padding: '20px 4px', lineHeight: 1.5 } }, "Klik op een element in het vel — logo, titel, datum, concept-balk, opmerkingen, scheiding-streep, dag-koppen, lijn-balk, shift-kolom, productgroep-tekst, uren-vakje, cel-opmerking, benodigd-personeel, totaalrij of een cel (voor het hele raster) — om het aan te passen.")];
     var A4 = pc.pageSize === 'A4';
@@ -4528,7 +4528,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-01 · v100 · ploeg N-O-M")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-01 · v101 · ontwerp-caps ruimer")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
