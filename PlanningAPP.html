@@ -3118,7 +3118,9 @@ const buildMRDoc = function (opts) {
       if (!prodHtml && !opmHtml && !benHtml) return { html: '<td class="cel"></td>', tot: totC };
       return { html: '<td class="cel">' + prodHtml + opmHtml + benHtml + '</td>', tot: totC };
     };
-    var shiftIdsVoor = function (L) { if (_mockR) { var n = +(L.ploegen) || 2; return SHIFTS.slice(0, n).map(function (z) { return z.id; }); } var ids = []; _days.forEach(function (d) { mrShiften(L, d).forEach(function (sx) { if (((Array.isArray(sx.pgs) && sx.pgs.length) || sx.basis != null || sx.max != null) && ids.indexOf(sx.id) < 0) ids.push(sx.id); }); }); if (!ids.length) { var ls = []; try { ls = lijnShifts(L) || []; } catch (e) {} ls.forEach(function (sx) { if (ids.indexOf(sx.id) < 0) ids.push(sx.id); }); } var ord = SHIFTS.map(function (z) { return z.id; }); ids.sort(function (a, b) { return ord.indexOf(a) - ord.indexOf(b); }); return ids; };
+    var _mrOrd = { N: 0, O: 1, M: 2, P4: 3, P5: 4 };
+    var _shOrd = function (id) { return (id in _mrOrd) ? _mrOrd[id] : 9; };
+    var shiftIdsVoor = function (L) { if (_mockR) { var n = +(L.ploegen) || 2; return SHIFTS.slice(0, n).map(function (z) { return z.id; }).sort(function (a, b) { return _shOrd(a) - _shOrd(b); }); } var ids = []; _days.forEach(function (d) { mrShiften(L, d).forEach(function (sx) { if (((Array.isArray(sx.pgs) && sx.pgs.length) || sx.basis != null || sx.max != null) && ids.indexOf(sx.id) < 0) ids.push(sx.id); }); }); if (!ids.length) { var ls = []; try { ls = lijnShifts(L) || []; } catch (e) {} ls.forEach(function (sx) { if (ids.indexOf(sx.id) < 0) ids.push(sx.id); }); } ids.sort(function (a, b) { return _shOrd(a) - _shOrd(b); }); return ids; };
     var isCleaningL = function (L, li) { if (_mockR) return li === (_lijnen.length - 1); try { return normSap(L.sap) === 'X'; } catch (e) { return String(L.sap || '').toUpperCase() === 'X'; } };
     var thDagen = _days.map(function (d) { return '<th class="dag">' + esc(d.lbl) + '<span class="dt">' + esc(d.dt) + '</span></th>'; }).join('');
     var thead = '<thead><tr><th class="lh">Lijn / Ploeg</th>' + thDagen + '</tr></thead>';
@@ -3172,26 +3174,64 @@ const buildMRDoc = function (opts) {
         setTimeout(function () { try { w.focus(); w.print(); } catch (e) {} }, 350);
         if (typeof logAction === 'function') logAction('MR_AFGEDRUKT', { week: week, jaar: jaar });
       };
-      ifr.onload = function () {
-        var f = 1;
+      var FLOOR = 0.4, CEIL = 2.6;
+      var readMetrics = function () {
         try {
           var d = ifr.contentDocument, cw = ifr.contentWindow;
           var pg = d.querySelector('.page'), rs = d.querySelector('.raster'), kop = d.querySelector('.kop');
-          if (pg && rs) {
-            var cs = cw.getComputedStyle(pg);
-            var padT = parseFloat(cs.paddingTop) || 0, padB = parseFloat(cs.paddingBottom) || 0;
-            var kopH = kop ? kop.offsetHeight : 0;
-            var rms = parseFloat(cw.getComputedStyle(rs).marginTop) || 0;
-            var avail = TARGET - padT - padB - kopH - rms - 6;
-            var need = rs.scrollHeight;
-            if (need > 0) { f = (avail * 0.985) / need; if (f < 0.4) f = 0.4; if (f > 2.8) f = 2.8; }
-          }
-        } catch (e) {}
-        setTimeout(function () { finish(f); }, 20);
+          if (!pg || !rs) return null;
+          var cs = cw.getComputedStyle(pg);
+          var padT = parseFloat(cs.paddingTop) || 0, padB = parseFloat(cs.paddingBottom) || 0;
+          var padL = parseFloat(cs.paddingLeft) || 0, padR = parseFloat(cs.paddingRight) || 0;
+          var kopH = kop ? kop.offsetHeight : 0;
+          var rms = parseFloat(cw.getComputedStyle(rs).marginTop) || 0;
+          var availH = TARGET - padT - padB - kopH - rms - 6;
+          var availW = pg.clientWidth - padL - padR;
+          return { availH: availH, availW: availW, needH: rs.scrollHeight, needW: rs.scrollWidth };
+        } catch (e) { return null; }
+      };
+      // true only if the current render fits within one page on BOTH axes
+      var fitsNow = function () { var r = readMetrics(); if (!r) return null; return (r.needH <= r.availH * 0.992) && (r.needW <= r.availW + 2); };
+      // render buildMRDoc at a scale into the iframe, then call cb once fonts+images+layout have settled
+      var renderAt = function (scale, cb) {
+        var fired = false, d = null, cw = null;
+        var doneCb = function () { if (!fired) { fired = true; cb(); } };
+        var settle = function () { try { cw.requestAnimationFrame(function () { cw.requestAnimationFrame(doneCb); }); } catch (e) { doneCb(); } };
+        var imgsReady = function () {
+          var imgs; try { imgs = Array.prototype.slice.call(d.images || []); } catch (e) { imgs = []; }
+          var pend = imgs.filter(function (im) { return !im.complete; });
+          if (!pend.length) { settle(); return; }
+          var left = pend.length, hit = false;
+          var one = function () { if (--left <= 0 && !hit) { hit = true; settle(); } };
+          pend.forEach(function (im) { im.addEventListener('load', one); im.addEventListener('error', one); });
+          try { cw.setTimeout(function () { if (!hit) { hit = true; settle(); } }, 500); } catch (e) { settle(); }
+        };
+        ifr.onload = function () {
+          try { d = ifr.contentDocument; cw = ifr.contentWindow; } catch (e) { doneCb(); return; }
+          try {
+            if (d.fonts && d.fonts.ready && d.fonts.ready.then) { d.fonts.ready.then(imgsReady, imgsReady); }
+            else { imgsReady(); }
+          } catch (e) { imgsReady(); }
+        };
+        setTimeout(function () { doneCb(); }, 1200);
+        ifr.srcdoc = buildMRDoc({ print: true, scale: scale });
+      };
+      // binary-search the largest scale that still fits one page (iterative = honest about text-wrap)
+      var lo = FLOOR, hi = CEIL, best = FLOOR, iter = 0, MAXIT = 7;
+      var step = function () {
+        if (iter >= MAXIT) { finish(best); return; }
+        iter++;
+        var mid = (lo + hi) / 2;
+        renderAt(mid, function () {
+          var ok = fitsNow();
+          if (ok === null) { finish(best); return; }
+          if (ok) { best = mid; lo = mid; } else { hi = mid; }
+          step();
+        });
       };
       document.body.appendChild(ifr);
-      ifr.srcdoc = buildMRDoc({ print: true, scale: 1 });
-      setTimeout(function () { finish(1); }, 2000);
+      setTimeout(function () { if (!done) { finish(best); } }, 9000);
+      step();
     } catch (e) { if (typeof ping === 'function') ping('Afdrukken mislukt', 'block'); }
   };
   const pdModal = function () {
@@ -4488,7 +4528,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-08-22 · v97 · iframe-meet-bak")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-01 · v100 · ploeg N-O-M")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
