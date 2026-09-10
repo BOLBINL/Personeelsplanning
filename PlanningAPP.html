@@ -6066,7 +6066,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-03 · v108 · verplaatsen rechtsklik")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-03 · v110 · bureau-afk gekleurd")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -6323,7 +6323,9 @@ const buildMRDoc = function (opts) {
         }
       }, c.actief + "/" + c.req)), function () { var rs = c.list.filter(function (x) { return x.overReason; }); if (!rs.length) return null; var uq = []; rs.forEach(function (x) { if (uq.indexOf(x.overReason) < 0) uq.push(x.overReason); }); return React.createElement("span", { key: "ob", title: "Boven max toegevoegd", style: { display: "inline-block", marginLeft: 6, fontSize: 9, fontWeight: 700, color: "#b02a37", background: "#fde8ea", border: "1px solid #f3c2c8", borderRadius: 8, padding: "1px 5px" } }, "▲ " + uq.join(", ")); }(), c.list.map(a => {
         const e = a.empId ? employees.find(x => x.id === a.empId) : null;
-        const lbl = a.type === 'uitzend' ? a.bureau ? a.bureau.slice(0, 2).toUpperCase() : 'UZ' : e ? e.naam.split(' ')[0] : '?';
+        const _buro = a.bureau || (e && e.bureau) || '';
+        const _bAfk = _buro ? (bureauAfk[_buro] || _buro.slice(0, 3).toUpperCase()) : '';
+        const lbl = e ? e.naam : (_bAfk || 'Uitzend');
         const _et = afgeleideTijd(a, c.key);
         return React.createElement("div", {
           key: a.id,
@@ -6340,7 +6342,10 @@ const buildMRDoc = function (opts) {
           style: {
             flex: 1,
             marginLeft: 4,
-            cursor: a.type === 'vast' ? 'pointer' : 'default'
+            cursor: a.type === 'vast' ? 'pointer' : 'default',
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
+            lineHeight: 1.15
           },
           onClick: ev => {
             ev.stopPropagation();
@@ -6358,7 +6363,7 @@ const buildMRDoc = function (opts) {
               vorigeDag: (a.vorigeDag === true)
             });
           }
-        }, lbl + (_et.start ? " " + _et.start : "") + (a.tijdVast ? " 🔒" : "") + (a.type === 'uitzend' ? ' ·uz' : '')), React.createElement("span", {
+        }, lbl, (_bAfk && e ? React.createElement("span", { style: { color: '#1f6feb', fontWeight: 700 } }, " · " + _bAfk) : null), (_et.start ? " " + _et.start : "") + (a.tijdVast ? " 🔒" : "")), React.createElement("span", {
           className: "acts"
         }, a.type === 'vast' ? React.createElement("button", {
           onClick: () => toggleSick(c.key, a.id),
