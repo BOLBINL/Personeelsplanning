@@ -6261,7 +6261,7 @@ const buildMRDoc = function (opts) {
       className: "d"
     }, d.lbl), React.createElement("div", {
       className: "dt"
-    }, d.dt)))), lines.map(line => React.createElement("div", {
+    }, d.dt), (function(){var _g=0,_b=0;lines.forEach(function(_L){dagShiften(_L,d.k,d.iso,isPubMR).forEach(function(_s){var _c=info(_L,_s.id,d.k);if(_c){_g+=(+_c.actief||0);_b+=(+_c.req||0);}});});var _st=_b===0?'z':(_g<_b?'u':(_g>_b?'o':'k'));var _col=_st==='z'?'#b0b4c0':_st==='u'?'#c15400':_st==='o'?'#b02a37':'#1b7f4b';var _bg=_st==='z'?'#f4f5f8':_st==='u'?'#fdeee2':_st==='o'?'#fdecea':'#e8f5ec';var _bd=_st==='z'?'#e6e8ee':_st==='u'?'#f2c9a3':_st==='o'?'#f3c2c8':'#b9e0c6';var _lab=_st==='u'?('tekort '+(_b-_g)):_st==='o'?('teveel +'+(_g-_b)):_st==='k'?'op norm':'\u00a0';return React.createElement('div',{title:(_st==='z'?'':_lab),style:{marginTop:4,display:'inline-flex',flexDirection:'column',alignItems:'center',lineHeight:1.05,borderRadius:7,padding:'2px 7px',border:'1px solid '+_bd,background:_bg,color:_col}},React.createElement('div',{style:{fontSize:13,fontWeight:800}},_g+' / '+_b),React.createElement('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'.3px',textTransform:'uppercase'}},_lab));})()))), lines.map(line => React.createElement("div", {
       key: line.lijn
     }, React.createElement("div", {
       className: "lgroup"
