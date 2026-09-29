@@ -3404,6 +3404,16 @@ function App() {
   };
   // Schakelaar Fase 3-5: partitiemodus. Leeg/false = huidig gedrag (één blob).
   const partitieAan = !!(flow && flow.partitie);
+  // v116 — Bij afdeling kiezen: laad alleen die afdeling-partitie (planning_<afd>), NIET config opnieuw.
+  // Packaging is voorgeladen door de opstart-laad; andere afdelingen worden geladen zodra je ze opent.
+  const _deptLoaded = React.useRef({ Packaging: true });
+  useEffect(function () {
+    if (!partitieAan || !flow.load) return;
+    if (_deptLoaded.current[dept]) return;
+    _deptLoaded.current[dept] = true;
+    laadPlanning(dept).catch(function () { _deptLoaded.current[dept] = false; });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dept, partitieAan, flow.load]);
   const laadVanSharePoint = (guard) => {
     if (!flow.load) {
       ping('Geen LOAD-flow URL ingesteld', 'warn');
@@ -6066,7 +6076,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-03 · v110 · bureau-afk gekleurd")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-25 · v116 · afd-wissel laadt partie")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
