@@ -4,12 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Biscuit International — Planning Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&display=swap" rel="stylesheet"/>
 <style>
-  :root{--navy:#0b1226;--gold:#C9A45C;--page:#F4F5F7;--card:#fff;--line:#E2E4EC;--ink:#141a34;--muted:#6b7080;--ok:#4caf50;--ok-bg:#e8f5e9;--warn:#e8a045;--warn-bg:#fff3e0;--bad:#dc2626;--bad-bg:#fdecea;--r-sm:8px;--r:10px;--r-lg:14px;--r-pill:999px;--sh-1:0 1px 2px rgba(20,26,52,.05),0 4px 14px rgba(20,26,52,.06);--sh-2:0 8px 24px rgba(20,26,52,.10);--sh-pop:0 10px 28px rgba(20,26,52,.16);--surface:#fbfbfd;--sub:#eef0fb;--cream:#fffdf7;--line-soft:#eef0f4;--nav-section:#5a6180;--live:#39b45a;--ring:rgba(11,18,38,.30);--cell-ok:#f4fbf4;--cell-warn:#fffaf0;--cell-bad:#fdf2f2;}
+  :root{--navy:#19203b;--gold:#C9A45C;--page:#f8fafc;--card:#fff;--line:#e2e8f0;--ink:#0f172a;--muted:#64748b;--ok:#059669;--ok-bg:#ecfdf5;--warn:#f59e0b;--warn-bg:#fffbeb;--bad:#e11d48;--bad-bg:#fff1f3;--r-sm:8px;--r:12px;--r-lg:16px;--r-pill:999px;--sh-1:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05);--sh-2:0 8px 24px rgba(15,23,42,.08);--sh-pop:0 10px 28px rgba(15,23,42,.14);--surface:#f8fafc;--sub:#eef2f8;--cream:#fffdf7;--line-soft:#eef0f4;--nav-section:#8a93ad;--live:#059669;--ring:rgba(25,32,59,.30);--cell-ok:#f0fdf4;--cell-warn:#fffbeb;--cell-bad:#fff1f3;}
   *{box-sizing:border-box;}
-  body{margin:0;font-family:'Hanken Grotesk',sans-serif;background:var(--page);color:var(--ink);}
+  body{margin:0;font-family:'IBM Plex Sans','Hanken Grotesk','Segoe UI',Arial,sans-serif;background:var(--page);color:var(--ink);}
   .mono,.cap,.dt,.d,.t,.hint,.rol,.cnt,.oncall{font-family:'JetBrains Mono',monospace;}
   .ms{font-family:'Material Symbols Outlined';line-height:1;vertical-align:middle;}
   ::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:#c7c5ce;border-radius:4px;}
@@ -19,7 +19,7 @@
   .brand{display:flex;flex-direction:column;align-items:center;padding:0 14px 18px;border-bottom:1px solid #252c47;}
   .logo{width:100%;max-width:180px;height:auto;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.35);padding:12px 14px;box-sizing:border-box;margin-bottom:8px;}
   .logo .ms{font-size:28px;color:#7a7f92;}
-  .brand h1{color:var(--gold);font-size:17px;font-weight:800;text-align:center;margin:9px 0 2px;line-height:1.15;}
+  .brand h1{color:var(--gold);font-size:17px;font-weight:800;text-align:center;margin:9px 0 2px;line-height:1.15;font-family:'Outfit','IBM Plex Sans',sans-serif;}
   .brand .cap{color:#7a8099;font-size:8.5px;letter-spacing:.15em;}
   nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px;}
   nav button{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:9px;border:none;border-left:3px solid transparent;background:none;color:#9aa0bd;font-size:13.5px;font-weight:600;text-align:left;width:100%;}
@@ -31,10 +31,10 @@
   nav>.nav-sec:first-child{padding-top:2px;}
   .sync{margin:0 10px;background:var(--gold);color:var(--navy);font-weight:800;font-size:11px;border:none;border-radius:9px;padding:12px;display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.04em;}
   .sync .ms{font-size:17px;}
-  .main{flex:1;min-width:0;padding:18px 20px 44px;}
+  .main{flex:1;min-width:0;padding:28px 28px 56px;}
   .stack{display:flex;flex-direction:column;gap:14px;}
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-  .topbar h2{font-size:23px;font-weight:800;margin:0;}
+  .topbar h2{font-size:23px;font-weight:800;margin:0;font-family:'Outfit','IBM Plex Sans',sans-serif;letter-spacing:-.01em;}
   .topbar .r{display:flex;align-items:center;gap:8px;}
   .pill{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:10.5px;letter-spacing:.05em;color:#5b6070;text-transform:uppercase;font-family:'JetBrains Mono',monospace;}
   .pill .dot{width:7px;height:7px;border-radius:50%;background:#39b45a;}
@@ -51,8 +51,9 @@
   .configwrap.show-A .cat-A,.configwrap.show-B .cat-B,.configwrap.show-C .cat-C,.configwrap.show-D .cat-D,.configwrap.show-E .cat-E{display:block;}
   .chev{display:none!important;}
   .wk{display:flex;align-items:center;gap:8px;}
-  .wk .nb{width:38px;height:38px;border-radius:9px;background:#eef0fb;border:none;display:flex;align-items:center;justify-content:center;color:var(--navy);}
-  .wk .lbl2{font-size:20px;font-weight:800;padding:0 6px;}
+  .wk .nb{width:38px;height:38px;border-radius:10px;background:var(--sub);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--navy);cursor:pointer;}
+  .wk .nb:hover{background:#fff;border-color:var(--gold);}
+  .wk .lbl2{font-size:20px;font-weight:800;padding:0 8px;font-family:'Outfit','IBM Plex Sans',sans-serif;letter-spacing:-.01em;}
   .btnrow{display:flex;gap:8px;flex-wrap:wrap;}.segrow{display:flex;gap:6px;flex-wrap:wrap;}.segrow .btn.seg{background:#fff;border:1px solid var(--line,#e6e8ee);border-radius:var(--r);padding:10px 14px;color:#4a4f63;}.segrow .btn.seg.on{background:var(--navy);border-color:var(--navy);color:#fff;}@media (max-width:1100px){.btnrow .btxt{display:none;}.btnrow .btn{padding-left:10px;padding-right:10px;}.segrow .btn.seg .btxt{display:inline;}}
   .btn{border-radius:var(--r);padding:10px 14px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;color:#4a4f63;}
   .btn.gold{background:var(--gold);border-color:var(--gold);color:var(--navy);}
@@ -93,22 +94,44 @@
   .pop{background:#fff;border:1px solid var(--gold);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.16);padding:5px;}
   .pop button{display:block;width:100%;text-align:left;font-size:12px;padding:6px 8px;border:none;background:none;border-radius:6px;font-family:'JetBrains Mono',monospace;}
   .pop button:hover{background:#faf4e6;}
-  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:4px;}
   .kpi{padding:18px;text-align:center;}
-  .kpi .v{font-size:34px;font-weight:800;line-height:1;}
-  .kpi .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:6px;font-family:'JetBrains Mono',monospace;}
-  .kpi.open{background:#fff8e8;}.kpi.open .v{color:#c15400;}.kpi.open .k{color:#c15400;}.kpi.over{background:#fdeaea;}.kpi.over .v{color:#c62828;}.kpi.over .k{color:#c62828;}@keyframes blPulse{0%{box-shadow:0 0 0 0 rgba(198,40,40,.5)}70%{box-shadow:0 0 0 9px rgba(198,40,40,0)}100%{box-shadow:0 0 0 0 rgba(198,40,40,0)}}
+  .kpi .v{font-size:34px;font-weight:800;line-height:1;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;}
+  .kpi .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:6px;font-family:'IBM Plex Sans',sans-serif;font-weight:700;}
+  .kpi.open{background:var(--warn-bg);}.kpi.open .v{color:#b45309;}.kpi.open .k{color:#b45309;}.kpi.over{background:var(--bad-bg);}.kpi.over .v{color:var(--bad);}.kpi.over .k{color:var(--bad);}@keyframes blPulse{0%{box-shadow:0 0 0 0 rgba(198,40,40,.5)}70%{box-shadow:0 0 0 9px rgba(198,40,40,0)}100%{box-shadow:0 0 0 0 rgba(198,40,40,0)}}
   .kpis.rich{grid-template-columns:repeat(4,1fr);}
-  .kpis.rich .kpi{padding:16px 18px;text-align:left;display:flex;flex-direction:column;gap:7px;}
+  .kpis.rich .kpi{padding:20px;text-align:left;display:flex;flex-direction:column;gap:8px;}
   .kpis.rich .kpi .kpi-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .kpis.rich .kpi .k{margin:0;}
   .kpis.rich .kpi .kpi-top .ms{font-size:18px;color:#c2c6d4;}
   .kpis.rich .kpi .v{font-size:30px;}
   .kpis.rich .kpi .kpi-sub{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
   .kpis.rich .kpi.open{background:var(--warn-bg);}
-  .kpis.rich .kpi.open .kpi-sub{color:#c15400;}
+  .kpis.rich .kpi.open .kpi-sub{color:#b45309;}
   .kpis.rich .kpi.open .kpi-top .ms{color:var(--warn);}
-  .staff{padding:16px;}.staff h3{margin:0 0 12px;font-size:20px;font-weight:800;}.staffhead{position:sticky;top:0;background:#fff;z-index:2;padding-bottom:8px;margin-bottom:2px;border-bottom:1px solid #eef0f4;}
+  .ctrlpanel{display:flex;gap:12px;align-items:flex-start;border-radius:var(--r-lg);padding:14px 16px;margin:0 0 14px;border:1px solid var(--line);background:var(--card);box-shadow:var(--sh-1);}
+  .ctrlpanel .ms{font-size:22px;line-height:1;margin-top:1px;}
+  .ctrlpanel-title{font-family:'Outfit','IBM Plex Sans',sans-serif;font-weight:700;font-size:15px;}
+  .ctrlpanel-lines{margin-top:5px;display:flex;flex-direction:column;gap:2px;}
+  .ctrlpanel-lines>div{font-size:13px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;}
+  .ctrlpanel .cl-short{color:#b45309;}
+  .ctrlpanel .cl-over{color:var(--bad);}
+  .ctrlpanel.ctrl-ok{background:var(--ok-bg);border-color:#a7f3d0;}
+  .ctrlpanel.ctrl-ok .ms{color:var(--ok);}
+  .ctrlpanel.ctrl-ok .ctrlpanel-title{color:#065f46;}
+  .ctrlpanel.ctrl-warn{background:var(--warn-bg);border-color:#fde68a;}
+  .ctrlpanel.ctrl-warn .ms{color:var(--warn);}
+  .ctrlpanel.ctrl-warn .ctrlpanel-title{color:#92400e;}
+  .ctrlpanel.ctrl-neutral{background:var(--surface);border-color:var(--line);}
+  .ctrlpanel.ctrl-neutral .ms{color:var(--muted);}
+  .ctrlpanel.ctrl-neutral .ctrlpanel-title{color:var(--ink);}
+  .plantabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:2px 0 16px;flex-wrap:wrap;}
+  .plantabs .plantab{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border:none;background:transparent;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-1px;}
+  .plantabs .plantab .ms{font-size:18px;}
+  .plantabs .plantab:hover{color:var(--ink);}
+  .plantabs .plantab.on{color:var(--navy);border-bottom-color:var(--gold);}
+  .dashctrl{display:flex;align-items:center;gap:10px;margin:0 0 14px;flex-wrap:wrap;}
+  .staff{padding:16px;}.staff h3{margin:0 0 12px;font-size:20px;font-weight:800;font-family:'Outfit','IBM Plex Sans',sans-serif;letter-spacing:-.01em;}.staffhead{position:sticky;top:0;background:#fff;z-index:2;padding-bottom:8px;margin-bottom:2px;border-bottom:1px solid #eef0f4;}
   .search{position:relative;}
   .search .ms{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:20px;}
   .search input{width:100%;padding:12px 12px 12px 40px;border:1.5px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;}
@@ -2836,6 +2859,7 @@ function App() {
   const [mrWeekMode, setMrWeekMode] = useState(false);
   const [mrScopeAsk, setMrScopeAsk] = useState(false);
   const [mrCtx, setMrCtx] = useState(null);
+  const _pgDrag = React.useRef(null);
   const [autoSave, setAutoSave] = useState(() => lsGet('bl_autosave_v4', true));
   const [actieMenu, setActieMenu] = useState(false);
   const [selMenu, setSelMenu] = useState(null);
@@ -2846,6 +2870,9 @@ function App() {
   const [dichtSec, setDichtSec] = useState({});
   const [cfgCat, setCfgCat] = useState('A');
   const [bdOpen, setBdOpen] = useState(false);
+  const [planTab, setPlanTab] = useState('overzicht');
+  const [dashAlle, setDashAlle] = useState(false);
+  const [pFilter, setPFilter] = useState('alle');
   const [bdExpand, setBdExpand] = useState({});
   const [conflict, setConflict] = useState(false);
   const toggleSec = id => setDichtSec(s => Object.assign({}, s, { [id]: !s[id] }));
@@ -5602,34 +5629,52 @@ const buildMRDoc = function (opts) {
     });
     return n;
   }); }
-  const mrWeekHeeftAfw = () => Object.keys(cfg).filter(heeftMR).some(function (dep) { return (cfg[dep] || []).some(function (l) { return days.some(function (d) { return d.iso && l.datumNorm && l.datumNorm[d.iso]; }); }); });
+  const mrWeekHeeftAfw = () => (cfg[dept] || []).some(function (l) { return days.some(function (d) { return d.iso && l.datumNorm && l.datumNorm[d.iso]; }); });
   const mrEnterWeek = () => { setMrScopeAsk(true); };
   const mrWeekBehoud = () => { setMrWeekMode(true); setMrScopeAsk(false); };
   const mrWeekVanStandaard = () => {
+    var _d0 = dept;
+    if (!heeftMR(_d0)) { setMrWeekMode(true); setMrScopeAsk(false); return; }
     setCfg(function (c) {
       var n = Object.assign({}, c);
-      Object.keys(n).forEach(function (dep) {
-        if (!heeftMR(dep)) return;
-        n[dep] = n[dep].map(function (l) {
-          var dtn = Object.assign({}, l.datumNorm || {});
-          days.forEach(function (d) { if (!d.iso) return; var std = (l.dagNorm || {})[d.k]; dtn[d.iso] = std ? JSON.parse(JSON.stringify(std)) : { shiften: [] }; });
-          return Object.assign({}, l, { datumNorm: dtn });
-        });
+      n[_d0] = (n[_d0] || []).map(function (l) {
+        var dtn = Object.assign({}, l.datumNorm || {});
+        days.forEach(function (d) { if (!d.iso) return; var std = (l.dagNorm || {})[d.k]; dtn[d.iso] = std ? JSON.parse(JSON.stringify(std)) : { shiften: [] }; });
+        return Object.assign({}, l, { datumNorm: dtn });
       });
       return n;
     });
     setMrWeekMode(true); setMrScopeAsk(false);
   };
   const mrWeekLeeg = () => {
+    var _d0 = dept;
+    if (!heeftMR(_d0)) { setMrWeekMode(true); setMrScopeAsk(false); return; }
     setCfg(function (c) {
       var n = Object.assign({}, c);
-      Object.keys(n).forEach(function (dep) {
-        if (!heeftMR(dep)) return;
-        n[dep] = n[dep].map(function (l) {
-          var dtn = Object.assign({}, l.datumNorm || {});
-          days.forEach(function (d) { if (d.iso) dtn[d.iso] = { shiften: [] }; });
-          return Object.assign({}, l, { datumNorm: dtn });
+      n[_d0] = (n[_d0] || []).map(function (l) {
+        var dtn = Object.assign({}, l.datumNorm || {});
+        days.forEach(function (d) { if (d.iso) dtn[d.iso] = { shiften: [] }; });
+        return Object.assign({}, l, { datumNorm: dtn });
+      });
+      return n;
+    });
+    setMrWeekMode(true); setMrScopeAsk(false);
+  };
+  const mrWeekVanVorige = () => {
+    var _d0 = dept;
+    if (!heeftMR(_d0)) { setMrScopeAsk(false); return; }
+    var _prevIso = function (iso) { var t = Date.parse(iso + 'T00:00:00Z') - 7 * 86400000; var d = new Date(t); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'); };
+    setCfg(function (c) {
+      var n = Object.assign({}, c);
+      n[_d0] = (n[_d0] || []).map(function (l) {
+        var dtn = Object.assign({}, l.datumNorm || {});
+        days.forEach(function (d) {
+          if (!d.iso) return;
+          var src = (l.datumNorm || {})[_prevIso(d.iso)];
+          if (!src) { var std = (l.dagNorm || {})[d.k]; src = std ? std : { shiften: [] }; }
+          dtn[d.iso] = JSON.parse(JSON.stringify(src));
         });
+        return Object.assign({}, l, { datumNorm: dtn });
       });
       return n;
     });
@@ -5775,13 +5820,14 @@ const buildMRDoc = function (opts) {
   const gridAddPgMeta = function (afd, li, dagK, iso, shiftId, pgId, uren, opm) { gridWrite(afd, li, dagK, iso, shiftId, function (pgs) { if (pgs.indexOf(pgId) < 0) pgs.push(pgId); return pgs; }, function (meta) { meta[pgId] = { uren: (uren === '' || uren == null ? '' : +uren), opm: opm || '' }; return meta; }); };
   const gridDelPg = function (afd, li, dagK, iso, shiftId, pgId) { gridWrite(afd, li, dagK, iso, shiftId, function (pgs) { return pgs.filter(function (z) { return z !== pgId; }); }); };
   const gridMovePg = function (afd, li, dagK, iso, shiftId, pgId, dir) { gridWrite(afd, li, dagK, iso, shiftId, function (pgs) { var i = pgs.indexOf(pgId); if (i < 0) return pgs; var j = i + dir; if (j < 0 || j >= pgs.length) return pgs; var t = pgs[i]; pgs[i] = pgs[j]; pgs[j] = t; return pgs; }); };
+  const gridReorderPg = function (afd, li, dagK, iso, shiftId, movingPid, targetPid) { if (movingPid === targetPid) return; gridWrite(afd, li, dagK, iso, shiftId, function (pgs) { var arr = pgs.filter(function (z) { return z !== movingPid; }); var bIdx = arr.indexOf(targetPid); if (bIdx < 0) bIdx = arr.length; arr.splice(bIdx, 0, movingPid); return arr; }); };
   const gridMovePgTo = function (afd, sLi, sDagK, sIso, sShiftId, tLi, tDagK, tIso, tShiftId, pid) { if (!!pubMR[mrWeekMode ? (afd + '|' + wkKey) : (afd + '|std')]) { ping('MR ' + afd + ' (' + (mrWeekMode ? 'week ' + week : 'standaard') + ') is gepubliceerd \u2014 trek eerst in om te wijzigen', 'warn'); return; } setCfg(function (c) { var n = Object.assign({}, c); var arr = (n[afd] || []).slice(); var srcEff0 = gridShiften(arr[sLi], sDagK, sIso); var srcSh0 = srcEff0.find(function (x) { return x.id === sShiftId; }); var carried = (srcSh0 && srcSh0.pgMeta && srcSh0.pgMeta[pid]) ? Object.assign({}, srcSh0.pgMeta[pid]) : null; var makeEff = function (li, dagK, iso) { var lijn = arr[li]; var eff = gridShiften(lijn, dagK, iso).map(function (x) { return Object.assign({}, x, { pgs: (x.pgs || []).slice(), pgMeta: Object.assign({}, x.pgMeta || {}) }); }); if (li === sLi && dagK === sDagK) { var si = eff.findIndex(function (x) { return x.id === sShiftId; }); if (si >= 0) { eff[si].pgs = eff[si].pgs.filter(function (z) { return z !== pid; }); delete eff[si].pgMeta[pid]; } } if (li === tLi && dagK === tDagK) { var ti = eff.findIndex(function (x) { return x.id === tShiftId; }); if (ti < 0) { eff.push({ id: tShiftId, pgs: [], pgMeta: {} }); ti = eff.length - 1; } if (eff[ti].pgs.indexOf(pid) < 0) eff[ti].pgs.push(pid); if (carried) eff[ti].pgMeta[pid] = carried; } eff = eff.map(function (x) { var mm = gridRecalc(x.pgs, afd, lijn.lijn); return Object.assign({}, x, { basis: mm ? mm.min : undefined, max: mm ? mm.max : undefined }); }); var ord = SHIFTS.map(function (z) { return z.id; }); eff.sort(function (a, b) { return ord.indexOf(a.id) - ord.indexOf(b.id); }); return eff; }; var cells = []; var addCell = function (li, dagK, iso) { if (!cells.some(function (k) { return k.li === li && k.dagK === dagK; })) cells.push({ li: li, dagK: dagK, iso: iso }); }; addCell(sLi, sDagK, sIso); addCell(tLi, tDagK, tIso); cells.forEach(function (cell) { var eff = makeEff(cell.li, cell.dagK, cell.iso); var lijn = Object.assign({}, arr[cell.li]); if (mrWeekMode && cell.iso) { var dtn = Object.assign({}, lijn.datumNorm || {}); dtn[cell.iso] = Object.assign({}, dtn[cell.iso] || {}, { shiften: eff, ploegen: eff.length }); lijn.datumNorm = dtn; } else { var dn = Object.assign({}, lijn.dagNorm || {}); dn[cell.dagK] = Object.assign({}, dn[cell.dagK] || {}, { shiften: eff, ploegen: eff.length }); lijn.dagNorm = dn; } arr[cell.li] = lijn; }); n[afd] = arr; return n; }); };
   const gridClearShift = function (afd, li, dagK, iso, shiftId) { var lijn = (cfg[afd] || [])[li]; if (!lijn) return; var eff = gridShiften(lijn, dagK, iso).map(function (x) { return Object.assign({}, x); }); var idx = eff.findIndex(function (x) { return x.id === shiftId; }); if (idx < 0) return; eff[idx] = { id: shiftId, pgs: [] }; setDagNorm(afd, li, dagK, { shiften: eff, ploegen: eff.length }); };
   const gridAddNorm = function (afd, li, dagK, iso, shiftId) { var lijn = (cfg[afd] || [])[li]; if (!lijn) return; var eff = gridShiften(lijn, dagK, iso).map(function (x) { return Object.assign({}, x); }); var idx = eff.findIndex(function (x) { return x.id === shiftId; }); var b = (lijn.basis != null && lijn.basis !== '') ? +lijn.basis : undefined; var m = (lijn.max != null && lijn.max !== '') ? +lijn.max : undefined; if (idx < 0) { eff.push({ id: shiftId, pgs: [], basis: b, max: m }); } else { eff[idx] = Object.assign({}, eff[idx], { basis: b, max: m }); } var ord = SHIFTS.map(function (z) { return z.id; }); eff.sort(function (a, b2) { return ord.indexOf(a.id) - ord.indexOf(b2.id); }); setDagNorm(afd, li, dagK, { shiften: eff, ploegen: eff.length }); };
   const gridSetMr = function (afd, li, dagK, iso, shiftId, field, val) { var lijn = (cfg[afd] || [])[li]; if (!lijn) return; var eff = gridShiften(lijn, dagK, iso).map(function (x) { return Object.assign({}, x); }); var idx = eff.findIndex(function (x) { return x.id === shiftId; }); if (idx < 0) { eff.push({ id: shiftId, pgs: [] }); idx = eff.length - 1; } var patch = {}; patch[field] = (val === '' ? null : +val); eff[idx] = Object.assign({}, eff[idx], patch); var ord = SHIFTS.map(function (z) { return z.id; }); eff.sort(function (a, b) { return ord.indexOf(a.id) - ord.indexOf(b.id); }); setDagNorm(afd, li, dagK, { shiften: eff, ploegen: eff.length }); var _nm = eff[idx].max; if (_nm == null || +_nm === 0) { var _pk = afd + '|' + lijn.lijn + '|' + shiftId + '|' + wkKey + '|' + dagK; var _cur = plan[_pk] || []; if (_cur.length) { setPlan(function (pp) { var n = Object.assign({}, pp); n[_pk] = []; return n; }); ping(_cur.length + ' persoon/personen vrijgemaakt — geen MR-bezetting meer op ' + lijn.lijn + ' · ' + shiftId + ' · ' + dagK); } } };
   const gridVulStandaard = function (afd, li) { var lijn = (cfg[afd] || [])[li]; if (!lijn) return; var b = lijn.basis != null ? +lijn.basis : 0, m = lijn.max != null ? +lijn.max : 0; var pl = +(lijn.ploegen || lijn.shiften || 2); var ids = SHIFTS.slice(0, pl).map(function (z) { return z.id; }); days.forEach(function (d) { if (['ma', 'di', 'wo', 'do', 'vr'].indexOf(d.k) < 0) return; var cur = gridShiften(lijn, d.k, d.iso).map(function (x) { return Object.assign({}, x); }); ids.forEach(function (sid) { var ex = cur.find(function (x) { return x.id === sid; }); if (!ex) { cur.push({ id: sid, basis: b, max: m }); } else if (ex.basis == null && ex.max == null && !(Array.isArray(ex.pgs) && ex.pgs.length)) { ex.basis = b; ex.max = m; } }); var ord = SHIFTS.map(function (z) { return z.id; }); cur.sort(function (a, bb) { return ord.indexOf(a.id) - ord.indexOf(bb.id); }); setDagNorm(afd, li, d.k, { shiften: cur, ploegen: cur.length }); }); };
   const mrGridCard = () => React.createElement(React.Fragment, null,
-    Object.keys(cfg).filter(heeftMR).map(function (afd) {
+    [dept].filter(heeftMR).map(function (afd) {
       var lijnen = cfg[afd] || [];
       var selLijn = gridLijn[afd] || (lijnen[0] && lijnen[0].lijn);
       var selL = lijnen.find(function (x) { return x.lijn === selLijn; });
@@ -5825,15 +5871,15 @@ const buildMRDoc = function (opts) {
                           var mn = sh ? sh.basis : null, mx = sh ? sh.max : null;
                           var mmr = (mn != null && mx != null && mn !== mx) ? (mn + '\u2013' + mx) : (mx != null ? mx : (mn != null ? mn : ''));
                           var isSel = gridSel && gridSel.afd === afd && gridSel.li === li && gridSel.dagK === d.k && gridSel.shiftId === sd.id;
-                          return React.createElement("td", { key: d.k, onClick: function () { setGridSel({ afd: afd, li: li, dagK: d.k, iso: d.iso, shiftId: sd.id }); setGridLijn(function (prev) { var n = Object.assign({}, prev); n[afd] = l.lijn; return n; }); }, onDragOver: function (e) { e.preventDefault(); }, onDrop: function (e) { e.preventDefault(); var pid = e.dataTransfer.getData('text/pg'); if (pid) setPgAdd({ afd: afd, li: li, dagK: d.k, iso: d.iso, shiftId: sd.id, pid: pid, uren: '', opm: '' }); }, style: { border: '1px solid ' + (isSel ? '#b8860b' : '#e6e8ee'), padding: '3px 6px', verticalAlign: 'top', minWidth: 82, cursor: 'pointer', background: (isSel ? '#fff3cd' : (pgs.length ? '#fffdf7' : '#fff')) } },
-                            pgs.map(function (pid, _ix) { var g = productgroepen.find(function (p) { return p.id === pid; }); var _mi = (sh && sh.pgMeta && sh.pgMeta[pid]) || {}; var _u = (_mi.uren !== '' && _mi.uren != null) ? (' \u00b7 ' + _mi.uren + 'u') : ''; return React.createElement("div", { key: pid, style: { lineHeight: 1.2, marginBottom: 1 }, onContextMenu: function (e) { e.preventDefault(); e.stopPropagation(); setMrCtx({ x: e.clientX, y: e.clientY, afd: afd, li: li, dagK: d.k, iso: d.iso, shiftId: sd.id, pid: pid }); } }, React.createElement("div", { style: { fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 } }, React.createElement("span", { style: { flex: 1 } }, (g ? g.naam : pid) + _u), React.createElement("span", { style: { cursor: _ix > 0 ? 'pointer' : 'default', color: _ix > 0 ? '#5b6070' : '#d0d3da', fontSize: 10, lineHeight: 1, userSelect: 'none' }, title: "omhoog", onClick: function (e) { e.stopPropagation(); if (_ix > 0) gridMovePg(afd, li, d.k, d.iso, sd.id, pid, -1); } }, "\u25b2"), React.createElement("span", { style: { cursor: _ix < pgs.length - 1 ? 'pointer' : 'default', color: _ix < pgs.length - 1 ? '#5b6070' : '#d0d3da', fontSize: 10, lineHeight: 1, userSelect: 'none' }, title: "omlaag", onClick: function (e) { e.stopPropagation(); if (_ix < pgs.length - 1) gridMovePg(afd, li, d.k, d.iso, sd.id, pid, 1); } }, "\u25bc"), React.createElement("span", { style: { color: '#b02a37', cursor: 'pointer', fontWeight: 700 }, title: "verwijder", onClick: function (e) { e.stopPropagation(); gridDelPg(afd, li, d.k, d.iso, sd.id, pid); } }, "\u00d7")), (_mi.opm ? React.createElement("div", { style: { fontSize: 10, color: '#8a6d1f', fontStyle: 'italic' } }, _mi.opm) : null), (mrCtx && mrCtx.pid === pid && mrCtx.afd === afd && mrCtx.li === li && mrCtx.dagK === d.k && mrCtx.shiftId === sd.id ? React.createElement(React.Fragment, null, React.createElement("div", { style: { position: 'fixed', inset: 0, zIndex: 9998 }, onClick: function (e) { e.stopPropagation(); setMrCtx(null); }, onContextMenu: function (e) { e.preventDefault(); setMrCtx(null); } }), React.createElement("div", { style: { position: 'fixed', left: Math.min(mrCtx.x, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 210), top: mrCtx.y, zIndex: 9999, background: '#fff', border: '1px solid #cfd3dc', borderRadius: 8, boxShadow: '0 6px 24px rgba(0,0,0,.18)', padding: 6, minWidth: 190, maxHeight: 340, overflowY: 'auto' }, onClick: function (e) { e.stopPropagation(); }, onContextMenu: function (e) { e.preventDefault(); e.stopPropagation(); } }, React.createElement("div", { style: { fontWeight: 700, fontSize: 12, padding: '2px 6px 6px', color: '#19203b' } }, "Verplaats \u201c" + (g ? g.naam : pid) + "\u201d naar\u2026"), React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: '#8a8f9c', padding: '4px 6px 2px' } }, "Andere lijn"), lijnen.map(function (tl, tli) { return tli === li ? null : React.createElement("button", { key: 'ml' + tli, className: "btn", style: { display: 'block', width: '100%', textAlign: 'left', margin: '1px 0', padding: '3px 6px', fontSize: 12 }, onClick: function () { gridMovePgTo(afd, li, d.k, d.iso, sd.id, tli, d.k, d.iso, sd.id, pid); setMrCtx(null); } }, "\u2192 " + tl.lijn); }), React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: '#8a8f9c', padding: '4px 6px 2px' } }, "Andere dag"), days.map(function (dd) { return dd.k === d.k ? null : React.createElement("button", { key: 'md' + dd.k, className: "btn", style: { display: 'block', width: '100%', textAlign: 'left', margin: '1px 0', padding: '3px 6px', fontSize: 12 }, onClick: function () { gridMovePgTo(afd, li, d.k, d.iso, sd.id, li, dd.k, dd.iso, sd.id, pid); setMrCtx(null); } }, "\u2192 " + dd.lbl); }), React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: '#8a8f9c', padding: '4px 6px 2px' } }, "Andere shift"), lijnShifts(l).map(function (ss) { return ss.id === sd.id ? null : React.createElement("button", { key: 'ms' + ss.id, className: "btn", style: { display: 'block', width: '100%', textAlign: 'left', margin: '1px 0', padding: '3px 6px', fontSize: 12 }, onClick: function () { gridMovePgTo(afd, li, d.k, d.iso, sd.id, li, d.k, d.iso, ss.id, pid); setMrCtx(null); } }, "\u2192 " + ((SHIFTS.find(function (z) { return z.id === ss.id; }) || {}).naam || ss.id)); }), React.createElement("button", { className: "btn", style: { display: 'block', width: '100%', marginTop: 6, padding: '3px 6px', fontSize: 12 }, onClick: function () { setMrCtx(null); } }, "Annuleren"))) : null)); }),
+                          return React.createElement("td", { key: d.k, onClick: function () { setGridSel({ afd: afd, li: li, dagK: d.k, iso: d.iso, shiftId: sd.id }); setGridLijn(function (prev) { var n = Object.assign({}, prev); n[afd] = l.lijn; return n; }); }, onDragOver: function (e) { e.preventDefault(); }, onDrop: function (e) { e.preventDefault(); var _src = _pgDrag.current; if (_src) { if (!(_src.afd === afd && _src.li === li && _src.dagK === d.k && _src.shiftId === sd.id)) { gridMovePgTo(afd, _src.li, _src.dagK, _src.iso, _src.shiftId, li, d.k, d.iso, sd.id, _src.pid); } _pgDrag.current = null; return; } var pid = e.dataTransfer.getData('text/pg'); if (pid) setPgAdd({ afd: afd, li: li, dagK: d.k, iso: d.iso, shiftId: sd.id, pid: pid, uren: '', opm: '' }); }, style: { border: '1px solid ' + (isSel ? '#b8860b' : '#e6e8ee'), padding: '3px 6px', verticalAlign: 'top', minWidth: 82, cursor: 'pointer', background: (isSel ? '#fff3cd' : (pgs.length ? '#fffdf7' : '#fff')) } },
+                            pgs.map(function (pid, _ix) { var g = productgroepen.find(function (p) { return p.id === pid; }); var _mi = (sh && sh.pgMeta && sh.pgMeta[pid]) || {}; var _u = (_mi.uren !== '' && _mi.uren != null) ? (' \u00b7 ' + _mi.uren + 'u') : ''; return React.createElement("div", { key: pid, draggable: true, onDragStart: function (e) { e.stopPropagation(); _pgDrag.current = { afd: afd, li: li, dagK: d.k, iso: d.iso, shiftId: sd.id, pid: pid }; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/pg-move', pid); } catch (_e) {} }, onDragEnd: function () { _pgDrag.current = null; }, onDragOver: function (e) { if (_pgDrag.current) { e.preventDefault(); e.stopPropagation(); try { e.dataTransfer.dropEffect = 'move'; } catch (_e) {} } }, onDrop: function (e) { var src = _pgDrag.current; if (!src) return; e.preventDefault(); e.stopPropagation(); if (src.afd === afd && src.li === li && src.dagK === d.k && src.shiftId === sd.id) { gridReorderPg(afd, li, d.k, d.iso, sd.id, src.pid, pid); } else { gridMovePgTo(afd, src.li, src.dagK, src.iso, src.shiftId, li, d.k, d.iso, sd.id, src.pid); } _pgDrag.current = null; }, style: { lineHeight: 1.2, marginBottom: 1, cursor: 'grab' }, onContextMenu: function (e) { e.preventDefault(); e.stopPropagation(); setMrCtx({ x: e.clientX, y: e.clientY, afd: afd, li: li, dagK: d.k, iso: d.iso, shiftId: sd.id, pid: pid }); } }, React.createElement("div", { style: { fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 } }, React.createElement("span", { style: { flex: 1 } }, (g ? g.naam : pid) + _u), React.createElement("span", { style: { cursor: _ix > 0 ? 'pointer' : 'default', color: _ix > 0 ? '#5b6070' : '#d0d3da', fontSize: 10, lineHeight: 1, userSelect: 'none' }, title: "omhoog", onClick: function (e) { e.stopPropagation(); if (_ix > 0) gridMovePg(afd, li, d.k, d.iso, sd.id, pid, -1); } }, "\u25b2"), React.createElement("span", { style: { cursor: _ix < pgs.length - 1 ? 'pointer' : 'default', color: _ix < pgs.length - 1 ? '#5b6070' : '#d0d3da', fontSize: 10, lineHeight: 1, userSelect: 'none' }, title: "omlaag", onClick: function (e) { e.stopPropagation(); if (_ix < pgs.length - 1) gridMovePg(afd, li, d.k, d.iso, sd.id, pid, 1); } }, "\u25bc"), React.createElement("span", { style: { color: '#b02a37', cursor: 'pointer', fontWeight: 700 }, title: "verwijder", onClick: function (e) { e.stopPropagation(); gridDelPg(afd, li, d.k, d.iso, sd.id, pid); } }, "\u00d7")), (_mi.opm ? React.createElement("div", { style: { fontSize: 10, color: '#8a6d1f', fontStyle: 'italic' } }, _mi.opm) : null), (mrCtx && mrCtx.pid === pid && mrCtx.afd === afd && mrCtx.li === li && mrCtx.dagK === d.k && mrCtx.shiftId === sd.id ? React.createElement(React.Fragment, null, React.createElement("div", { style: { position: 'fixed', inset: 0, zIndex: 9998 }, onClick: function (e) { e.stopPropagation(); setMrCtx(null); }, onContextMenu: function (e) { e.preventDefault(); setMrCtx(null); } }), React.createElement("div", { style: { position: 'fixed', left: Math.min(mrCtx.x, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 210), top: mrCtx.y, zIndex: 9999, background: '#fff', border: '1px solid #cfd3dc', borderRadius: 8, boxShadow: '0 6px 24px rgba(0,0,0,.18)', padding: 6, minWidth: 190, maxHeight: 340, overflowY: 'auto' }, onClick: function (e) { e.stopPropagation(); }, onContextMenu: function (e) { e.preventDefault(); e.stopPropagation(); } }, React.createElement("div", { style: { fontWeight: 700, fontSize: 12, padding: '2px 6px 6px', color: '#19203b' } }, "Verplaats \u201c" + (g ? g.naam : pid) + "\u201d naar\u2026"), React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: '#8a8f9c', padding: '4px 6px 2px' } }, "Andere lijn"), lijnen.map(function (tl, tli) { return tli === li ? null : React.createElement("button", { key: 'ml' + tli, className: "btn", style: { display: 'block', width: '100%', textAlign: 'left', margin: '1px 0', padding: '3px 6px', fontSize: 12 }, onClick: function () { gridMovePgTo(afd, li, d.k, d.iso, sd.id, tli, d.k, d.iso, sd.id, pid); setMrCtx(null); } }, "\u2192 " + tl.lijn); }), React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: '#8a8f9c', padding: '4px 6px 2px' } }, "Andere dag"), days.map(function (dd) { return dd.k === d.k ? null : React.createElement("button", { key: 'md' + dd.k, className: "btn", style: { display: 'block', width: '100%', textAlign: 'left', margin: '1px 0', padding: '3px 6px', fontSize: 12 }, onClick: function () { gridMovePgTo(afd, li, d.k, d.iso, sd.id, li, dd.k, dd.iso, sd.id, pid); setMrCtx(null); } }, "\u2192 " + dd.lbl); }), React.createElement("div", { style: { fontSize: 10, fontWeight: 700, color: '#8a8f9c', padding: '4px 6px 2px' } }, "Andere shift"), lijnShifts(l).map(function (ss) { return ss.id === sd.id ? null : React.createElement("button", { key: 'ms' + ss.id, className: "btn", style: { display: 'block', width: '100%', textAlign: 'left', margin: '1px 0', padding: '3px 6px', fontSize: 12 }, onClick: function () { gridMovePgTo(afd, li, d.k, d.iso, sd.id, li, d.k, d.iso, ss.id, pid); setMrCtx(null); } }, "\u2192 " + ((SHIFTS.find(function (z) { return z.id === ss.id; }) || {}).naam || ss.id)); }), React.createElement("button", { className: "btn", style: { display: 'block', width: '100%', marginTop: 6, padding: '3px 6px', fontSize: 12 }, onClick: function () { setMrCtx(null); } }, "Annuleren"))) : null)); }),
                             (pgs.length ? (mmr !== '' ? React.createElement("div", { style: { fontSize: 12, color: '#8a6d1f', fontWeight: 700, marginTop: 2 } }, "MR " + mmr) : null) : ((sh && (sh.basis != null || sh.max != null)) ? React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 2, marginTop: 3 } }, React.createElement("span", { style: { fontSize: 10, color: '#8a6d1f', fontWeight: 700 } }, "MR"), React.createElement("input", { type: "number", min: 0, value: (sh && sh.basis != null ? sh.basis : ''), title: "min", onClick: function (e) { e.stopPropagation(); }, onChange: function (e) { gridSetMr(afd, li, d.k, d.iso, sd.id, 'basis', e.target.value); }, style: { width: 34, fontSize: 12, padding: '3px 4px', border: '1px solid #e3c987', borderRadius: 3 } }), React.createElement("span", { style: { fontSize: 10 } }, "\u2013"), React.createElement("input", { type: "number", min: 0, value: (sh && sh.max != null ? sh.max : ''), title: "max", onClick: function (e) { e.stopPropagation(); }, onChange: function (e) { gridSetMr(afd, li, d.k, d.iso, sd.id, 'max', e.target.value); }, style: { width: 34, fontSize: 12, padding: '3px 4px', border: '1px solid #e3c987', borderRadius: 3 } }), ((sh && (sh.basis != null || sh.max != null)) ? React.createElement("span", { style: { color: '#b02a37', cursor: 'pointer', fontWeight: 800, marginLeft: 2 }, title: "leegmaken", onClick: function (e) { e.stopPropagation(); gridClearShift(afd, li, d.k, d.iso, sd.id); } }, "\u00d7") : null)) : React.createElement("button", { onClick: function (e) { e.stopPropagation(); gridAddNorm(afd, li, d.k, d.iso, sd.id); }, title: "Norm uit config (lijn-MR) toevoegen", style: { fontSize: 12, padding: '3px 9px', borderRadius: 5, border: '1px dashed #b8860b', background: '#fff', color: '#8a6d1f', cursor: 'pointer', marginTop: 2 } }, "+ toevoegen"))), React.createElement("div", { title: "Opmerking toevoegen / bewerken / verwijderen", onClick: function (e) { e.stopPropagation(); var _ck = afd + "|" + l.lijn + "|" + sd.id + "|" + wkKey + "|" + d.k; var cur = dagOpm[_ck] || ""; var nv = window.prompt("Opmerking (leeg laten = verwijderen):", cur); if (nv !== null) { setDagOpm(function (prev) { var n = Object.assign({}, prev); if (String(nv).trim()) n[_ck] = String(nv).trim(); else delete n[_ck]; try { localStorage.setItem("bl_dagopm_v4", JSON.stringify(n)); } catch (ex) {} return n; }); } }, style: { marginTop: 3, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" } }, React.createElement("span", { style: { color: "#c79c3e", fontSize: 16, display: "inline-flex", alignItems: "center", lineHeight: 1 } }, React.createElement(I, { n: "chat_bubble" })), (dagOpm[afd + "|" + l.lijn + "|" + sd.id + "|" + wkKey + "|" + d.k] ? React.createElement("span", { style: { fontSize: 9, color: "#b02a37", fontWeight: 800, fontStyle: "italic", lineHeight: 1.2 } }, dagOpm[afd + "|" + l.lijn + "|" + sd.id + "|" + wkKey + "|" + d.k]) : null)));
                         }));
                     }), _plusRow);
                 }))))));
     }));
 
-  const weekdagCard = () => React.createElement(React.Fragment, null, Object.keys(cfg).filter(heeftMR).map(dep => React.createElement("div", { key: 'wd' + dep, className: "card", style: { padding: 16 } }, React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' } }, React.createElement("h3", { style: { margin: 0 } }, dep + " \u2014 MR per weekdag"), (!!pubMR[mrPubKey(dep)] ? React.createElement("span", { style: { fontSize: 10, fontWeight: 700, color: '#8a6d1f', background: '#f6e2b3', border: '1px solid #e5c98a', borderRadius: 10, padding: '2px 8px' } }, "🔒 gepubliceerd \u2014 " + (mrWeekMode ? "wk " + week : "standaard")) : null), React.createElement("button", { className: "btn " + (!!pubMR[mrPubKey(dep)] ? "" : "gold"), style: { marginLeft: 'auto', padding: '4px 10px', fontSize: 12 }, onClick: function () { publishMR(dep); }, title: (!!pubMR[mrPubKey(dep)] ? "Publicatie intrekken (reden vereist)" : "Publiceren en vergrendelen") }, React.createElement(I, { n: (!!pubMR[mrPubKey(dep)] ? "lock_open" : "publish") }), (!!pubMR[mrPubKey(dep)] ? "Intrekken" : (mrWeekMode ? "Publiceer week " + week : "Publiceer standaard")))), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Vul alleen dagen die draaien. Leeg = lijn draait niet op die dag (geen MR, grijs in de planning). Klik + dag om een draaidag toe te voegen."), (cfg[dep] || []).map((l, i) => React.createElement("div", { key: i, style: { marginBottom: 14, borderTop: '1px solid #eee', paddingTop: 10 } }, React.createElement("div", { style: { fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 } }, React.createElement("span", { className: "cdot", style: { background: l.kleur, display: 'inline-block' } }), l.lijn, React.createElement("span", { className: "sap", style: { marginLeft: 4 } }, l.sap), React.createElement("span", { style: { marginLeft: 'auto', fontSize: 11, color: '#8a8f9c' } }, "std " + l.basis + "/" + l.max + " \u00b7 " + (l.ploegen || l.shiften || 2) + "plg"), React.createElement("button", { className: "btn", style: { fontSize: 10, padding: "2px 8px", marginLeft: 8 }, onClick: () => vulWerkweek(dep, i) }, "Ma-Vr")), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, DAG_K.map((dk, di) => {
+  const weekdagCard = () => React.createElement(React.Fragment, null, [dept].filter(heeftMR).map(dep => React.createElement("div", { key: 'wd' + dep, className: "card", style: { padding: 16 } }, React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' } }, React.createElement("h3", { style: { margin: 0 } }, dep + " \u2014 MR per weekdag"), (!!pubMR[mrPubKey(dep)] ? React.createElement("span", { style: { fontSize: 10, fontWeight: 700, color: '#8a6d1f', background: '#f6e2b3', border: '1px solid #e5c98a', borderRadius: 10, padding: '2px 8px' } }, "🔒 gepubliceerd \u2014 " + (mrWeekMode ? "wk " + week : "standaard")) : null), React.createElement("button", { className: "btn " + (!!pubMR[mrPubKey(dep)] ? "" : "gold"), style: { marginLeft: 'auto', padding: '4px 10px', fontSize: 12 }, onClick: function () { publishMR(dep); }, title: (!!pubMR[mrPubKey(dep)] ? "Publicatie intrekken (reden vereist)" : "Publiceren en vergrendelen") }, React.createElement(I, { n: (!!pubMR[mrPubKey(dep)] ? "lock_open" : "publish") }), (!!pubMR[mrPubKey(dep)] ? "Intrekken" : (mrWeekMode ? "Publiceer week " + week : "Publiceer standaard")))), React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, "Vul alleen dagen die draaien. Leeg = lijn draait niet op die dag (geen MR, grijs in de planning). Klik + dag om een draaidag toe te voegen."), (cfg[dep] || []).map((l, i) => React.createElement("div", { key: i, style: { marginBottom: 14, borderTop: '1px solid #eee', paddingTop: 10 } }, React.createElement("div", { style: { fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 } }, React.createElement("span", { className: "cdot", style: { background: l.kleur, display: 'inline-block' } }), l.lijn, React.createElement("span", { className: "sap", style: { marginLeft: 4 } }, l.sap), React.createElement("span", { style: { marginLeft: 'auto', fontSize: 11, color: '#8a8f9c' } }, "std " + l.basis + "/" + l.max + " \u00b7 " + (l.ploegen || l.shiften || 2) + "plg"), React.createElement("button", { className: "btn", style: { fontSize: 10, padding: "2px 8px", marginLeft: 8 }, onClick: () => vulWerkweek(dep, i) }, "Ma-Vr")), React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, DAG_K.map((dk, di) => {
     var _iso = isoFor(dk);
     var _ovWk = mrWeekMode && _iso ? (l.datumNorm || {})[_iso] : null;
     var ov = mrWeekMode ? _ovWk : (l.dagNorm || {})[dk];
@@ -6076,7 +6122,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-25 · v116 · afd-wissel laadt partie")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-30 · v128 · direct/indirect-filter (gate 9)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -6106,6 +6152,158 @@ const buildMRDoc = function (opts) {
   }), React.createElement("span", {
     className: "lbl"
   }, "SYNC SAP DATA")));
+  function perLijnCard() {
+  var _rows = (kpi.bd) || [];
+  var _num = { padding: "6px 10px", textAlign: "right", fontFamily: "JetBrains Mono, monospace", fontVariantNumeric: "tabular-nums" };
+  var _th = function (right) { return { textAlign: right ? "right" : "left", padding: "6px 10px", borderBottom: "1px solid var(--line)", color: "var(--muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em" }; };
+  return React.createElement("div", { className: "card", style: { padding: 16, overflowX: "auto" } },
+    React.createElement("h3", null, "Per lijn / shift — " + dept + " · week " + week),
+    (_rows.length === 0
+      ? React.createElement("div", { style: { color: "var(--muted)", fontSize: 13 } }, "Geen lijnen of normen voor deze afdeling.")
+      : React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, borderCollapse: "collapse" } },
+          React.createElement("thead", null,
+            React.createElement("tr", null,
+              React.createElement("th", { style: _th(false) }, "Lijn"),
+              React.createElement("th", { style: _th(false) }, "Shift"),
+              React.createElement("th", { style: _th(true) }, "Ingepland"),
+              React.createElement("th", { style: _th(true) }, "Basis"),
+              React.createElement("th", { style: _th(true) }, "Tekort"),
+              React.createElement("th", { style: _th(true) }, "Teveel"),
+              React.createElement("th", { style: _th(true) }, "Dekking")
+            )
+          ),
+          React.createElement("tbody", null,
+            _rows.map(function (r) {
+              var _cov = r.capH > 0 ? Math.round(r.schedH / r.capH * 100) + "%" : (r.basis > 0 ? Math.round(r.ingepland / r.basis * 100) + "%" : "—");
+              return React.createElement("tr", { key: r.lijn + "|" + r.shift, style: { borderTop: "1px solid var(--line-soft)" } },
+                React.createElement("td", { style: { padding: "6px 10px", fontWeight: 600 } }, r.lijn),
+                React.createElement("td", { style: { padding: "6px 10px", color: "var(--muted)" } }, r.shiftLabel),
+                React.createElement("td", { style: _num }, r.ingepland),
+                React.createElement("td", { style: _num }, r.basis),
+                React.createElement("td", { style: Object.assign({}, _num, { color: r.tekort > 0 ? "#b45309" : "var(--muted)", fontWeight: r.tekort > 0 ? 700 : 400 }) }, r.tekort || "—"),
+                React.createElement("td", { style: Object.assign({}, _num, { color: r.over > 0 ? "var(--bad)" : "var(--muted)", fontWeight: r.over > 0 ? 700 : 400 }) }, r.over || "—"),
+                React.createElement("td", { style: _num }, _cov)
+              );
+            })
+          )
+        )
+    )
+  );
+}
+  function grafiekenCard(alle, pf) {
+  pf = pf || 'alle';
+  var _sfx = pf === 'direct' ? " · direct" : (pf === 'indirect' ? " · indirect" : "");
+  var _norm = function (l, dy, s) { if (pf === 'indirect') return 0; var sn = shiftNorm(l, dy.k, dy.iso, s.id, isPubMR); return sn.runs ? (+sn.basis || 0) : 0; };
+  var _chart = function (title, rows) {
+    if (!rows.length) return React.createElement("div", { className: "card", style: { padding: 16, marginBottom: 16, color: "var(--muted)", fontSize: 13 } }, title + " — geen gegevens.");
+    var W = 680, H = 260, padL = 36, padR = 14, padT = 20, padB = 34;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var maxV = rows.reduce(function (m, r) { return Math.max(m, r.ing, r.ben); }, 0);
+    var step = Math.max(1, Math.ceil(Math.max(1, maxV) / 4));
+    var top = step * 4;
+    var y = function (v) { return padT + plotH - (v / top) * plotH; };
+    var n = rows.length, gW = plotW / n, bW = Math.min(26, gW * 0.30), gap = 4;
+    var els = [];
+    for (var t = 0; t <= 4; t++) {
+      var gv = step * t, gy = y(gv);
+      els.push(React.createElement("line", { key: "g" + t, x1: padL, x2: W - padR, y1: gy, y2: gy, stroke: "#e2e8f0", strokeWidth: 1 }));
+      els.push(React.createElement("text", { key: "gl" + t, x: padL - 6, y: gy + 3, textAnchor: "end", fontSize: 10, fill: "#94a3b8", fontFamily: "JetBrains Mono, monospace" }, gv));
+    }
+    rows.forEach(function (r, i) {
+      var cx = padL + gW * i + gW / 2;
+      var x1 = cx - bW - gap / 2, x2 = cx + gap / 2;
+      els.push(React.createElement("rect", { key: "bi" + i, x: x1, y: y(r.ing), width: bW, height: Math.max(0, plotH - (y(r.ing) - padT)), rx: 3, fill: "#19203b" }, React.createElement("title", null, r.label + " — ingepland " + r.ing)));
+      els.push(React.createElement("rect", { key: "bb" + i, x: x2, y: y(r.ben), width: bW, height: Math.max(0, plotH - (y(r.ben) - padT)), rx: 3, fill: "#C9A45C", stroke: "#a9863f", strokeWidth: 1 }, React.createElement("title", null, r.label + " — benodigd " + r.ben)));
+      els.push(React.createElement("text", { key: "li" + i, x: x1 + bW / 2, y: y(r.ing) - 4, textAnchor: "middle", fontSize: 10, fontWeight: 700, fill: "#19203b", fontFamily: "JetBrains Mono, monospace" }, r.ing));
+      els.push(React.createElement("text", { key: "lb" + i, x: x2 + bW / 2, y: y(r.ben) - 4, textAnchor: "middle", fontSize: 10, fontWeight: 700, fill: "#8a6d1f", fontFamily: "JetBrains Mono, monospace" }, r.ben));
+      els.push(React.createElement("text", { key: "xl" + i, x: cx, y: H - padB + 16, textAnchor: "middle", fontSize: 11, fill: "#475569", fontWeight: 600 }, r.label));
+    });
+    return React.createElement("div", { className: "card", style: { padding: 16, marginBottom: 16 } },
+      React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 } },
+        React.createElement("h3", { style: { margin: 0 } }, title),
+        React.createElement("div", { style: { display: "flex", gap: 14, fontSize: 12, color: "var(--muted)" } },
+          React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 5 } }, React.createElement("span", { style: { width: 11, height: 11, borderRadius: 3, background: "#19203b", display: "inline-block" } }), (pf === 'indirect' ? "Indirect ingepland" : "Ingepland")),
+          (pf === 'indirect' ? null : React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 5 } }, React.createElement("span", { style: { width: 11, height: 11, borderRadius: 3, background: "#C9A45C", display: "inline-block" } }), "Benodigd"))
+        )
+      ),
+      React.createElement("svg", { viewBox: "0 0 " + W + " " + H, style: { width: "100%", height: "auto", display: "block" }, role: "img", "aria-label": title }, els)
+    );
+  };
+  if (alle) {
+    var rowsA = Object.keys(cfg).filter(heeftMR).map(function (d) {
+      var ing = 0, ben = 0;
+      (cfg[d] || []).forEach(function (l) { days.forEach(function (dy) { dagShiften(l, dy.k, dy.iso, isPubMR).forEach(function (s) { ing += _ingFiltered(d, l.lijn, s.id, dy.k, pf); ben += _norm(l, dy, s); }); }); });
+      return { label: d, ing: ing, ben: ben };
+    });
+    return React.createElement("div", null, _chart("Ingepland vs benodigd — per afdeling (alle, week " + week + ")" + _sfx, rowsA));
+  }
+  var _mkDag = function () {
+    return days.map(function (dy) {
+      var ing = 0, ben = 0;
+      (cfg[dept] || []).forEach(function (l) { dagShiften(l, dy.k, dy.iso, isPubMR).forEach(function (s) { ing += _ingFiltered(dept, l.lijn, s.id, dy.k, pf); ben += _norm(l, dy, s); }); });
+      return { label: (dy.k || "").toUpperCase(), ing: ing, ben: ben, run: (ben > 0 || ing > 0) };
+    }).filter(function (x) { return x.run; });
+  };
+  var _mkLijn = function () {
+    return (cfg[dept] || []).map(function (l) {
+      var ing = 0, ben = 0;
+      days.forEach(function (dy) { dagShiften(l, dy.k, dy.iso, isPubMR).forEach(function (s) { ing += _ingFiltered(dept, l.lijn, s.id, dy.k, pf); ben += _norm(l, dy, s); }); });
+      return { label: l.lijn, ing: ing, ben: ben };
+    }).filter(function (x) { return x.ing > 0 || x.ben > 0; });
+  };
+  return React.createElement("div", null,
+    _chart("Ingepland vs benodigd — per dag (" + dept + ", week " + week + ")" + _sfx, _mkDag()),
+    _chart("Ingepland vs benodigd — per lijn (" + dept + ")" + _sfx, _mkLijn())
+  );
+}
+  function _ingFiltered(afd, lijn, shiftId, dayK, pf) {
+  var list = plan[cellK(afd, lijn, shiftId, wkKey, dayK)] || [];
+  return list.filter(function (a) {
+    if (a.ziek) return false;
+    if (!pf || pf === 'alle') return true;
+    var dir;
+    if (a.type === 'uitzend') dir = true;
+    else { var e = (employees || []).find(function (x) { return x.id === a.empId; }); dir = e ? (e.direct !== false) : true; }
+    return pf === 'direct' ? dir : !dir;
+  }).length;
+}
+  function controlePaneel(alle, pf) {
+  pf = pf || 'alle';
+  var _norm = function (l, dy, s) { var sn = shiftNorm(l, dy.k, dy.iso, s.id, isPubMR); return { req: sn.runs ? (+sn.basis || 0) : 0, cap: sn.runs ? (+sn.max || 0) : 0 }; };
+  if (pf === 'indirect') {
+    var cnt = 0;
+    var deps = alle ? Object.keys(cfg).filter(heeftMR) : (heeftMR(dept) ? [dept] : []);
+    deps.forEach(function (d) { (cfg[d] || []).forEach(function (l) { days.forEach(function (dy) { dagShiften(l, dy.k, dy.iso, isPubMR).forEach(function (s) { cnt += _ingFiltered(d, l.lijn, s.id, dy.k, 'indirect'); }); }); }); });
+    var scopeI = alle ? "alle afdelingen" : dept;
+    return React.createElement("div", { className: "ctrlpanel ctrl-neutral" }, React.createElement(I, { n: "groups" }), React.createElement("div", { className: "ctrlpanel-body" }, React.createElement("div", { className: "ctrlpanel-title" }, cnt + " indirecte medewerker(s) ingepland deze week (" + scopeI + ")"), React.createElement("div", { className: "ctrlpanel-lines" }, React.createElement("div", null, "Indirect personeel telt niet mee voor de SAP MR-norm."))));
+  }
+  var _o = 0, _ov = 0, _req = 0, _short = [], _overL = [], _scope = alle ? "alle afdelingen" : dept;
+  var groups;
+  if (alle) { groups = Object.keys(cfg).filter(heeftMR).map(function (d) { return { key: d, lines: (cfg[d] || []).map(function (l) { return { d: d, l: l }; }) }; }); }
+  else { groups = (heeftMR(dept) ? (cfg[dept] || []) : []).map(function (l) { return { key: l.lijn, lines: [{ d: dept, l: l }] }; }); }
+  groups.forEach(function (g) {
+    var gt = 0, go = 0;
+    g.lines.forEach(function (pair) {
+      days.forEach(function (dy) {
+        dagShiften(pair.l, dy.k, dy.iso, isPubMR).forEach(function (s) {
+          var ing = _ingFiltered(pair.d, pair.l.lijn, s.id, dy.k, pf);
+          var nm = _norm(pair.l, dy, s);
+          _req += nm.req;
+          if (ing < nm.req) gt += (nm.req - ing);
+          if (nm.cap > 0 && ing > nm.cap) go += (ing - nm.cap);
+        });
+      });
+    });
+    if (gt > 0) { _o += gt; _short.push(g.key + ": " + gt + " tekort"); }
+    if (go > 0) { _ov += go; _overL.push(g.key + ": +" + go + " teveel"); }
+  });
+  var _sfx = pf === 'direct' ? " · direct" : "";
+  var _cls, _ic, _title;
+  if (_req === 0) { _cls = "ctrl-neutral"; _ic = "info"; _title = "Nog geen norm of planning voor " + _scope + " deze week"; }
+  else if (_o === 0 && _ov === 0) { _cls = "ctrl-ok"; _ic = "check_circle"; _title = "Alles binnen norm — geen tekort of overbezetting (" + _scope + _sfx + ")"; }
+  else { _cls = "ctrl-warn"; _ic = "warning"; _title = (_o > 0 ? _o + " tekort" : "") + ((_o > 0 && _ov > 0) ? " · " : "") + (_ov > 0 ? _ov + " teveel" : "") + " deze week (" + _scope + _sfx + ")"; }
+  return React.createElement("div", { className: "ctrlpanel " + _cls }, React.createElement(I, { n: _ic }), React.createElement("div", { className: "ctrlpanel-body" }, React.createElement("div", { className: "ctrlpanel-title" }, _title), ((_req > 0 && (_o > 0 || _ov > 0)) ? React.createElement("div", { className: "ctrlpanel-lines" }, _short.map(function (t, _i) { return React.createElement("div", { key: "s" + _i, className: "cl-short" }, t); }).concat(_overL.map(function (t, _i) { return React.createElement("div", { key: "o" + _i, className: "cl-over" }, t); }))) : null)));
+}
   function planningView() {
     return React.createElement("div", {
       className: "stack"
@@ -6252,7 +6450,7 @@ const buildMRDoc = function (opts) {
           }
         }, e.naam.split(' ')[0] + ' · ' + reden);
       }))) : null;
-    }(), React.createElement("div", {
+    }(), React.createElement("div", { className: "plantabs" }, [["overzicht", "Overzicht", "view_column"], ["perlijn", "Per lijn / shift", "table_rows"], ["grafieken", "Grafieken", "bar_chart"]].map(function (t) { return React.createElement("button", { key: t[0], className: "plantab" + (planTab === t[0] ? " on" : ""), onClick: function () { setPlanTab(t[0]); } }, React.createElement(I, { n: t[2] }), React.createElement("span", null, t[1])); })), (planTab === 'overzicht' ? React.createElement("div", {
       className: "planrow"
     }, React.createElement("div", {
       className: "card grid-card"
@@ -6271,7 +6469,7 @@ const buildMRDoc = function (opts) {
       className: "d"
     }, d.lbl), React.createElement("div", {
       className: "dt"
-    }, d.dt), (function(){var _g=0,_b=0;lines.forEach(function(_L){dagShiften(_L,d.k,d.iso,isPubMR).forEach(function(_s){var _c=info(_L,_s.id,d.k);if(_c){_g+=(+_c.actief||0);_b+=(+_c.req||0);}});});var _st=_b===0?'z':(_g<_b?'u':(_g>_b?'o':'k'));var _col=_st==='z'?'#b0b4c0':_st==='u'?'#c15400':_st==='o'?'#b02a37':'#1b7f4b';var _bg=_st==='z'?'#f4f5f8':_st==='u'?'#fdeee2':_st==='o'?'#fdecea':'#e8f5ec';var _bd=_st==='z'?'#e6e8ee':_st==='u'?'#f2c9a3':_st==='o'?'#f3c2c8':'#b9e0c6';var _lab=_st==='u'?('tekort '+(_b-_g)):_st==='o'?('teveel +'+(_g-_b)):_st==='k'?'op norm':'\u00a0';return React.createElement('div',{title:(_st==='z'?'':_lab),style:{marginTop:4,display:'inline-flex',flexDirection:'column',alignItems:'center',lineHeight:1.05,borderRadius:7,padding:'2px 7px',border:'1px solid '+_bd,background:_bg,color:_col}},React.createElement('div',{style:{fontSize:13,fontWeight:800}},_g+' / '+_b),React.createElement('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'.3px',textTransform:'uppercase'}},_lab));})()))), lines.map(line => React.createElement("div", {
+    }, d.dt), (function(){var _g=0,_b=0;lines.forEach(function(_L){dagShiften(_L,d.k,d.iso,isPubMR).forEach(function(_s){var _c=info(_L,_s.id,d.k);if(_c){_g+=(+_c.actief||0);_b+=(+_c.req||0);}});});var _st=_b===0?'z':(_g<_b?'u':(_g>_b?'o':'k'));var _col=_st==='z'?'#94a3b8':_st==='u'?'#b45309':_st==='o'?'#e11d48':'#059669';var _bg=_st==='z'?'#f8fafc':_st==='u'?'#fffbeb':_st==='o'?'#fff1f3':'#ecfdf5';var _bd=_st==='z'?'#e2e8f0':_st==='u'?'#fde68a':_st==='o'?'#fecdd3':'#a7f3d0';var _lab=_st==='u'?('tekort '+(_b-_g)):_st==='o'?('teveel +'+(_g-_b)):_st==='k'?'op norm':'\u00a0';return React.createElement('div',{title:(_st==='z'?'':_lab),style:{marginTop:4,display:'inline-flex',flexDirection:'column',alignItems:'center',lineHeight:1.05,borderRadius:7,padding:'2px 7px',border:'1px solid '+_bd,background:_bg,color:_col}},React.createElement('div',{style:{fontSize:13,fontWeight:800}},_g+' / '+_b),React.createElement('div',{style:{fontSize:9,fontWeight:700,letterSpacing:'.3px',textTransform:'uppercase'}},_lab));})()))), lines.map(line => React.createElement("div", {
       key: line.lijn
     }, React.createElement("div", {
       className: "lgroup"
@@ -6483,10 +6681,10 @@ const buildMRDoc = function (opts) {
       }
     }, ag)), React.createElement("span", {
       className: "oncall"
-    }, "ON-CALL"))))));
+    }, "ON-CALL"))))) : null), (planTab === 'perlijn' ? perLijnCard() : null), (planTab === 'grafieken' ? grafiekenCard() : null));
   }
   function sapmrView() {
-    return React.createElement("div", { className: "stack" }, React.createElement("div", { className: "mrsticky", style: { background: "var(--bg, #f5f6fa)", paddingTop: 4, paddingBottom: 8 } }, React.createElement("div", { className: "topbar" }, React.createElement("h2", null, "SAP MR — Normen"), React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' } }, React.createElement("button", { className: "btn", onClick: prevWeek, title: "Vorige week" }, "\u25C0"), React.createElement("strong", { style: { minWidth: 120, textAlign: 'center' } }, "Week " + week + ", " + jaar), React.createElement("button", { className: "btn", onClick: nextWeek, title: "Volgende week" }, "\u25B6"), React.createElement("button", { className: "btn gold", onClick: drukMRAf, title: "Afdrukken A3 / PDF" }, React.createElement(I, { n: "print" }), React.createElement("span", { className: "btxt" }, "Afdrukken")))), React.createElement("div", { className: "card", style: { padding: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' } }, React.createElement("span", { style: { fontSize: 12, fontWeight: 600 } }, "Wijzigingen gelden voor:"), React.createElement("button", { className: "btn " + (mrWeekMode ? '' : 'gold'), onClick: function () { setMrWeekMode(false); } }, "Alle weken (standaard)"), React.createElement("button", { className: "btn " + (mrWeekMode ? 'gold' : ''), onClick: function () { mrEnterWeek(); } }, "Alleen week " + week), React.createElement("span", { style: { fontSize: 11, color: '#8a8f9c' } }, mrWeekMode ? "Afwijkingen gelden alleen voor week " + week + " \u2014 andere weken houden de standaard." : "Wijzigingen gelden als standaard voor elke week."), (mrScopeAsk ? React.createElement("div", { style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }, onClick: function () { setMrScopeAsk(false); } }, React.createElement("div", { className: "card", style: { maxWidth: 440, padding: 20 }, onClick: function (e) { e.stopPropagation(); } }, React.createElement("div", { style: { fontSize: 16, fontWeight: 700, marginBottom: 8 } }, "Week " + week + " apart instellen"), React.createElement("div", { style: { fontSize: 13, color: '#5b6070', marginBottom: 16 } }, "Begin je week " + week + " met een kopie van de standaard, of leeg? De standaard van andere weken blijft ongewijzigd."), (mrWeekHeeftAfw() ? React.createElement("div", { style: { fontSize: 12, color: '#b02a37', fontWeight: 600, marginTop: -8, marginBottom: 14 } }, "\u26a0 Week " + week + " heeft al afwijkingen \u2014 'Standaard overnemen' en 'Leeg beginnen' overschrijven die.") : null), React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, React.createElement("button", { className: "btn gold", onClick: mrWeekVanStandaard }, "Standaard overnemen"), React.createElement("button", { className: "btn", onClick: mrWeekLeeg }, "Leeg beginnen"), (mrWeekHeeftAfw() ? React.createElement("button", { className: "btn", onClick: mrWeekBehoud }, "Behouden") : null), React.createElement("button", { className: "btn", onClick: function () { setMrScopeAsk(false); } }, "Annuleren")))) : null)), React.createElement("div", { className: "card", style: { padding: 12 } }, React.createElement("div", { style: { fontSize: 12, fontWeight: 700, marginBottom: 6 } }, "Opmerking \u2014 verschijnt op de print, geldt voor alle afdelingen"), React.createElement("textarea", { value: (weekOpm[wkKey] || ""), onChange: function (e) { var v = e.target.value; setWeekOpm(function (prev) { var n = Object.assign({}, prev); n[wkKey] = v; return n; }); }, placeholder: "Bijv. promo\u2019s, telweek, bijzonderheden\u2026", style: { width: "100%", minHeight: 44, maxHeight: 140, resize: "vertical", boxSizing: "border-box", fontSize: 13, padding: 8, borderRadius: 8, border: "1px solid #e6e8ee" } })), React.createElement("div", { style: { marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center' } }, React.createElement("span", { style: { fontSize: 12, color: '#5b6070' } }, "Weergave:"), React.createElement("button", { className: "btn", onClick: function () { setMrViewMode(mrViewMode === 'raster' ? 'klassiek' : 'raster'); } }, mrViewMode === 'raster' ? "Klassieke invoer" : "Raster-weergave"))), (mrViewMode === 'raster' ? mrGridCard() : weekdagCard()));
+    return React.createElement("div", { className: "stack" }, React.createElement("div", { className: "mrsticky", style: { background: "var(--bg, #f5f6fa)", paddingTop: 4, paddingBottom: 8 } }, React.createElement("div", { className: "topbar" }, React.createElement("h2", null, "SAP MR — Normen"), React.createElement("select", { className: "cin", value: dept, onChange: function (e) { setDept(e.target.value); setSel(null); }, title: "Kies afdeling — toont alleen deze", style: { marginLeft: 12, fontSize: 13, fontWeight: 700, padding: '5px 10px', borderRadius: 8, border: '1px solid #e6e8ee', background: '#fff', cursor: 'pointer' } }, Object.keys(cfg).filter(heeftMR).map(function (d) { return React.createElement("option", { key: d, value: d }, d); })), React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' } }, React.createElement("button", { className: "btn", onClick: prevWeek, title: "Vorige week" }, "\u25C0"), React.createElement("strong", { style: { minWidth: 120, textAlign: 'center' } }, "Week " + week + ", " + jaar), React.createElement("button", { className: "btn", onClick: nextWeek, title: "Volgende week" }, "\u25B6"), React.createElement("button", { className: "btn gold", onClick: drukMRAf, title: "Afdrukken A3 / PDF" }, React.createElement(I, { n: "print" }), React.createElement("span", { className: "btxt" }, "Afdrukken")))), React.createElement("div", { className: "card", style: { padding: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' } }, React.createElement("span", { style: { fontSize: 12, fontWeight: 600 } }, "Wijzigingen gelden voor:"), React.createElement("button", { className: "btn " + (mrWeekMode ? '' : 'gold'), onClick: function () { setMrWeekMode(false); } }, "Alle weken (standaard)"), React.createElement("button", { className: "btn " + (mrWeekMode ? 'gold' : ''), onClick: function () { mrEnterWeek(); } }, "Alleen week " + week), React.createElement("span", { style: { fontSize: 11, color: '#8a8f9c' } }, mrWeekMode ? "Afwijkingen gelden alleen voor week " + week + " \u2014 andere weken houden de standaard." : "Wijzigingen gelden als standaard voor elke week."), (mrScopeAsk ? React.createElement("div", { style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }, onClick: function () { setMrScopeAsk(false); } }, React.createElement("div", { className: "card", style: { maxWidth: 440, padding: 20 }, onClick: function (e) { e.stopPropagation(); } }, React.createElement("div", { style: { fontSize: 16, fontWeight: 700, marginBottom: 8 } }, "Week " + week + " apart instellen — " + dept), React.createElement("div", { style: { fontSize: 13, color: '#5b6070', marginBottom: 16 } }, "Waarmee wil je week " + week + " voor " + dept + " beginnen? Alleen deze afdeling wordt aangepast; andere afdelingen en de standaard van andere weken blijven ongewijzigd."), (mrWeekHeeftAfw() ? React.createElement("div", { style: { fontSize: 12, color: '#b02a37', fontWeight: 600, marginTop: -8, marginBottom: 14 } }, "\u26a0 Week " + week + " heeft voor " + dept + " al afwijkingen \u2014 overnemen of leeg beginnen overschrijft die.") : null), React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, React.createElement("button", { className: "btn gold", onClick: mrWeekVanStandaard }, "Standaard overnemen"), React.createElement("button", { className: "btn", onClick: mrWeekVanVorige, title: "Neem de planning van vorige week over naar week " + week }, "Vorige week (" + (week > 1 ? week - 1 : 52) + ") overnemen"), React.createElement("button", { className: "btn", onClick: mrWeekLeeg }, "Leeg beginnen"), (mrWeekHeeftAfw() ? React.createElement("button", { className: "btn", onClick: mrWeekBehoud }, "Behouden") : null), React.createElement("button", { className: "btn", onClick: function () { setMrScopeAsk(false); } }, "Annuleren")))) : null)), React.createElement("div", { className: "card", style: { padding: 12 } }, React.createElement("div", { style: { fontSize: 12, fontWeight: 700, marginBottom: 6 } }, "Opmerking \u2014 verschijnt op de print, geldt voor alle afdelingen"), React.createElement("textarea", { value: (weekOpm[wkKey] || ""), onChange: function (e) { var v = e.target.value; setWeekOpm(function (prev) { var n = Object.assign({}, prev); n[wkKey] = v; return n; }); }, placeholder: "Bijv. promo\u2019s, telweek, bijzonderheden\u2026", style: { width: "100%", minHeight: 44, maxHeight: 140, resize: "vertical", boxSizing: "border-box", fontSize: 13, padding: 8, borderRadius: 8, border: "1px solid #e6e8ee" } })), React.createElement("div", { style: { marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center' } }, React.createElement("span", { style: { fontSize: 12, color: '#5b6070' } }, "Weergave:"), React.createElement("button", { className: "btn", onClick: function () { setMrViewMode(mrViewMode === 'raster' ? 'klassiek' : 'raster'); } }, mrViewMode === 'raster' ? "Klassieke invoer" : "Raster-weergave"))), (mrViewMode === 'raster' ? mrGridCard() : weekdagCard()));
   }
   function empForm() {
     const e = editEmp;
@@ -6537,7 +6735,7 @@ const buildMRDoc = function (opts) {
       }, Object.keys(cfg).map(d => React.createElement("option", {
         key: d,
         value: d
-      }, d)))), React.createElement("label", {
+      }, d)))), React.createElement("label", { className: "efld", style: { gridColumn: '1/-1', flexDirection: 'row', alignItems: 'center', gap: 8 } }, React.createElement("input", { type: "checkbox", checked: e.direct !== false, onChange: ev => set('direct', ev.target.checked) }), "Direct (productie-lijn) \u2014 vink uit voor indirect personeel"), React.createElement("label", {
         className: "efld",
         style: {
           gridColumn: '1/-1',
@@ -7989,7 +8187,7 @@ const buildMRDoc = function (opts) {
       }
     }, k[1]), React.createElement("div", {
       className: "k"
-    }, k[0])))), React.createElement("div", {
+    }, k[0])))), React.createElement("div", { className: "dashctrl" }, React.createElement("span", { style: { fontSize: 12, fontWeight: 600, color: "var(--muted)" } }, "Afdeling:"), React.createElement("select", { className: "cin", value: dashAlle ? "__alle__" : dept, onChange: function (e) { if (e.target.value === "__alle__") { setDashAlle(true); } else { setDashAlle(false); setDept(e.target.value); } }, style: { fontSize: 13, fontWeight: 700, padding: "5px 10px", borderRadius: 8, border: "1px solid var(--line)", background: "#fff", cursor: "pointer" } }, Object.keys(cfg).filter(heeftMR).map(function (d) { return React.createElement("option", { key: d, value: d }, d); }).concat([React.createElement("option", { key: "__alle__", value: "__alle__" }, "Alle afdelingen")])), React.createElement("span", { style: { fontSize: 12, fontWeight: 600, color: "var(--muted)", marginLeft: 10 } }, "Personeel:"), React.createElement("div", { className: "seg2", style: { display: "inline-flex" } }, [["alle", "Alle"], ["direct", "Direct"], ["indirect", "Indirect"]].map(function (o) { return React.createElement("button", { key: o[0], className: (pFilter === o[0] ? "on" : ""), onClick: function () { setPFilter(o[0]); } }, o[1]); }))), controlePaneel(dashAlle, pFilter), grafiekenCard(dashAlle, pFilter), React.createElement("div", {
       className: "card",
       style: {
         padding: 16
