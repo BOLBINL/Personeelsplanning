@@ -2,14 +2,21 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#19203b"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="BL Planning"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="data:image/png;base64,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"/>
 <title>Biscuit International — Planning Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&display=swap" rel="stylesheet"/>
 <style>
   :root{--navy:#19203b;--gold:#C9A45C;--page:#f8fafc;--card:#fff;--line:#e2e8f0;--ink:#0f172a;--muted:#64748b;--ok:#059669;--ok-bg:#ecfdf5;--warn:#f59e0b;--warn-bg:#fffbeb;--bad:#e11d48;--bad-bg:#fff1f3;--r-sm:8px;--r:12px;--r-lg:16px;--r-pill:999px;--sh-1:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05);--sh-2:0 8px 24px rgba(15,23,42,.08);--sh-pop:0 10px 28px rgba(15,23,42,.14);--surface:#f8fafc;--sub:#eef2f8;--cream:#fffdf7;--line-soft:#eef0f4;--nav-section:#8a93ad;--live:#059669;--ring:rgba(25,32,59,.30);--cell-ok:#f0fdf4;--cell-warn:#fffbeb;--cell-bad:#fff1f3;}
   *{box-sizing:border-box;}
-  body{margin:0;font-family:'IBM Plex Sans','Hanken Grotesk','Segoe UI',Arial,sans-serif;background:var(--page);color:var(--ink);}
+  body{margin:0;font-family:'IBM Plex Sans','Hanken Grotesk','Segoe UI',Arial,sans-serif;background:var(--page);color:var(--ink);padding-top:env(safe-area-inset-top);}
   .mono,.cap,.dt,.d,.t,.hint,.rol,.cnt,.oncall{font-family:'JetBrains Mono',monospace;}
   .ms{font-family:'Material Symbols Outlined';line-height:1;vertical-align:middle;}
   ::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-thumb{background:#c7c5ce;border-radius:4px;}
@@ -167,7 +174,7 @@
   .note .ms{color:var(--gold);}
   .emgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;}
   .emcard{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;min-width:0;}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99;padding:12px 18px;border-radius:10px;color:#fff;background:var(--navy);font-weight:700;font-size:14px;display:flex;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25);}
+  .toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:99;padding:12px 18px;border-radius:10px;color:#fff;background:var(--navy);font-weight:700;font-size:14px;display:flex;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25);}
   .toast.warn{background:var(--gold);color:var(--navy);}.toast.block{background:var(--bad);}
   
   .pubbadge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:#2e7d32;background:var(--ok-bg);padding:4px 10px;border-radius:999px;margin-left:6px;}
@@ -219,6 +226,16 @@
   .planrow .grid-card{flex:1;min-width:0;}
   .planrow .staff{width:340px;flex-shrink:0;position:sticky;top:70px;max-height:calc(100vh - 82px);overflow:auto;z-index:14;}.afwbar{position:sticky;top:62px;z-index:12;}.app.mob .afwbar{position:static;}.app.mob .actiemenu-ov{background:rgba(15,20,40,.35)!important;z-index:5900!important;}.app.mob .actiemenu{position:fixed!important;left:12px!important;right:12px!important;bottom:16px!important;top:auto!important;width:auto!important;z-index:5901!important;max-height:72vh;overflow:auto!important;}
   @media (max-width:900px){.planrow{flex-direction:column;align-items:stretch;}.planrow .staff{width:100%;position:static;max-height:none;}.grid-card{width:100%;}.grid-scroll{max-width:100%;}}
+  @media (max-width:640px){
+    .modal-bg{align-items:flex-end;padding:0;overflow:hidden;z-index:6100;}
+    .modal{max-width:none;width:100%;margin:0;border-radius:18px 18px 0 0;max-height:92vh;max-height:92dvh;display:flex;flex-direction:column;animation:blSheetUp .22s cubic-bezier(.32,.72,0,1);}
+    .modal-hd{flex:0 0 auto;position:relative;padding-top:20px;}
+    .modal-hd::before{content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.45);}
+    .etabs{flex:0 0 auto;}
+    .modal-bd{flex:1 1 auto;max-height:none;-webkit-overflow-scrolling:touch;}
+    .modal-ft{flex:0 0 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom));}
+  }
+  @keyframes blSheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
 </style>
 <style id="mob-drawer">body{overflow-x:hidden;}.hamb{display:none;}.app.mob{display:block!important;}.mtopbar{display:none;}.mobnav .mtopbar{display:flex;align-items:center;gap:8px;position:fixed;top:0;left:0;right:0;height:52px;padding:0 6px;background:var(--navy);z-index:5000;box-shadow:0 2px 10px rgba(0,0,0,.25);}.mrsticky{position:sticky;top:0;z-index:40;box-shadow:0 6px 10px -6px rgba(15,20,40,.18);}.app.mob .mrsticky{top:52px;}.pgpanel{position:sticky;top:calc(var(--mrhead, 150px) + 6px);max-height:calc(100vh - var(--mrhead, 150px) - 24px);overflow-y:auto;align-self:flex-start;}.app.mob .pgpanel{top:calc(52px + var(--mrhead, 150px) + 6px);max-height:calc(100vh - 52px - var(--mrhead, 150px) - 24px);}.mobnav .mtopbar .hamb{position:static!important;width:40px!important;height:40px!important;background:transparent!important;box-shadow:none!important;color:#fff!important;flex:0 0 auto;border-radius:9px!important;}.mobnav .mtopbar .mtb-title{color:#fff;font-weight:700;font-size:14px;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.02em;}.mobnav .mtopbar .mtb-actions{display:flex;gap:6px;flex:0 0 auto;}.mobnav .mtopbar .mtb-actions button{width:40px;height:40px;border-radius:9px;border:none;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}.mobnav .mtopbar .mtb-actions button.gold{background:var(--gold);color:#1c1c1c;}.mobnav .hamb{display:flex!important;position:fixed!important;top:10px;left:10px;width:44px;height:44px;align-items:center;justify-content:center;border-radius:11px;background:var(--navy)!important;color:#fff!important;border:none!important;box-shadow:0 4px 14px rgba(0,0,0,.28);z-index:6000!important;}.mobnav .side{position:fixed!important;top:0!important;left:0!important;bottom:0!important;height:100dvh!important;width:250px!important;max-width:82vw!important;flex-direction:column!important;transform:translateX(-102%)!important;visibility:hidden!important;transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s linear .26s!important;z-index:5900!important;padding:16px 0!important;overflow-y:auto!important;border:none!important;box-shadow:none;}.mobnav .side.open{transform:translateX(0)!important;visibility:visible!important;transition:transform .26s cubic-bezier(.4,0,.2,1),visibility 0s!important;box-shadow:8px 0 30px rgba(0,0,0,.35);}.mobnav .side .brand{display:flex!important;}.mobnav .side .lbl{display:inline!important;}.mobnav nav button{width:100%!important;justify-content:flex-start!important;border-left:3px solid transparent!important;border-bottom:none!important;padding:12px 16px!important;}.mobnav .drawer-ov{position:fixed!important;inset:0!important;background:rgba(0,0,0,.45);z-index:5800!important;}.app.mob .main{width:100%!important;max-width:100%!important;margin:0!important;padding:64px 10px 90px!important;box-sizing:border-box!important;}.app.mob .kpis{grid-template-columns:1fr 1fr!important;}.app.mob .btnrow{flex-wrap:nowrap!important;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:6px;padding-bottom:4px;}.app.mob .btnrow>*{flex:0 0 auto;}.app.mob .btnrow .btn{padding:9px 11px;}.app.mob .hide-mob{display:none!important;}.app.mob .segrow{flex:0 0 auto;}.app.mob .kpis{grid-template-columns:1fr 1fr!important;gap:8px;}.card.collapsed > *:not(:first-child){display:none!important;}h3 .chev{display:inline-block;transition:transform .2s;font-size:11px;color:#8a8f9c;}.card.collapsed h3 .chev{transform:rotate(-90deg);}.app.mob .kpis.rich .kpi{padding:13px 14px;gap:5px;}.app.mob .kpis.rich .kpi .v{font-size:24px;}.app.mob .kpis.rich .kpi .kpi-sub{font-size:10px;}</style></head>
 <body>
@@ -2585,6 +2602,32 @@ var VIJFPLOEGEN_PRESETS = {
       ['-','-','-','-','O','O','M'],
       ['M','N','N','-','-','-','-']
     ]
+  },
+  drie_vw: {
+    naam: '3-ploegen voorwaarts (A/B/C)', cyclusWeken: 3, ploegen: ['A', 'B', 'C'],
+    ploegOffset: { A: 0, B: 1, C: 2 },
+    matrix: [
+      ['O','O','O','O','O','-','-'],
+      ['M','M','M','M','M','-','-'],
+      ['N','N','N','N','N','-','-']
+    ]
+  },
+  drie_aw: {
+    naam: '3-ploegen achterwaarts (N\u2192M\u2192O)', cyclusWeken: 3, ploegen: ['A', 'B', 'C'],
+    ploegOffset: { A: 0, B: 1, C: 2 },
+    matrix: [
+      ['N','N','N','N','N','-','-'],
+      ['M','M','M','M','M','-','-'],
+      ['O','O','O','O','O','-','-']
+    ]
+  },
+  drie_seizoen: {
+    naam: '3-ploegen seizoen — nacht-wissel (A/B)', cyclusWeken: 2, ploegen: ['A', 'B'],
+    ploegOffset: { A: 0, B: 1 },
+    matrix: [
+      ['N','N','N','N','N','-','-'],
+      ['-','-','-','-','-','-','-']
+    ]
   }
 };
 function normVijfPloegenLijn(c) {
@@ -2598,10 +2641,13 @@ function normVijfPloegenLijn(c) {
   var ploegen = (Array.isArray(c.ploegen) && c.ploegen.length) ? c.ploegen.map(String) : ['A', 'B', 'C', 'D', 'E'];
   var off = (c.ploegOffset && typeof c.ploegOffset === 'object') ? c.ploegOffset : {};
   var po = {}; ploegen.forEach(function (pg, i) { po[pg] = ((off[pg] != null ? (parseInt(off[pg], 10) || 0) : i) % cyc + cyc) % cyc; });
+  var _nsRaw = (c.nachtStart && typeof c.nachtStart === 'object') ? c.nachtStart : {};
+  var ns = {}; DAG_K.forEach(function (d) { if (_nsRaw[d]) ns[d] = String(_nsRaw[d]); });
+  var nb = (c.nachtBron === 'template') ? 'template' : 'vast';
   return {
     aan: c.aan === true, preset: c.preset || '', cyclusWeken: cyc,
     refJaar: parseInt(c.refJaar, 10) || 0, refWeek: Math.max(1, parseInt(c.refWeek, 10) || 1),
-    ploegen: ploegen, ploegOffset: po, matrix: m
+    ploegen: ploegen, ploegOffset: po, matrix: m, nachtStart: ns, nachtBron: nb
   };
 }
 function normVijfPloegen(x) {
@@ -2685,11 +2731,15 @@ function normalizeTemplate(t) {
     werkdagen: Array.isArray(t.werkdagen) ? t.werkdagen : ['ma', 'di', 'wo', 'do', 'vr']
   }];
   weken = weken.map(function (w) {
+    var _dsRaw = (w.dagStart && typeof w.dagStart === 'object') ? w.dagStart : {};
+    var ds = {}; DAG_K.forEach(function (d) { if (_dsRaw[d]) ds[d] = String(_dsRaw[d]); });
     return {
       start: w.start || '06:00',
       netto: w.netto || '7:12',
       pauze: w.pauze || '1:03',
-      werkdagen: Array.isArray(w.werkdagen) ? w.werkdagen : ['ma', 'di', 'wo', 'do', 'vr']
+      vorigeDag: w.vorigeDag === true,
+      werkdagen: Array.isArray(w.werkdagen) ? w.werkdagen : ['ma', 'di', 'wo', 'do', 'vr'],
+      dagStart: ds
     };
   });
   return {
@@ -2715,7 +2765,7 @@ function getWerktijden(emp, dagKey, weekNr, templates) {
     var idx = ((weekNr - 1 + sw) % n + n) % n;
     var wk = t.weken[idx];
     if (wk.werkdagen && wk.werkdagen.indexOf(dagKey) < 0) return null;
-    var start = wk.start || '06:00';
+    var start = (wk.dagStart && wk.dagStart[dagKey]) || wk.start || '06:00';
     return {
       start: start,
       eind: berekenEindtijd(start, wk.netto || '7:12', wk.pauze || '1:03'),
@@ -2822,6 +2872,10 @@ function App() {
   const [cfg, setCfg] = useState(() => normCfg(lsGet(LS_CFG, DEFAULT_CFG)));
   const [roosterRegels, setRoosterRegels] = useState(() => normRoosterRegels(lsGet(LS_RR, ROOSTER_REGELS_DEFAULT)));
   const [vijfPloegen, setVijfPloegen] = useState(() => normVijfPloegen(lsGet(LS_5P, { versie: 1, perLijn: {} })));
+  const [seizoenDismiss, setSeizoenDismiss] = useState({});
+  const [nachtBasisStart, setNachtBasisStart] = useState('21:00');
+  const [nachtStap, setNachtStap] = useState(15);
+  const [nachtStartDag, setNachtStartDag] = useState('zo');
   const [sel5pLijn, setSel5pLijn] = useState('');
   const [mrAfd, setMrAfd] = useState(() => lsGet('bl_mrafd_v4', {}));
   const [mgrMails, setMgrMails] = useState(() => lsGet('bl_mgrmails_v4', {}));
@@ -4292,16 +4346,43 @@ function App() {
         });
       });
     });
-    if (!verw) { ping('Geen 5-ploegen-plaatsingen in ' + dept + ' deze week.', 'warn'); return; }
+    if (!verw) { ping('Geen ploegenrooster-plaatsingen in ' + dept + ' deze week.', 'warn'); return; }
     setPlan(n);
     logAction('WIS_5PLOEGEN', { week: wkKey, dept: dept, verwijderd: verw });
-    ping(verw + ' 5-ploegen-plaatsingen gewist in ' + wkKey);
+    ping(verw + ' ploegenrooster-plaatsingen gewist in ' + wkKey);
   };
-  const genereer5p = () => {
+  const genereer5p = (vpOverride) => {
     if (_bewerkGeblokkeerd()) return;
-    var vp = normVijfPloegen(vijfPloegen);
+    var vp = normVijfPloegen((vpOverride && vpOverride.perLijn) ? vpOverride : vijfPloegen);
     var n = Object.assign({}, plan);
-    var geplaatst = 0, overgeslagen = 0, actieveLijnen = 0;
+    var geplaatst = 0, overgeslagen = 0, actieveLijnen = 0, vol = 0;
+    var _deptLijnen = cfg[dept] || [];
+    var _magOp = function (e, L) { return !e.lijnen || e.lijnen.length === 0 || e.lijnen.indexOf(L.lijn) >= 0; };
+    var _plaatsOpDienst = function (e, sh, dy, homeLine, pg) {
+      var kand = [homeLine].concat(_deptLijnen.filter(function (L) { return L.lijn !== homeLine.lijn; }));
+      for (var i = 0; i < kand.length; i++) {
+        var L = kand[i]; var isHome = (i === 0);
+        if (!_magOp(e, L)) continue;                                   // alleen lijnen waar persoon mag
+        var sn = shiftNorm(L, dy.k, dy.iso, sh, isPubMR);
+        var heeftNorm = !!(sn && sn.runs !== false && (+sn.max > 0));
+        if (!isHome && !heeftNorm) continue;                          // overloop alleen naar lijn met MR-bezetting op deze dienst
+        var ck2 = cellK(dept, L.lijn, sh, wkKey, dy.k);
+        var lijst = n[ck2] || [];
+        if (lijst.some(function (a) { return a.empId === e.id; })) return 'al';
+        var bezet = lijst.filter(function (a) { return !a.ziek; }).length;
+        var cap = heeftNorm ? (+sn.max) : Infinity;                   // zonder MR-norm geen cap (oud gedrag) op thuis-lijn
+        if (bezet >= cap) continue;                                   // MR-max bereikt -> volgende lijn
+        var st, ei;
+        if (sh === 'N') {
+          var _lcN = normVijfPloegenLijn(vp.perLijn[dept + '|' + L.lijn]);
+          if (_lcN.nachtBron === 'template' && e.template) { var _wt = getWerktijden(e, dy.k, week, templates); if (_wt && _wt.start) { st = _wt.start; ei = _wt.eind || berekenEindtijd(st, e.netto || '7:12', e.pauze || '1:03'); } } // gate 22: template per medewerker
+          if (!st) { var _nst = (_lcN.nachtStart || {})[dy.k]; st = _nst || lijnStart(L, sh) || '22:00'; ei = berekenEindtijd(st, e.netto || '7:12', e.pauze || '1:03'); } // vaste tijd per lijn
+        } else { st = lijnStart(L, sh) || (sh === 'O' ? '06:00' : '14:00'); ei = berekenEindtijd(st, e.netto || '7:12', e.pauze || '1:03'); }
+        n[ck2] = lijst.concat([{ id: uid(), empId: e.id, type: 'vast', ziek: false, start: st, eind: ei, kostplaats: L.kostplaats || null, bron5p: pg, door: user, ts: new Date().toISOString() }]);
+        return 'ok';
+      }
+      return 'vol';
+    };
     (cfg[dept] || []).forEach(function (line) {
       var key = dept + '|' + line.lijn;
       var lc = normVijfPloegenLijn(vp.perLijn[key]);
@@ -4320,23 +4401,71 @@ function App() {
           var row = (((elapsed + (lc.ploegOffset[pg] || 0)) % lc.cyclusWeken) + lc.cyclusWeken) % lc.cyclusWeken;
           var sh = (lc.matrix[row] || [])[di] || '-';
           if (sh !== 'O' && sh !== 'M' && sh !== 'N') return;
-          var ck = cellK(dept, line.lijn, sh, wkKey, dy.k);
-          var st = lijnStart(line, sh) || (sh === 'O' ? '06:00' : sh === 'M' ? '14:00' : '22:00');
-          var ei = berekenEindtijd(st, '7:30', '0:30');
           (ledenVanPloeg[pg] || []).forEach(function (e) {
             if (e.status === 'Ziek' || isOpVerlof(e.naam, dy.iso) || heleDagVrij(e.naam, dy.iso)) { overgeslagen++; return; }
-            if ((n[ck] || []).some(function (a) { return a.empId === e.id; })) return;
-            n[ck] = (n[ck] || []).concat([{ id: uid(), empId: e.id, type: 'vast', ziek: false, start: st, eind: ei, kostplaats: line.kostplaats || null, bron5p: pg, door: user, ts: new Date().toISOString() }]);
-            geplaatst++;
+            var _r = _plaatsOpDienst(e, sh, dy, line, pg); // MR-max per lijn; vol -> overloop naar andere afdelingslijn (waar persoon mag); anders overslaan
+            if (_r === 'ok') geplaatst++; else if (_r === 'vol') vol++;
           });
         });
       });
     });
-    if (!actieveLijnen) { ping('Geen 5-ploegen-lijn met startweek in ' + dept + '. Stel dit in bij Configuratie \u2192 5-ploegen.', 'warn'); return; }
+    if (!actieveLijnen) { ping('Geen ploegenrooster-lijn met startweek in ' + dept + '. Stel dit in bij Configuratie \u2192 Ploegenrooster.', 'warn'); return; }
     setPlan(n);
     logAction('GENEREER_5PLOEGEN', { week: wkKey, dept: dept, geplaatst: geplaatst });
-    ping('5-ploegen ' + wkKey + ': ' + geplaatst + ' geplaatst' + (overgeslagen ? ', ' + overgeslagen + ' overgeslagen (verlof/ziek)' : ''));
+    ping('Ploegenrooster ' + wkKey + ': ' + geplaatst + ' geplaatst' + (overgeslagen ? ', ' + overgeslagen + ' overgeslagen (verlof/ziek)' : '') + (vol ? ', ' + vol + ' geen plek (MR vol)' : ''));
   };
+  function _nachtLijnenMR() {
+    var vp = normVijfPloegen(vijfPloegen);
+    var out = [];
+    (cfg[dept] || []).forEach(function (line) {
+      var key = dept + '|' + line.lijn;
+      var lc = normVijfPloegenLijn(vp.perLijn[key]);
+      if (!lc.preset) return;
+      var heeftNacht = (days || []).some(function (d) {
+        var sn = shiftNorm(line, d.k, d.iso, 'N', isPubMR);
+        return sn && sn.runs !== false && ((+sn.max > 0) || (+sn.basis > 0));
+      });
+      if (!heeftNacht) return;
+      out.push({ key: key, lijn: line.lijn, lc: lc, alAan: !!(lc.aan && lc.refJaar) });
+    });
+    return out;
+  }
+  function startSeizoenNacht(key, groep) {
+    if (_bewerkGeblokkeerd && _bewerkGeblokkeerd()) return;
+    var vp0 = normVijfPloegen(vijfPloegen);
+    var lc = normVijfPloegenLijn(vp0.perLijn[key]);
+    var ploegen = (lc.ploegen && lc.ploegen.length) ? lc.ploegen : ['A', 'B'];
+    var cyc = lc.cyclusWeken || ploegen.length || 2;
+    var nachtRij = 0; for (var r = 0; r < lc.matrix.length; r++) { if ((lc.matrix[r] || []).indexOf('N') >= 0) { nachtRij = r; break; } }
+    var off = {}; off[groep] = nachtRij;
+    var used = {}; used[nachtRij] = 1; var nxt = (nachtRij + 1) % cyc;
+    ploegen.forEach(function (p) { if (p === groep) return; while (used[nxt]) { nxt = (nxt + 1) % cyc; } off[p] = nxt; used[nxt] = 1; nxt = (nxt + 1) % cyc; });
+    var nvp = normVijfPloegen(vijfPloegen);
+    var c = normVijfPloegenLijn(nvp.perLijn[key]);
+    c.aan = true; c.refJaar = jaar; c.refWeek = week; c.ploegOffset = off;
+    nvp.perLijn[key] = normVijfPloegenLijn(c);
+    nvp = normVijfPloegen(nvp);
+    setVijfPloegen(nvp);
+    genereer5p(nvp);
+    try { logAction('SEIZOEN_NACHT_START', { key: key, groep: groep, week: wkKey }); } catch (e) {}
+  }
+  function seizoenBanner() {
+    var lijnen = _nachtLijnenMR();
+    var tonen = lijnen.filter(function (x) { return !x.alAan && !((seizoenDismiss || {})[dept + '|' + wkKey + '|' + x.key]); });
+    if (!tonen.length) return null;
+    return React.createElement("div", { className: "card", style: { padding: 14, borderLeft: '4px solid #b8860b', background: '#fffdf5' } },
+      React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } },
+        React.createElement(I, { n: "dark_mode" }),
+        React.createElement("span", { style: { fontWeight: 800 } }, "Nachtdienst in SAP MR — ploegenrooster inschakelen?")),
+      tonen.map(function (x) {
+        var pl = (x.lc.ploegen && x.lc.ploegen.length) ? x.lc.ploegen : ['A', 'B'];
+        return React.createElement("div", { key: x.key, style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '4px 0' } },
+          React.createElement("span", { style: { flex: '0 0 auto', fontWeight: 600 } }, x.lijn),
+          React.createElement("span", { className: "hint", style: { margin: 0 } }, "Welke groep start met nacht?"),
+          pl.map(function (pg) { return React.createElement("button", { key: pg, className: "btn gold", style: { padding: '4px 12px' }, onClick: function () { startSeizoenNacht(x.key, pg); } }, "Groep " + pg); }),
+          React.createElement("button", { className: "btn", style: { padding: '4px 10px' }, onClick: function () { setSeizoenDismiss(function (pp) { var nn = Object.assign({}, pp); nn[dept + '|' + wkKey + '|' + x.key] = true; return nn; }); } }, "Niet nu"));
+      }));
+  }
   const editTime = m => {
     setPlan(p => {
       const n = Object.assign({}, p);
@@ -5970,7 +6099,10 @@ const buildMRDoc = function (opts) {
       if (a.ziek) return 0;
       if (a.bron5p && a.start && a.eind) {
         var sp5 = hhmmMin(a.eind) - hhmmMin(a.start); if (sp5 < 0) sp5 += 1440;
-        return betaald ? sp5 : (sp5 - 30);
+        var e5 = a.empId ? employees.find(function (x) { return x.id === a.empId; }) : null;
+        var pz5 = hhmmMin((e5 && e5.pauze) || '1:03'); // per medewerker: eigen pauze i.p.v. hardcoded 30 min
+        var net5 = sp5 - pz5; if (net5 < 0) net5 = 0;
+        return net5 + (betaald && rrB.pauze.betaald ? pz5 : 0);
       }
       var nettoMin = 0, pauzeMin = 0;
       if (a.type === 'vast' && a.empId) {
@@ -6128,7 +6260,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-09-30 · v130 · import BP meerdere lijnen (gate 11)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-05 · v144 · PWA meta + manifest (gate 24)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -6367,7 +6499,7 @@ const buildMRDoc = function (opts) {
       }, m.v), React.createElement("div", {
         className: "kpi-sub"
       }, m.sub));
-    })), bdOpen ? React.createElement("div", { className: "card", style: { padding: 14, overflowX: "auto" } }, React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } }, React.createElement("div", { style: { fontWeight: 800 } }, "Bezetting per lijn & shift \u2014 " + dept), React.createElement("button", { className: "btn", style: { padding: "4px 10px" }, onClick: function () { setBdOpen(false); } }, "Sluiten")), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (deptKpi || []).map(function (d) { return React.createElement("tr", { key: d.dept }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, d.dept), React.createElement("td", { style: { padding: "4px 8px", color: d.underCells > 0 ? "#c15400" : "#9aa0ad", fontWeight: d.underCells > 0 ? 700 : 400 } }, d.underCells > 0 ? (d.underCells + " \u00b7 " + d.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: d.overCells > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: d.overCells > 0 ? 700 : 400 } }, d.overCells > 0 ? (d.overCells + " \u00b7 " + d.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, d.schedH + " / " + d.capH + "u"), React.createElement("td", { style: { padding: "4px 8px" } }, d.hoursPct == null ? "\u2014" : d.hoursPct + "%")); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Detail \u2014 " + dept), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.perAfd || []).map(function (a) { return React.createElement("tr", { key: a.afd, style: { fontWeight: a.afd === dept ? 700 : 400, background: a.afd === dept ? "#f6f7fb" : "transparent" } }, React.createElement("td", { style: { padding: "4px 8px" } }, a.afd), React.createElement("td", { style: { padding: "4px 8px", color: a.o > 0 ? "#c15400" : "#9aa0ad", fontWeight: a.o > 0 ? 700 : 400 } }, a.o > 0 ? (a.underCells + " \u00b7 " + a.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: a.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: a.over > 0 ? 700 : 400 } }, a.over > 0 ? (a.overCells + " \u00b7 " + a.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, a.schedH + " / " + a.capH + "u" + (a.hoursPct == null ? "" : " \u00b7 " + a.hoursPct + "%"))); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Detail \u2014 " + dept), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13 } }, React.createElement("thead", null, React.createElement("tr", null, ["Lijn", "Shift", "Ingepland", "Basis", "Tekort", "Te veel", "Uren", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.bd || []).map(function (r) { var _ek = r.lijn + "|" + r.shift; var _ex = bdExpand[_ek]; var _tog = function () { setBdExpand(function (pp) { var nn = Object.assign({}, pp); nn[_ek] = !nn[_ek]; return nn; }); }; var _main = React.createElement("tr", { key: _ek, onClick: _tog, style: { cursor: "pointer" } }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, (_ex ? "\u25be " : "\u25b8 ") + r.lijn), React.createElement("td", { style: { padding: "4px 8px" } }, r.shiftLabel), React.createElement("td", { style: { padding: "4px 8px" } }, r.ingepland), React.createElement("td", { style: { padding: "4px 8px" } }, r.basis), React.createElement("td", { style: { padding: "4px 8px", color: r.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: r.tekort > 0 ? 700 : 400 } }, r.tekort || "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: r.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: r.over > 0 ? 700 : 400 } }, r.over || "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, r.schedH + "u"), React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600, color: (r.capH > 0 && r.schedH / r.capH < 0.5) ? "#c15400" : "inherit" } }, r.capH > 0 ? Math.round(r.schedH / r.capH * 100) + "%" : "\u2014")); var _kids = [_main]; if (_ex) { var _DL = { ma: "Ma", di: "Di", wo: "Wo", do: "Do", vr: "Vr", za: "Za", zo: "Zo" }; (r.dagen || []).filter(function (d) { return d.basis > 0 || d.ingepland > 0; }).forEach(function (d) { _kids.push(React.createElement("tr", { key: _ek + "|" + d.dag, style: { background: "#f6f7fb", fontSize: 12 } }, React.createElement("td", { style: { padding: "3px 8px 3px 22px", color: "#6b7280" } }, _DL[d.dag] || d.dag), React.createElement("td", { style: { padding: "3px 8px" } }, ""), React.createElement("td", { style: { padding: "3px 8px" } }, d.ingepland), React.createElement("td", { style: { padding: "3px 8px" } }, d.basis), React.createElement("td", { style: { padding: "3px 8px", color: d.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: d.tekort > 0 ? 700 : 400 } }, d.tekort || "\u2014"), React.createElement("td", { style: { padding: "3px 8px", color: d.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: d.over > 0 ? 700 : 400 } }, d.over || "\u2014"), React.createElement("td", { style: { padding: "3px 8px" } }, ""), React.createElement("td", { style: { padding: "3px 8px" } }, ""))); }); } return React.createElement(React.Fragment, { key: _ek }, _kids); }))), React.createElement("div", { className: "hint", style: { marginTop: 8 } }, "Oranje = onder de MR-basis (bv. lege middag). Draait die shift niet? Zet de basis op 0 in Configuratie \u2192 Lijnen & MR, dan telt het niet meer als tekort.")) : null, React.createElement("div", {
+    })), bdOpen ? React.createElement("div", { className: "card", style: { padding: 14, overflowX: "auto" } }, React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } }, React.createElement("div", { style: { fontWeight: 800 } }, "Bezetting per lijn & shift \u2014 " + dept), React.createElement("button", { className: "btn", style: { padding: "4px 10px" }, onClick: function () { setBdOpen(false); } }, "Sluiten")), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (deptKpi || []).map(function (d) { return React.createElement("tr", { key: d.dept }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, d.dept), React.createElement("td", { style: { padding: "4px 8px", color: d.underCells > 0 ? "#c15400" : "#9aa0ad", fontWeight: d.underCells > 0 ? 700 : 400 } }, d.underCells > 0 ? (d.underCells + " \u00b7 " + d.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: d.overCells > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: d.overCells > 0 ? 700 : 400 } }, d.overCells > 0 ? (d.overCells + " \u00b7 " + d.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, d.schedH + " / " + d.capH + "u"), React.createElement("td", { style: { padding: "4px 8px" } }, d.hoursPct == null ? "\u2014" : d.hoursPct + "%")); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px", fontSize: 13 } }, "Detail \u2014 " + dept), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Per afdeling"), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13, marginBottom: 14 } }, React.createElement("thead", null, React.createElement("tr", null, ["Afdeling", "Onderbezet", "Overbezet", "Uren / MR-max"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.perAfd || []).map(function (a) { return React.createElement("tr", { key: a.afd, style: { fontWeight: a.afd === dept ? 700 : 400, background: a.afd === dept ? "#f6f7fb" : "transparent" } }, React.createElement("td", { style: { padding: "4px 8px" } }, a.afd), React.createElement("td", { style: { padding: "4px 8px", color: a.o > 0 ? "#c15400" : "#9aa0ad", fontWeight: a.o > 0 ? 700 : 400 } }, a.o > 0 ? (a.underCells + " \u00b7 " + a.o + " tekort") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: a.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: a.over > 0 ? 700 : 400 } }, a.over > 0 ? (a.overCells + " \u00b7 " + a.over + " te veel") : "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, a.schedH + " / " + a.capH + "u" + (a.hoursPct == null ? "" : " \u00b7 " + a.hoursPct + "%"))); }))), React.createElement("div", { style: { fontWeight: 700, margin: "0 0 6px" } }, "Detail \u2014 " + dept), React.createElement("table", { className: "tbl", style: { width: "100%", fontSize: 13 } }, React.createElement("thead", null, React.createElement("tr", null, ["Lijn", "Shift", "Ingepland", "Basis", "Tekort", "Te veel", "Uren", "Dekking"].map(function (hh) { return React.createElement("th", { key: hh, style: { textAlign: "left", padding: "4px 8px" } }, hh); }))), React.createElement("tbody", null, (kpi.bd || []).map(function (r) { var _ek = r.lijn + "|" + r.shift; var _ex = bdExpand[_ek]; var _tog = function () { setBdExpand(function (pp) { var nn = Object.assign({}, pp); nn[_ek] = !nn[_ek]; return nn; }); }; var _main = React.createElement("tr", { key: _ek, onClick: _tog, style: { cursor: "pointer" } }, React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600 } }, (_ex ? "\u25be " : "\u25b8 ") + r.lijn), React.createElement("td", { style: { padding: "4px 8px" } }, r.shiftLabel), React.createElement("td", { style: { padding: "4px 8px" } }, r.ingepland), React.createElement("td", { style: { padding: "4px 8px" } }, r.basis), React.createElement("td", { style: { padding: "4px 8px", color: r.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: r.tekort > 0 ? 700 : 400 } }, r.tekort || "\u2014"), React.createElement("td", { style: { padding: "4px 8px", color: r.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: r.over > 0 ? 700 : 400 } }, r.over || "\u2014"), React.createElement("td", { style: { padding: "4px 8px" } }, r.schedH + "u"), React.createElement("td", { style: { padding: "4px 8px", fontWeight: 600, color: (r.capH > 0 && r.schedH / r.capH < 0.5) ? "#c15400" : "inherit" } }, r.capH > 0 ? Math.round(r.schedH / r.capH * 100) + "%" : "\u2014")); var _kids = [_main]; if (_ex) { var _DL = { ma: "Ma", di: "Di", wo: "Wo", do: "Do", vr: "Vr", za: "Za", zo: "Zo" }; (r.dagen || []).filter(function (d) { return d.basis > 0 || d.ingepland > 0; }).forEach(function (d) { _kids.push(React.createElement("tr", { key: _ek + "|" + d.dag, style: { background: "#f6f7fb", fontSize: 12 } }, React.createElement("td", { style: { padding: "3px 8px 3px 22px", color: "#6b7280" } }, _DL[d.dag] || d.dag), React.createElement("td", { style: { padding: "3px 8px" } }, ""), React.createElement("td", { style: { padding: "3px 8px" } }, d.ingepland), React.createElement("td", { style: { padding: "3px 8px" } }, d.basis), React.createElement("td", { style: { padding: "3px 8px", color: d.tekort > 0 ? "#c15400" : "#9aa0ad", fontWeight: d.tekort > 0 ? 700 : 400 } }, d.tekort || "\u2014"), React.createElement("td", { style: { padding: "3px 8px", color: d.over > 0 ? "#2b5bd7" : "#9aa0ad", fontWeight: d.over > 0 ? 700 : 400 } }, d.over || "\u2014"), React.createElement("td", { style: { padding: "3px 8px" } }, ""), React.createElement("td", { style: { padding: "3px 8px" } }, ""))); }); } return React.createElement(React.Fragment, { key: _ek }, _kids); }))), React.createElement("div", { className: "hint", style: { marginTop: 8 } }, "Oranje = onder de MR-basis (bv. lege middag). Draait die shift niet? Zet de basis op 0 in Configuratie \u2192 Lijnen & MR, dan telt het niet meer als tekort.")) : null, seizoenBanner(), React.createElement("div", {
       className: "card weekbar"
     }, React.createElement("div", {
       className: "wk"
@@ -6383,7 +6515,7 @@ const buildMRDoc = function (opts) {
       onClick: nextWeek
     }, React.createElement(I, {
       n: "chevron_right"
-    }))), React.createElement("div", { className: "btnrow", style: { alignItems: "center" } }, React.createElement("div", { className: "segrow" }, Object.keys(cfg).filter(heeftMR).map(d => React.createElement("button", { key: d, className: "btn seg " + (dept === d ? "on" : ""), onClick: () => { setDept(d); setSel(null); } }, d))), React.createElement("button", { className: "btn " + (showFilter ? "on" : ""), onClick: () => setShowFilter(!showFilter), title: "Filter lijnen" }, React.createElement(I, { n: "filter_list" }), React.createElement("span", { className: "btxt" }, "Lijnen")), React.createElement("div", { style: { position: "relative" } }, React.createElement("button", { className: "btn " + (actieMenu ? "on" : ""), onClick: function () { setActieMenu(!actieMenu); }, title: "Planningsacties" }, React.createElement(I, { n: "bolt" }), React.createElement("span", { className: "btxt" }, "Acties"), React.createElement(I, { n: "expand_more" })), actieMenu ? React.createElement("div", null, React.createElement("div", { className: "actiemenu-ov", onClick: function () { setActieMenu(false); }, style: { position: "fixed", inset: 0, zIndex: 900 } }), React.createElement("div", { className: "actiemenu", style: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 901, background: "#fff", border: "1px solid #e6e8ee", borderRadius: 10, boxShadow: "0 8px 28px rgba(15,20,40,.22)", width: 220, overflow: "hidden" } }, React.createElement("button", { key: "Vaste bezetting", onClick: function () { setActieMenu(false); vulVasteBezetting(false); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "how_to_reg" }), "Vaste bezetting"), React.createElement("button", { key: "Auto-rooster", onClick: function () { setActieMenu(false); autoRooster(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "bolt" }), "Auto-rooster"), React.createElement("button", { key: "5-ploegen", onClick: function () { setActieMenu(false); genereer5p(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "groups" }), "Genereer 5-ploegen"), React.createElement("button", { key: "wis5p", onClick: function () { setActieMenu(false); wis5p(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", color: "#c62828" } }, React.createElement(I, { n: "backspace" }), "Wis 5-ploegen"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { key: "Kopieer week", onClick: function () { setActieMenu(false); copyWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "content_copy" }), "Kopieer week"), React.createElement("button", { key: "Kopieer maandag", onClick: function () { setActieMenu(false); kopieerMaandag(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "looks_two" }), "Kopieer maandag"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { onClick: function () { setActieMenu(false); clearWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", color: "#c62828" } }, React.createElement(I, { n: "delete_sweep" }), "Week leegmaken"))) : null), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit" }, React.createElement(I, { n: "check_box" }), React.createElement("span", { className: "btxt" }, "Selecteer")), klembord.length ? React.createElement("button", { className: "btn", onClick: () => setKlembord([]), title: "Klembord legen", style: { color: "#2e7d32", borderColor: "#a5d6a7" } }, React.createElement(I, { n: "content_paste" }), klembord.length + " \u2715") : null, React.createElement("div", { className: "hide-mob", style: { flex: "1 1 auto", minWidth: 0 } }), React.createElement("button", { className: "btn hide-mob " + (isPub ? "" : "gold"), onClick: publish, title: isPub ? "Publicatie intrekken" : "Publiceren en vergrendelen" }, React.createElement(I, { n: isPub ? "lock_open" : "publish" }), React.createElement("span", { className: "btxt" }, isPub ? "Ingetrokken" : "Publiceer")), isPub ? React.createElement("button", { className: "btn hide-mob", onClick: printRooster, title: "Afdrukken / PDF" }, React.createElement(I, { n: "print" }), React.createElement("span", { className: "btxt" }, "Afdrukken")) : null)), showFilter ? React.createElement("div", {
+    }))), React.createElement("div", { className: "btnrow", style: { alignItems: "center" } }, React.createElement("div", { className: "segrow" }, Object.keys(cfg).filter(heeftMR).map(d => React.createElement("button", { key: d, className: "btn seg " + (dept === d ? "on" : ""), onClick: () => { setDept(d); setSel(null); } }, d))), React.createElement("button", { className: "btn " + (showFilter ? "on" : ""), onClick: () => setShowFilter(!showFilter), title: "Filter lijnen" }, React.createElement(I, { n: "filter_list" }), React.createElement("span", { className: "btxt" }, "Lijnen")), React.createElement("div", { style: { position: "relative" } }, React.createElement("button", { className: "btn " + (actieMenu ? "on" : ""), onClick: function () { setActieMenu(!actieMenu); }, title: "Planningsacties" }, React.createElement(I, { n: "bolt" }), React.createElement("span", { className: "btxt" }, "Acties"), React.createElement(I, { n: "expand_more" })), actieMenu ? React.createElement("div", null, React.createElement("div", { className: "actiemenu-ov", onClick: function () { setActieMenu(false); }, style: { position: "fixed", inset: 0, zIndex: 900 } }), React.createElement("div", { className: "actiemenu", style: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 901, background: "#fff", border: "1px solid #e6e8ee", borderRadius: 10, boxShadow: "0 8px 28px rgba(15,20,40,.22)", width: 220, overflow: "hidden" } }, React.createElement("button", { key: "Vaste bezetting", onClick: function () { setActieMenu(false); vulVasteBezetting(false); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "how_to_reg" }), "Vaste bezetting"), React.createElement("button", { key: "Auto-rooster", onClick: function () { setActieMenu(false); autoRooster(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "bolt" }), "Auto-rooster"), React.createElement("button", { key: "5-ploegen", onClick: function () { setActieMenu(false); genereer5p(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "groups" }), "Genereer ploegenrooster"), React.createElement("button", { key: "wis5p", onClick: function () { setActieMenu(false); wis5p(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", color: "#c62828" } }, React.createElement(I, { n: "backspace" }), "Wis ploegenrooster"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { key: "Kopieer week", onClick: function () { setActieMenu(false); copyWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "content_copy" }), "Kopieer week"), React.createElement("button", { key: "Kopieer maandag", onClick: function () { setActieMenu(false); kopieerMaandag(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left" } }, React.createElement(I, { n: "looks_two" }), "Kopieer maandag"), React.createElement("div", { style: { height: 1, background: "#eef0f4" } }), React.createElement("button", { onClick: function () { setActieMenu(false); clearWeek(); }, style: { display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 13, textAlign: "left", color: "#c62828" } }, React.createElement(I, { n: "delete_sweep" }), "Week leegmaken"))) : null), React.createElement("button", { className: "btn" + (selMode ? " gold" : ""), onClick: () => setSelMode(v => !v), title: "Tik-selectie aan/uit" }, React.createElement(I, { n: "check_box" }), React.createElement("span", { className: "btxt" }, "Selecteer")), klembord.length ? React.createElement("button", { className: "btn", onClick: () => setKlembord([]), title: "Klembord legen", style: { color: "#2e7d32", borderColor: "#a5d6a7" } }, React.createElement(I, { n: "content_paste" }), klembord.length + " \u2715") : null, React.createElement("div", { className: "hide-mob", style: { flex: "1 1 auto", minWidth: 0 } }), React.createElement("button", { className: "btn hide-mob " + (isPub ? "" : "gold"), onClick: publish, title: isPub ? "Publicatie intrekken" : "Publiceren en vergrendelen" }, React.createElement(I, { n: isPub ? "lock_open" : "publish" }), React.createElement("span", { className: "btxt" }, isPub ? "Ingetrokken" : "Publiceer")), isPub ? React.createElement("button", { className: "btn hide-mob", onClick: printRooster, title: "Afdrukken / PDF" }, React.createElement(I, { n: "print" }), React.createElement("span", { className: "btxt" }, "Afdrukken")) : null)), showFilter ? React.createElement("div", {
       className: "card",
       style: {
         padding: 14
@@ -6640,7 +6772,7 @@ const buildMRDoc = function (opts) {
         overflow: 'hidden',
         textOverflow: 'ellipsis'
       }
-    }, e.naam), React.createElement("div", { className: "rol", style: { display: 'flex', alignItems: 'center', gap: 5 } }, React.createElement("span", { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 } }, e.functie || e.rol), (e.isUitzend && e.bureau && bureauAfk[e.bureau] ? React.createElement("span", { style: { flex: '0 0 auto', fontSize: 10, fontWeight: 700, color: '#8a6d1f', background: '#f6e2b3', borderRadius: 4, padding: '1px 5px' } }, bureauAfk[e.bureau]) : null)), React.createElement("div", {
+    }, e.naam), React.createElement("div", { className: "rol", style: { display: 'flex', alignItems: 'center', gap: 5 } }, React.createElement("span", { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 } }, e.functie || e.rol), (e.isUitzend && e.bureau && bureauAfk[e.bureau] ? React.createElement("span", { style: { flex: '0 0 auto', fontSize: 10, fontWeight: 700, color: '#8a6d1f', background: '#f6e2b3', borderRadius: 4, padding: '1px 5px' } }, bureauAfk[e.bureau]) : null), (function(){var _vp=normVijfPloegen(vijfPloegen);var _gs=[];Object.keys(e.ploeg5p||{}).forEach(function(_k){if(_k.indexOf(dept+'|')!==0)return;var _g=(e.ploeg5p||{})[_k];if(!_g)return;var _lc=normVijfPloegenLijn(_vp.perLijn[_k]);if(!_lc.preset&&!_lc.aan)return;if(_gs.indexOf(_g)<0)_gs.push(_g);});if(!_gs.length)return null;var _kl={A:'#1d4ed8',B:'#059669',C:'#b45309',D:'#7c3aed',E:'#be123c'};return _gs.map(function(_g){return React.createElement("span",{key:'pg'+_g,title:'Ploegenrooster-groep '+_g,style:{flex:'0 0 auto',fontSize:10,fontWeight:800,color:'#fff',background:(_kl[_g]||'#475569'),borderRadius:4,padding:'1px 6px'}},_g);});})()), React.createElement("div", {
       style: {
         display: "flex",
         gap: 2,
@@ -6874,20 +7006,20 @@ const buildMRDoc = function (opts) {
           (cfg[dp] || []).forEach(function (l) {
             var k2 = dp + '|' + l.lijn;
             var lc2 = normVijfPloegenLijn(vpp.perLijn[k2]);
-            if (!lc2.aan) return;
+            if (!lc2.aan && !lc2.preset) return; // toon zodra lijn een ploegenrooster-preset heeft (ook off-seizoen, voor vooraf indelen)
             if ((e.afd || '') !== dp) return;
             if (e.lijnen && e.lijnen.length && e.lijnen.indexOf(l.lijn) < 0) return;
-            opties.push({ key: k2, label: dp + ' / ' + l.lijn, ploegen: lc2.ploegen });
+            opties.push({ key: k2, label: dp + ' / ' + l.lijn, ploegen: lc2.ploegen, aan: lc2.aan, presetNaam: (VIJFPLOEGEN_PRESETS[lc2.preset] || {}).naam || '' });
           });
         });
-        if (!opties.length) return React.createElement("div", { className: "hint" }, "Geen 5-ploegen-lijn voor deze medewerker (zet de lijn op 5-ploegen in Configuratie).");
+        if (!opties.length) return React.createElement("div", { className: "hint" }, "Geen ploegenrooster-lijn voor deze medewerker (kies een preset bij Configuratie \u2192 Ploegenrooster).");
         return React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
-          React.createElement("div", { className: "hint", style: { margin: 0 } }, "5-PLOEGEN \u2014 ploeg per lijn"),
+          React.createElement("div", { className: "hint", style: { margin: 0 } }, "PLOEGENROOSTER \u2014 groep per lijn"),
           opties.map(function (o) {
             return React.createElement("div", { key: o.key, style: { display: 'flex', alignItems: 'center', gap: 8 } },
-              React.createElement("span", { style: { flex: '1 1 auto' } }, o.label),
+              React.createElement("span", { style: { flex: '1 1 auto' } }, o.label, o.presetNaam ? React.createElement("span", { className: "hint", style: { marginLeft: 6 } }, o.presetNaam) : null, o.aan ? null : React.createElement("span", { style: { marginLeft: 6, fontSize: 11, color: '#b45309' } }, "(off-seizoen)")),
               React.createElement("select", { className: "cin", value: (e.ploeg5p || {})[o.key] || '', onChange: function (ev) { set('ploeg5p', Object.assign({}, e.ploeg5p || {}, (function () { var m = {}; m[o.key] = ev.target.value; return m; })())); }, style: { minWidth: 90, width: 'auto' } },
-                [React.createElement("option", { key: '_', value: '' }, '\u2014')].concat(o.ploegen.map(function (pg) { return React.createElement("option", { key: pg, value: pg }, "Ploeg " + pg); }))));
+                [React.createElement("option", { key: '_', value: '' }, '\u2014')].concat(o.ploegen.map(function (pg) { return React.createElement("option", { key: pg, value: pg }, "Groep " + pg); }))));
           }));
       })());
     } else if (tab === 'skills') {
@@ -7367,7 +7499,7 @@ const buildMRDoc = function (opts) {
     var laadPreset = function (pk) {
       var pr = VIJFPLOEGEN_PRESETS[pk];
       if (!pr) return;
-      upd(function (c) { c.preset = pk; c.cyclusWeken = pr.cyclusWeken; c.matrix = pr.matrix.map(function (r) { return r.slice(); }); c.ploegOffset = Object.assign({}, pr.ploegOffset); return c; });
+      upd(function (c) { c.preset = pk; c.cyclusWeken = pr.cyclusWeken; c.matrix = pr.matrix.map(function (r) { return r.slice(); }); c.ploegOffset = Object.assign({}, pr.ploegOffset); if (Array.isArray(pr.ploegen) && pr.ploegen.length) c.ploegen = pr.ploegen.slice(); return c; });
     };
     var seq = ['-', 'O', 'M', 'N'];
     var cycleCel = function (wk, dg) { upd(function (c) { var v = (c.matrix[wk] && c.matrix[wk][dg]) || '-'; c.matrix[wk][dg] = seq[(seq.indexOf(v) + 1) % 4]; return c; }); };
@@ -7376,18 +7508,17 @@ const buildMRDoc = function (opts) {
     return React.createElement("div", { className: "card", style: { padding: 16 } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
         React.createElement("h3", { style: { margin: 0, display: "flex", alignItems: "center", gap: 6, userSelect: "none" } },
-          React.createElement("span", { className: "chev" }, "\u25BE"), "5-ploegen (per lijn)")),
+          React.createElement("span", { className: "chev" }, "\u25BE"), "Ploegenrooster (per lijn)")),
       React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
           React.createElement("span", { style: { flex: "0 0 90px", fontWeight: 600 } }, "Lijn"),
           React.createElement("select", { value: huidig, onChange: function (e) { setSel5pLijn(e.target.value); }, style: { minWidth: 180 } },
             lijnOpties.map(function (o) { return React.createElement("option", { key: o.key, value: o.key }, o.label + (normVijfPloegenLijn(vp.perLijn[o.key]).aan ? ' \u2713' : '')); })),
-          React.createElement("button", { className: "btn" + (lc.aan ? " gold" : ""), onClick: function () { upd(function (c) { c.aan = !c.aan; return c; }); } }, lc.aan ? "5-ploegen AAN" : "5-ploegen uit")),
+          React.createElement("button", { className: "btn" + (lc.aan ? " gold" : ""), onClick: function () { upd(function (c) { c.aan = !c.aan; return c; }); } }, lc.aan ? "Ploegenrooster AAN" : "Ploegenrooster uit")),
         huidig ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, opacity: lc.aan ? 1 : 0.55 } },
           React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
             React.createElement("span", { style: { flex: "0 0 90px", fontWeight: 600 } }, "Preset"),
-            React.createElement("button", { className: "btn", onClick: function () { laadPreset('vb11'); } }, "Laad Vb11"),
-            React.createElement("button", { className: "btn", onClick: function () { laadPreset('vb10'); } }, "Laad Vb10"),
+            Object.keys(VIJFPLOEGEN_PRESETS).map(function (pk) { return React.createElement("button", { key: pk, className: "btn" + (lc.preset === pk ? " gold" : ""), onClick: function () { laadPreset(pk); }, title: VIJFPLOEGEN_PRESETS[pk].naam }, "Laad: " + VIJFPLOEGEN_PRESETS[pk].naam); }),
             React.createElement("span", { style: { marginLeft: 8 } }, "Cyclus (weken)"),
             React.createElement("input", { type: "number", min: 1, max: 20, value: lc.cyclusWeken, onChange: function (e) { var n = Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 1)); upd(function (c) { c.cyclusWeken = n; return c; }); }, style: { width: 60 } })),
           React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
@@ -7403,6 +7534,7 @@ const buildMRDoc = function (opts) {
                 React.createElement("b", null, pg),
                 React.createElement("input", { type: "number", min: 0, max: lc.cyclusWeken - 1, value: lc.ploegOffset[pg] != null ? lc.ploegOffset[pg] : 0, onChange: function (e) { var n = parseInt(e.target.value, 10) || 0; upd(function (c) { c.ploegOffset[pg] = n; return c; }); }, style: { width: 48 } }));
             })),
+          (function(){var pls=lc.ploegen||[];var cyc=lc.cyclusWeken||1;var errs=[];var byOff={};pls.forEach(function(p){var o=(((lc.ploegOffset[p]||0)%cyc)+cyc)%cyc;(byOff[o]=byOff[o]||[]).push(p);});Object.keys(byOff).forEach(function(o){if(byOff[o].length>1)errs.push('Ploeg '+byOff[o].join(' & ')+' hebben dezelfde offset ('+o+'); zij draaien dezelfde dienst en een andere blijft leeg.');});var shN={O:'Ochtend',M:'Avond',N:'Nacht'};for(var w=0;w<cyc;w++){var perSh={};pls.forEach(function(p){var row=(((w+(lc.ploegOffset[p]||0))%cyc)+cyc)%cyc;var sh=(lc.matrix[row]||[])[0]||'-';if(sh!=='-')(perSh[sh]=perSh[sh]||[]).push(p);});Object.keys(perSh).forEach(function(sh){if(perSh[sh].length>1)errs.push('Cyclusweek '+(w+1)+': '+(shN[sh]||sh)+' wordt door meerdere ploegen gedraaid ('+perSh[sh].join(' & ')+').');});}errs=errs.filter(function(v,i){return errs.indexOf(v)===i;});if(errs.length)return React.createElement("div",{style:{background:'#fff1f3',border:'1px solid #f3b4c0',color:'#9f1239',borderRadius:8,padding:'8px 10px',fontSize:12,display:'flex',flexDirection:'column',gap:4}},React.createElement("div",{style:{fontWeight:800}},"⚠ Controle ploegindeling"),errs.map(function(t,i){return React.createElement("div",{key:i},"• "+t);}));return React.createElement("div",{style:{background:'#ecfdf5',border:'1px solid #a7f3d0',color:'#065f46',borderRadius:8,padding:'8px 10px',fontSize:12,fontWeight:700}},"✓ Dekking klopt — elke dienst wordt per week door precies één ploeg gedraaid.");})(),
           React.createElement("div", { className: "hint", style: { margin: "4px 0 0" } }, "ROTATIE (klik cel: \u2013 \u2192 O \u2192 M \u2192 N)"),
           React.createElement("div", { style: { overflowX: "auto" } },
             React.createElement("table", { style: { borderCollapse: "collapse", fontSize: 12 } },
@@ -7415,7 +7547,30 @@ const buildMRDoc = function (opts) {
                       return React.createElement("td", { key: dg, style: { padding: 1 } },
                         React.createElement("button", { onClick: function () { cycleCel(wk, dg); }, style: { width: 34, height: 28, border: "1px solid #d0d3da", borderRadius: 4, background: kleur[v] || "#f3f4f6", cursor: "pointer", fontWeight: 700 } }, v === '-' ? '\u2013' : v));
                     })));
-                }))))
+                })))),
+          React.createElement("div", { style: { marginTop: 10, borderTop: '1px solid #eef0f4', paddingTop: 10 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 } },
+              React.createElement("span", { style: { fontSize: 12, fontWeight: 700 } }, "Nacht-tijden uit"),
+              React.createElement("button", { className: "btn" + (lc.nachtBron === 'template' ? " gold" : ""), onClick: function () { upd(function (c) { c.nachtBron = 'template'; return c; }); } }, "Template (per medewerker)"),
+              React.createElement("button", { className: "btn" + (lc.nachtBron === 'template' ? "" : " gold"), onClick: function () { upd(function (c) { c.nachtBron = 'vast'; return c; }); } }, "Vaste tijd (per lijn)")),
+            lc.nachtBron === 'template'
+              ? React.createElement("div", { className: "hint", style: { margin: 0 } }, "Nacht-start én eind komen uit het rooster-template van elke medewerker (Personeel → Template → Start per dag). Zo kan 40u en 36u een eigen start per dag hebben.")
+              : React.createElement("div", null,
+                  React.createElement("div", { className: "hint", style: { margin: "0 0 6px" } }, "NACHT-START PER DAG (vaste tijd per lijn) — eind = start + eigen netto + pauze per medewerker"),
+                  React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 8 } },
+                    React.createElement("span", { style: { fontSize: 12 } }, "Gestaggerd vanaf"),
+                    React.createElement("select", { className: "cin", value: nachtStartDag, onChange: function (e) { setNachtStartDag(e.target.value); }, style: { width: 'auto' } }, DAG_K.map(function (d, i) { return React.createElement("option", { key: 'v' + d, value: d }, DAG_L[i]); })),
+                    React.createElement("input", { className: "cin", value: nachtBasisStart, onChange: function (e) { setNachtBasisStart(e.target.value); }, placeholder: "21:00", style: { width: 70 } }),
+                    React.createElement("span", { style: { fontSize: 12 } }, "stap"),
+                    React.createElement("input", { type: "number", className: "cin", value: nachtStap, onChange: function (e) { setNachtStap(e.target.value); }, style: { width: 56 } }),
+                    React.createElement("span", { style: { fontSize: 12 } }, "min"),
+                    React.createElement("button", { className: "btn", onClick: function () { var order = ['ma','di','wo','do','vr','za','zo']; var si = order.indexOf(nachtStartDag); if (si < 0) si = 0; var base = hhmmMin(nachtBasisStart || '21:00'); var stap = parseInt(nachtStap, 10) || 0; var ns = {}; for (var i = 0; i < 7; i++) { var d = order[(si + i) % 7]; ns[d] = minHHMM(((base + stap * i) % 1440 + 1440) % 1440); } upd(function (c) { c.nachtStart = ns; return c; }); } }, "Vul in"),
+                    React.createElement("button", { className: "btn", onClick: function () { upd(function (c) { c.nachtStart = {}; return c; }); } }, "Wis")),
+                  React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+                    DAG_K.map(function (d, i) {
+                      return React.createElement("label", { key: 'nd' + d, style: { display: "inline-flex", flexDirection: "column", fontSize: 11, fontWeight: 600, color: "#64748b", gap: 2 } }, DAG_L[i],
+                        React.createElement("input", { className: "cin", value: (lc.nachtStart || {})[d] || '', onChange: function (e) { var v = e.target.value; upd(function (c) { c.nachtStart = Object.assign({}, c.nachtStart || {}); if (v) c.nachtStart[d] = v; else delete c.nachtStart[d]; return c; }); }, placeholder: "–", style: { width: 64 } }));
+                    }))))
         ) : React.createElement("div", { className: "hint" }, "Geen lijnen gevonden.")));
   }
   function configView() {
@@ -8486,7 +8641,7 @@ const buildMRDoc = function (opts) {
       className: "cin",
       readOnly: true,
       value: berekenEindtijd(wk.start, wk.netto, wk.pauze)
-    })), React.createElement("label", { className: "efld" }, "Vorige dag (begon gisteren)", React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6 } }, React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? " gold" : ""), onClick: function () { setWk('vorigeDag', true); } }, "Ja"), React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? "" : " gold"), onClick: function () { setWk('vorigeDag', false); } }, "Nee")))), React.createElement("div", {
+    })), React.createElement("label", { className: "efld" }, "Vorige dag (begon gisteren)", React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6 } }, React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? " gold" : ""), onClick: function () { setWk('vorigeDag', true); } }, "Ja"), React.createElement("button", { type: "button", className: "btn" + ((wk.vorigeDag === true) ? "" : " gold"), onClick: function () { setWk('vorigeDag', false); } }, "Nee")))), React.createElement("div", { style: { marginTop: 8 } }, React.createElement("div", { className: "hint", style: { margin: '0 0 4px' } }, "START PER DAG (optioneel — leeg = weekstart hierboven)"), React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6 } }, React.createElement("span", { style: { fontSize: 12 } }, "Gestaggerd vanaf"), React.createElement("select", { className: "cin", value: nachtStartDag, onChange: function (e) { setNachtStartDag(e.target.value); }, style: { width: 'auto' } }, DAG_K.map(function (d, i) { return React.createElement("option", { key: 'o' + d, value: d }, DAG_L[i]); })), React.createElement("input", { className: "cin", value: nachtBasisStart, onChange: function (e) { setNachtBasisStart(e.target.value); }, placeholder: wk.start, style: { width: 68 } }), React.createElement("span", { style: { fontSize: 12 } }, "stap"), React.createElement("input", { type: "number", className: "cin", value: nachtStap, onChange: function (e) { setNachtStap(e.target.value); }, style: { width: 54 } }), React.createElement("span", { style: { fontSize: 12 } }, "min"), React.createElement("button", { type: "button", className: "btn", onClick: function () { var order = ['ma','di','wo','do','vr','za','zo']; var si = order.indexOf(nachtStartDag); if (si < 0) si = 0; var base = hhmmMin(nachtBasisStart || wk.start || '21:00'); var stap = parseInt(nachtStap, 10) || 0; var ds = {}; for (var i = 0; i < 7; i++) { var d = order[(si + i) % 7]; ds[d] = minHHMM(((base + stap * i) % 1440 + 1440) % 1440); } setWk('dagStart', ds); } }, "Vul in"), React.createElement("button", { type: "button", className: "btn", onClick: function () { setWk('dagStart', {}); } }, "Wis")), React.createElement("div", { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } }, DAG_K.map(function (d, i) { return React.createElement("label", { key: 'ds' + d, style: { display: 'inline-flex', flexDirection: 'column', fontSize: 11, fontWeight: 600, color: '#64748b', gap: 2 } }, DAG_L[i], React.createElement("input", { className: "cin", value: (wk.dagStart || {})[d] || '', placeholder: wk.start, onChange: function (e) { var v = e.target.value; var ds = Object.assign({}, (wk.dagStart || {})); if (v) ds[d] = v; else delete ds[d]; setWk('dagStart', ds); }, style: { width: 62 } })); }))), React.createElement("div", {
       style: {
         marginTop: 8
       }
