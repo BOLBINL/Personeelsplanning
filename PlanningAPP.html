@@ -4383,7 +4383,7 @@ function App() {
         var st, ei;
         if (sh === 'N') {
           var _lcN = normVijfPloegenLijn(vp.perLijn[dept + '|' + L.lijn]);
-          if (_lcN.nachtBron === 'template' && e.template) { var _wt = getWerktijden(e, dy.k, week, templates); if (_wt && _wt.start) { st = _wt.start; ei = _wt.eind || berekenEindtijd(st, e.netto || '7:12', e.pauze || '1:03'); } } // gate 22: template per medewerker
+          var _ntpl = e.nachtTemplate || e.template; if (_lcN.nachtBron === 'template' && _ntpl) { var _wt = getWerktijden(Object.assign({}, e, { template: _ntpl }), dy.k, week, templates); if (_wt && _wt.start) { st = _wt.start; ei = _wt.eind || berekenEindtijd(st, e.netto || '7:12', e.pauze || '1:03'); } } // gate 26: nacht-template (valt terug op dag-template)
           if (!st) { var _nst = (_lcN.nachtStart || {})[dy.k]; st = _nst || lijnStart(L, sh) || '22:00'; ei = berekenEindtijd(st, e.netto || '7:12', e.pauze || '1:03'); } // vaste tijd per lijn
         } else { st = lijnStart(L, sh) || (sh === 'O' ? '06:00' : '14:00'); ei = berekenEindtijd(st, e.netto || '7:12', e.pauze || '1:03'); }
         n[ck2] = lijst.concat([{ id: uid(), empId: e.id, type: 'vast', ziek: false, start: st, eind: ei, kostplaats: L.kostplaats || null, bron5p: pg, door: user, ts: new Date().toISOString() }]);
@@ -6268,7 +6268,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-06 · v146 · dag-toggle < 768px (gate 25)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-06 · v147 · nacht-template per medewerker (gate 26)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -6943,7 +6943,7 @@ const buildMRDoc = function (opts) {
       }, '\u2014 Geen \u2014')].concat(templates.map(t => React.createElement("option", {
         key: t.naam,
         value: t.naam
-      }, t.naam + ' (' + t.weken.length + '-wk)'))))), function () {
+      }, t.naam + ' (' + t.weken.length + '-wk)'))))), React.createElement("label", { className: "efld", style: { gridColumn: '1/-1' } }, "🌙 Nacht-template (ploegenrooster)", React.createElement("select", { className: "cin", value: e.nachtTemplate || '', onChange: function (ev) { set('nachtTemplate', ev.target.value); } }, [React.createElement("option", { key: '_n', value: '' }, '— Geen (gebruikt dag-template) —')].concat(templates.map(function (t) { return React.createElement("option", { key: 'n' + t.naam, value: t.naam }, t.naam + ' (' + t.weken.length + '-wk)'); })))), function () {
         var t = templates.find(x => x.naam === e.template);
         if (!t || t.weken.length < 2) return null;
         return React.createElement("label", {
