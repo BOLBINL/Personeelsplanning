@@ -4759,7 +4759,7 @@ const buildMRDoc = function (opts) {
     var shNaam = function (sid) { var z = SHIFTS.find(function (x) { return x.id === sid; }); return z ? z.naam : sid; };
     var pgNaam = function (pid) { var g = (typeof productgroepen !== 'undefined' ? productgroepen : []).find(function (pp) { return pp.id === pid; }); return g ? g.naam : pid; };
     var pgMrVoor = function (pid, _afd, _lijn) { var g = (typeof productgroepen !== 'undefined' ? productgroepen : []).find(function (pp) { return pp.id === pid; }); var lr = g && (g.lijnen || []).find(function (x) { return x.afd === _afd && x.lijn === _lijn; }); return (lr && lr.mr !== '' && lr.mr != null) ? +lr.mr : null; };
-    var mrShiften = function (L, d) { var eff = []; try { eff = dagShiften(L, d.k, d.iso) || []; } catch (e) {} var wd = (L.dagNorm || {})[d.k]; var wdSh = (wd && Array.isArray(wd.shiften)) ? wd.shiften : []; var out = eff.map(function (sh) { if (Array.isArray(sh.pgs)) return sh; var base = null; for (var bi = 0; bi < wdSh.length; bi++) { if (wdSh[bi].id === sh.id) { base = wdSh[bi]; break; } } return (base && Array.isArray(base.pgs) && base.pgs.length) ? base : sh; }); var have = {}; out.forEach(function (sh) { have[sh.id] = 1; }); wdSh.forEach(function (bs) { if (!have[bs.id] && Array.isArray(bs.pgs) && bs.pgs.length) { out.push(bs); have[bs.id] = 1; } }); return out; };
+    var mrShiften = function (L, d) { var _pgExists = function (pid) { return !!(typeof productgroepen !== 'undefined' ? productgroepen : []).find(function (pp) { return pp.id === pid; }); }; var eff = []; try { eff = dagShiften(L, d.k, d.iso) || []; } catch (e) {} var wd = (L.dagNorm || {})[d.k]; var wdSh = (wd && Array.isArray(wd.shiften)) ? wd.shiften : []; var out = eff.map(function (sh) { if (Array.isArray(sh.pgs)) return sh; var base = null; for (var bi = 0; bi < wdSh.length; bi++) { if (wdSh[bi].id === sh.id) { base = wdSh[bi]; break; } } return (base && Array.isArray(base.pgs) && base.pgs.length) ? base : sh; }); var have = {}; out.forEach(function (sh) { have[sh.id] = 1; }); wdSh.forEach(function (bs) { if (!have[bs.id] && Array.isArray(bs.pgs) && bs.pgs.length) { out.push(bs); have[bs.id] = 1; } }); return out.map(function (sh) { if (!Array.isArray(sh.pgs)) return sh; var _f = sh.pgs.filter(_pgExists); if (_f.length === sh.pgs.length) return sh; var _c = Object.assign({}, sh); _c.pgs = _f; return _c; }); };
     var pgNaamKort = function (pid) { var g = (typeof productgroepen !== 'undefined' ? productgroepen : []).find(function (pp) { return pp.id === pid; }); var nm = pgNaam(pid); var cds = g ? (Array.isArray(g.mrCodes) ? g.mrCodes.join('/') : (g.mrCode || '')) : ''; if (cds) { nm = nm.split(' \u00b7 ' + cds).join('').replace(/\s+$/, ''); } return nm; };
     var _mockPool = [['70673 BP ALM_RND', 5, '0.5'], ['70647 BP APP_RND 42,5g', 5, '2'], ['74414 BP TRT STRAW (00011)', 5, '5'], ['74463 BP FB BUT ALM MI', 7, '3'], ['71369 BP AH Gevulde Koek 30gr', 7, ''], ['74362 BP RND BUT (00039)', 9, '4'], ['74366 BP FNG ALM (00001)', 8, '8']];
     var prowsVoor = function (sh, lijn) { var pgs = (sh && sh.pgs) || []; var meta = (sh && sh.pgMeta) || {}; return pgs.map(function (pid) { var pm = pgMrVoor(pid, dept, lijn); var nm = pgNaamKort(pid); var mi = meta[pid] || {}; var hasU = (mi.uren !== '' && mi.uren != null); var box = hasU ? '<span class="puren">' + esc(String(mi.uren)) + ' u</span>' : ''; return '<div class="prow"><span class="pname">' + esc(nm) + (pm != null ? ' <span class="pgmr">(' + pm + ')</span>' : '') + '</span>' + box + '</div>'; }).join(''); };
@@ -6273,7 +6273,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-06 · v150 · beschikbaar als bottom-sheet (gate 29)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-07 · v152 · wees-productgroepen niet meer in print (gate 31)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -6459,6 +6459,30 @@ const buildMRDoc = function (opts) {
     var _dagIdx = Math.max(0, Math.min(dagIdx, days.length - 1));
     var renderDays = isPhone ? [days[_dagIdx]] : days;
     var growStyle = isPhone ? { gridTemplateColumns: '92px minmax(0,1fr)' } : undefined;
+    function vulAssistent(){
+      if(!isPhone) return null;
+      var dagK=(days[_dagIdx]||days[0]||{}).k;
+      var tek=[];
+      (lines||[]).forEach(function(L){ SHIFTS.forEach(function(sh){ var c=info(L,sh.id,dagK); if(c&&(+c.req>0)&&(+c.tekort>0)) tek.push({key:c.key,lijn:L.lijn,shiftNaam:sh.naam,tekort:c.tekort}); }); });
+      var selInfo=null;
+      if(sel){ var p=sel.split('|'); var L2=(cfg[dept]||[]).find(function(x){return x.lijn===p[1];}); if(L2){ var c2=info(L2,p[2],p[4]); if(c2){ var shN=(SHIFTS.find(function(z){return z.id===p[2];})||{}).naam||p[2]; var dl=(days.find(function(d){return d.k===p[4];})||{}).lbl||p[4]; selInfo={lijn:p[1],shiftNaam:shN,dag:dl,actief:+c2.actief||0,req:+c2.req||0,tekort:+c2.tekort||0,key:c2.key}; } } }
+      var kids=[];
+      if(selInfo){
+        var pct=selInfo.req>0?Math.min(100,Math.round(selInfo.actief/selInfo.req*100)):0;
+        var done=selInfo.tekort<=0;
+        kids.push(React.createElement("div",{key:'t',style:{fontWeight:800,fontSize:14}},selInfo.lijn+" · "+selInfo.shiftNaam+" · "+selInfo.dag));
+        kids.push(React.createElement("div",{key:'p',style:{display:'flex',alignItems:'center',gap:8,marginTop:4}},React.createElement("div",{style:{flex:1,height:8,background:'#e2e8f0',borderRadius:6,overflow:'hidden'}},React.createElement("div",{style:{width:pct+'%',height:'100%',background:done?'#059669':'#b8860b'}})),React.createElement("span",{style:{fontSize:13,fontWeight:700,color:done?'#059669':'#b45309'}},selInfo.actief+"/"+selInfo.req)));
+        kids.push(React.createElement("div",{key:'s',style:{fontSize:12,fontWeight:700,marginTop:3,color:done?'#059669':'#b45309'}},done?"✓ norm gehaald — kies iemand om extra toe te voegen":("nog "+selInfo.tekort+" nodig — kies hieronder iemand")));
+        var nxt=tek.filter(function(t){return t.key!==sel;})[0];
+        if(nxt) kids.push(React.createElement("button",{key:'n',className:"btn gold",style:{marginTop:8,width:'100%',justifyContent:'center'},onClick:function(){ setSel(nxt.key); }},"Volgende tekort → "+nxt.lijn+" · "+nxt.shiftNaam));
+        else if(done) kids.push(React.createElement("div",{key:'g',style:{fontSize:12,color:'#059669',marginTop:6,fontWeight:700}},"Alle diensten op norm vandaag ✓"));
+      } else {
+        kids.push(React.createElement("div",{key:'h',style:{fontWeight:800,fontSize:14}},"Kies een cel om te vullen"));
+        if(tek.length){ kids.push(React.createElement("div",{key:'l',style:{fontSize:12,color:'#64748b',margin:'2px 0 6px'}},"Tekorten vandaag:")); kids.push(React.createElement("div",{key:'c',style:{display:'flex',flexWrap:'wrap',gap:6}},tek.map(function(t){ return React.createElement("button",{key:t.key,className:"btn",style:{padding:'6px 10px',fontSize:13,borderColor:'#fecdd3',background:'#fff1f3',color:'#9f1239',fontWeight:700},onClick:function(){ setSel(t.key); }},t.lijn+" · "+t.shiftNaam+" −"+t.tekort); }))); }
+        else kids.push(React.createElement("div",{key:'ok',style:{fontSize:13,color:'#059669',fontWeight:700,marginTop:4}},"Geen tekorten vandaag ✓"));
+      }
+      return React.createElement("div",{className:"vulassist",style:{background:'#f7f8fc',border:'1px solid #e6e8ee',borderRadius:10,padding:'10px 12px',marginBottom:10}},kids);
+    }
     return React.createElement("div", {
       className: "stack"
     }, React.createElement("div", {
@@ -6760,7 +6784,7 @@ const buildMRDoc = function (opts) {
       value: zoek,
       onChange: e => setZoek(e.target.value),
       placeholder: "Zoek naam of vaardigheid…"
-    })), React.createElement("label", { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5b6070', margin: '6px 0 2px', cursor: 'pointer' } }, React.createElement("input", { type: "checkbox", checked: beschAlleenAfd, onChange: e => setBeschAlleenAfd(e.target.checked) }), "Alleen " + dept), React.createElement("div", {
+    })), React.createElement("label", { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5b6070', margin: '6px 0 2px', cursor: 'pointer' } }, React.createElement("input", { type: "checkbox", checked: beschAlleenAfd, onChange: e => setBeschAlleenAfd(e.target.checked) }), "Alleen " + dept), vulAssistent(), React.createElement("div", {
       className: "hint"
     }, sel ? 'Gekozen: ' + sel.split('|')[1] + ' · ' + (sel.split('|')[2] === 'O' ? 'Ochtend' : 'Middag') + ' — klik iemand' : 'Kies eerst een cel in het rooster'), sel ? React.createElement("div", { style: { margin: '4px 0 10px', padding: '8px', background: '#fff8ec', border: '1px solid #f0d9a8', borderRadius: 8 } }, tempFor === sel ? React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' } }, React.createElement("span", { style: { fontSize: 11, color: '#8a6d1f', width: '100%', marginBottom: 4 } }, "Kies bureau:"), agencies.map(function (ag) { return React.createElement("button", { key: ag, className: "btn", style: { padding: '3px 8px', fontSize: 12 }, onClick: () => askUitzend(sel, ag) }, ag); }), React.createElement("button", { className: "btn", style: { padding: '3px 8px', fontSize: 12 }, onClick: () => setTempFor(null) }, "\u2715")) : React.createElement("button", { className: "btn gold", style: { width: '100%', justifyContent: 'center' }, onClick: () => setTempFor(sel) }, React.createElement(I, { n: "add" }), "Extra uitzendkracht aanvragen")) : null), staff.map(e => React.createElement("div", {
       key: e.id,
