@@ -2493,7 +2493,7 @@ function pickN(a, b, c) {
 function resolveNorm(line, dagKey, iso, wkPub) {
   var g = { basis: +line.basis || 0, max: +line.max || 0, ploegen: +(line.ploegen || line.shiften || 2) };
   var wdRaw = (line.dagNorm || {})[dagKey];
-  var dtRaw = (iso && wkPub !== false) ? (line.datumNorm || {})[iso] : undefined;
+  var dtRaw = iso ? (line.datumNorm || {})[iso] : undefined;
   var hasW = !!wdRaw;
   var hasD = !!dtRaw;
   if (!hasW && !hasD) {
@@ -2512,7 +2512,7 @@ function resolveNorm(line, dagKey, iso, wkPub) {
 function dagShiften(line, dagKey, iso, wkPub) {
   var rn = resolveNorm(line, dagKey, iso, wkPub);
   if (!rn.runs) return [];
-  var dt = (iso && wkPub !== false) ? (line.datumNorm || {})[iso] : null;
+  var dt = iso ? (line.datumNorm || {})[iso] : null;
   var wd = (line.dagNorm || {})[dagKey];
   if (dt && Array.isArray(dt.shiften)) return dt.shiften;
   if (wd && Array.isArray(wd.shiften)) return wd.shiften;
@@ -2531,7 +2531,7 @@ function lijnStart(line, shiftId) {
 }
 function shiftNorm(line, dagKey, iso, shiftId, wkPub) {
   var rn = resolveNorm(line, dagKey, iso, wkPub);
-  var dt = (iso && wkPub !== false) ? (line.datumNorm || {})[iso] : null;
+  var dt = iso ? (line.datumNorm || {})[iso] : null;
   var wd = (line.dagNorm || {})[dagKey];
   var dtArr = (dt && Array.isArray(dt.shiften)) ? dt.shiften : null;
   var wdArr = (wd && Array.isArray(wd.shiften)) ? wd.shiften : null;
@@ -5809,7 +5809,7 @@ const buildMRDoc = function (opts) {
     return n;
   }); }
   const mrWeekHeeftAfw = () => (cfg[dept] || []).some(function (l) { return days.some(function (d) { return d.iso && l.datumNorm && l.datumNorm[d.iso]; }); });
-  const mrEnterWeek = () => { setMrScopeAsk(true); };
+  const mrEnterWeek = () => { if (mrWeekHeeftAfw()) { mrWeekBehoud(); } else { setMrScopeAsk(true); } };
   const mrWeekBehoud = () => { setMrWeekMode(true); setMrScopeAsk(false); };
   const mrWeekVanStandaard = () => {
     var _d0 = dept;
@@ -6376,7 +6376,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-13 · v158 · MR-chip bewerken: uren + productgroep in popup (gate 36)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-14 · v159 · week-afwijking: direct terugzien + planning volgt de week (gate 37)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
