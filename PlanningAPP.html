@@ -4004,7 +4004,7 @@ function App() {
         if (redenen.indexOf(a.overReason) < 0) redenen.push(a.overReason);
         const nm = a.empId
           ? ((employees.find(function (e) { return e.id === a.empId; }) || {}).naam || String(a.empId))
-          : ('Uitzendkracht' + (a.bureau ? ' (' + a.bureau + ')' : ''));
+          : ((a.naam ? a.naam : 'Uitzendkracht') + (a.bureau ? ' (' + a.bureau + ')' : ''));
         wie.push(nm);
       });
       const dObj = days.find(function (x) { return x.k === pt[4]; });
@@ -5671,10 +5671,10 @@ const buildMRDoc = function (opts) {
       (plan[k] || []).forEach(function (a) {
         var _et = afgeleideTijd(a, k);
         if (a.type === 'uitzend' && (a.bureau || 'Onbekend') === bureau) {
-          rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: 'EXTRA', start: _et.start || a.start, eind: _et.eind || a.eind, netto: (uitzendCfg(a.bureau) || {}).netto || '7:12', vorigeDag: a.vorigeDag === true });
+          rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: 'EXTRA', start: _et.start || a.start, eind: _et.eind || a.eind, netto: (uitzendCfg(a.bureau) || {}).netto || '7:12', vorigeDag: a.vorigeDag === true, shift: pt[2], k: k, did: a.id });
         } else if (a.type === 'vast' && a.empId) {
           var e = employees.find(function (x) { return x.id === a.empId; });
-          if (e && e.isUitzend && (e.bureau || 'Onbekend') === bureau) rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: e.naam, start: _et.start || a.start, eind: _et.eind || a.eind, netto: e.netto || '7:12', vorigeDag: a.vorigeDag === true });
+          if (e && e.isUitzend && (e.bureau || 'Onbekend') === bureau) rows.push({ dag: pt[4], lijn: pt[1], dept: pt[0], naam: e.naam, start: _et.start || a.start, eind: _et.eind || a.eind, netto: e.netto || '7:12', vorigeDag: a.vorigeDag === true, shift: pt[2], k: k, did: a.id });
         }
       });
     });
@@ -5695,7 +5695,7 @@ const buildMRDoc = function (opts) {
     order.sort(function (a, b) { return groups[a].dt - groups[b].dt; });
     var HEAD = ['ID', 'Start-End', 'Hours', 'Line / Position', 'Full name', 'Requested change', 'Reason'];
     var aoa = [['Request ' + bureau + ' — Week ' + week + ' ' + jaar], ['', 'DELIVERED BY BL — please do not change', '', '', 'TO BE FILLED BY AGENCY', '', ''], HEAD.slice()];
-    var baseAoa = [['ID', 'Day', 'Date', 'Start-End', 'Hours', 'Line / Position']];
+    var baseAoa = [['ID', 'Day', 'Date', 'Start-End', 'Hours', 'Line / Position', 'Dept', 'Shift', 'PlanDay', 'PrevDay', 'Bureau']];
     var bandRows = [], dataRows = [], idn = 0;
     order.forEach(function (key) {
       var g = groups[key];
@@ -5705,7 +5705,7 @@ const buildMRDoc = function (opts) {
         var tijd = (r.start || '?') + ' - ' + (r.eind || '?');
         var nm = (r.naam && r.naam !== 'EXTRA') ? r.naam : '';
         dataRows.push(aoa.length); aoa.push([id, tijd, r.netto || '7:12', r.lijn, nm, '', '']);
-        baseAoa.push([id, DAY_EN[g.dt.getUTCDay()], fmtD(g.dt), tijd, r.netto || '7:12', r.lijn]);
+        baseAoa.push([id, DAY_EN[g.dt.getUTCDay()], fmtD(g.dt), tijd, r.netto || '7:12', r.lijn, r.dept || '', r.shift || '', r.dag || '', (r.vorigeDag ? '1' : ''), bureau]);
       });
       aoa.push([]);
     });
@@ -5915,12 +5915,23 @@ const buildMRDoc = function (opts) {
     if (!mainName) return null;
     var main = XU.sheet_to_json(wb.Sheets[mainName], { header: 1, raw: false, defval: '' });
     var base = XU.sheet_to_json(wb.Sheets['_baseline'], { header: 1, raw: false, defval: '' });
-    var baseById = {}; for (var b = 1; b < base.length; b++) { var br = base[b] || []; if (br[0]) baseById[String(br[0]).trim()] = { dag: br[1] || '', datum: br[2] || '', tijd: String(br[3] || '').trim(), uren: String(br[4] || '').trim(), lijn: String(br[5] || '').trim() }; }
+    var bHdr = (base[0] || []).map(function (x) { return String(x || '').trim(); });
+    var ci = { dept: bHdr.indexOf('Dept'), shift: bHdr.indexOf('Shift'), planDay: bHdr.indexOf('PlanDay'), prevDay: bHdr.indexOf('PrevDay'), bureau: bHdr.indexOf('Bureau') };
+    var baseById = {};
+    for (var b = 1; b < base.length; b++) { var br = base[b] || []; if (!br[0]) continue; var rec = { dag: br[1] || '', datum: br[2] || '', tijd: String(br[3] || '').trim(), uren: String(br[4] || '').trim(), lijn: String(br[5] || '').trim() }; if (ci.dept >= 0) rec.dept = String(br[ci.dept] || '').trim(); if (ci.shift >= 0) rec.shift = String(br[ci.shift] || '').trim(); if (ci.planDay >= 0) rec.planDay = String(br[ci.planDay] || '').trim(); if (ci.prevDay >= 0) rec.prevDay = String(br[ci.prevDay] || '').trim() === '1'; if (ci.bureau >= 0) rec.bureau = String(br[ci.bureau] || '').trim(); baseById[String(br[0]).trim()] = rec; }
     var hdr = -1; for (var h = 0; h < main.length; h++) { if (String(((main[h] || [])[0]) || '').trim() === 'ID') { hdr = h; break; } }
     var cur = {};
     if (hdr >= 0) { for (var r = hdr + 1; r < main.length; r++) { var mr = main[r] || []; var id = String(mr[0] || '').trim(); if (!/^r\d+$/.test(id)) continue; cur[id] = { tijd: String(mr[1] || '').trim(), uren: String(mr[2] || '').trim(), lijn: String(mr[3] || '').trim(), naam: String(mr[4] || '').trim(), wijziging: String(mr[5] || '').trim(), reden: String(mr[6] || '').trim() }; } }
+    var titel = String((main[0] || [])[0] || '');
+    var tm = titel.match(/(?:Request|Aanvraag)\s+(.+?)\s+[—-]\s+Week\s+(\d+)\s+(\d{4})/i);
+    var bureau = tm ? tm[1].trim() : '';
+    var week = tm ? parseInt(tm[2], 10) : null;
+    var jaar = tm ? parseInt(tm[3], 10) : null;
+    var wkKey = (jaar != null && week != null) ? (jaar + 'W' + week) : null;
+    var DAYMAP = { Sunday: 'zo', Monday: 'ma', Tuesday: 'di', Wednesday: 'wo', Thursday: 'do', Friday: 'vr', Saturday: 'za', Zondag: 'zo', Maandag: 'ma', Dinsdag: 'di', Woensdag: 'wo', Donderdag: 'do', Vrijdag: 'vr', Zaterdag: 'za' };
+    var afdVanLijn = function (lj) { return Object.keys(cfg || {}).filter(function (dep) { return (cfg[dep] || []).some(function (L) { return L.lijn === lj; }); }); };
     var VELD = { tijd: 'Start-End', uren: 'Hours', lijn: 'Line / Position' };
-    var items = [];
+    var items = [], apply = [], unresolved = 0;
     Object.keys(baseById).forEach(function (id) {
       var bz = baseById[id], a = cur[id];
       var ctx = (bz.dag ? bz.dag + ' ' : '') + bz.datum + (bz.lijn ? ' · ' + bz.lijn : '');
@@ -5928,8 +5939,32 @@ const buildMRDoc = function (opts) {
       ['tijd', 'uren', 'lijn'].forEach(function (fld) { if (String(a[fld]) !== String(bz[fld])) items.push({ type: 'cel', id: id, ctx: ctx, veld: VELD[fld], van: bz[fld], naar: a[fld] }); });
       if (a.wijziging) items.push({ type: 'verzoek', id: id, ctx: ctx, van: bz.tijd, naar: a.wijziging, reden: a.reden });
       if (a.naam) items.push({ type: 'naam', id: id, ctx: ctx, naam: a.naam });
+      var finalName = (a.wijziging || a.naam || '').trim();
+      if (!finalName) return;
+      var lijn = bz.lijn;
+      var dept = bz.dept || afdVanLijn(lijn)[0] || null;
+      var dag = bz.planDay || DAYMAP[bz.dag] || null;
+      var sp = String(bz.tijd || '').split(/\s*[-–]\s*/);
+      var st = (sp[0] || '').trim(); var ei = (sp[1] || '').trim();
+      var shift = bz.shift || (function () { var uu = parseInt((st.match(/^(\d{1,2})/) || [])[1], 10); return (isFinite(uu) && uu < 12) ? 'O' : 'M'; })();
+      if (dept && lijn && dag) { apply.push({ id: id, dept: dept, lijn: lijn, shift: shift, dag: dag, start: st, eind: ei, vorigeDag: bz.prevDay === true, naam: finalName, ctx: ctx }); }
+      else unresolved++;
     });
-    return { items: items, titel: String((main[0] || [])[0] || ''), fileName: fileName || '', nCel: items.filter(function (x) { return x.type === 'cel'; }).length, nWeg: items.filter(function (x) { return x.type === 'weg'; }).length, nVerzoek: items.filter(function (x) { return x.type === 'verzoek'; }).length, nNaam: items.filter(function (x) { return x.type === 'naam'; }).length };
+    return { items: items, titel: titel, fileName: fileName || '', bureau: bureau, week: week, jaar: jaar, wkKey: wkKey, apply: apply, unresolved: unresolved, nCel: items.filter(function (x) { return x.type === 'cel'; }).length, nWeg: items.filter(function (x) { return x.type === 'weg'; }).length, nVerzoek: items.filter(function (x) { return x.type === 'verzoek'; }).length, nNaam: items.filter(function (x) { return x.type === 'naam'; }).length };
+  };
+  const commitUzDiff = function () {
+    var d = uzDiff;
+    if (!d || !d.wkKey || !(d.apply && d.apply.length)) { setUzDiff(null); return; }
+    var bureau = d.bureau, wk = d.wkKey;
+    setPlan(function (prev) {
+      var n = {};
+      Object.keys(prev).forEach(function (k) { var pt = k.split('|'); if (pt[3] === wk) { n[k] = (prev[k] || []).filter(function (a) { return !(a.type === 'uitzend' && (a.bureau || '') === bureau); }); } else { n[k] = prev[k]; } });
+      d.apply.forEach(function (t) { var key = [t.dept, t.lijn, t.shift, wk, t.dag].join('|'); var arr = n[key] ? n[key].slice() : []; arr.push({ id: uid(), empId: null, type: 'uitzend', bureau: bureau, functie: (uitzendCfg(bureau) || {}).functie || null, naam: t.naam, start: t.start || null, eind: t.eind || null, ziek: false, vorigeDag: t.vorigeDag === true, door: user, ts: new Date().toISOString(), hersteld: true }); n[key] = arr; });
+      return n;
+    });
+    try { logAction('UZ_TERUGGAVE_VERWERKT', { bureau: bureau, week: d.week, geplaatst: d.apply.length, unresolved: d.unresolved }); } catch (e) {}
+    ping(d.apply.length + ' uitzendkracht(en) in week ' + d.week + ' geplaatst' + (d.unresolved ? ' — ' + d.unresolved + ' niet te koppelen' : ''), 'ok');
+    setUzDiff(null);
   };
   const uzDiffModal = () => React.createElement("div", { onClick: () => setUzDiff(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1320, padding: 16 } },
     React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 620, maxWidth: '96vw', maxHeight: '88vh', overflowY: 'auto' } },
@@ -5950,7 +5985,7 @@ const buildMRDoc = function (opts) {
           React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 2 } }, it.ctx), body,
           (it.reden ? React.createElement("div", { style: { fontSize: 13, color: '#5b6070', fontStyle: 'italic', marginTop: 4 } }, "“" + it.reden + "”") : null));
       }) : React.createElement("div", { style: { fontSize: 13, color: '#059669', padding: '8px 0' } }, "✓ Geen afwijkingen — het bureau heeft niets gewijzigd.")),
-      React.createElement("div", { style: { display: 'flex', justifyContent: 'flex-end', marginTop: 12 } }, React.createElement("button", { className: "btn gold", onClick: () => setUzDiff(null) }, "Sluiten"))));
+      React.createElement("div", { style: { display: 'flex', justifyContent: 'flex-end', marginTop: 12 } }, (uzDiff.apply && uzDiff.apply.length ? React.createElement("button", { className: "btn gold", style: { marginRight: 8 }, onClick: commitUzDiff }, "In planning verwerken (week " + (uzDiff.week != null ? uzDiff.week : "?") + ")") : null), React.createElement("button", { className: "btn", onClick: () => setUzDiff(null) }, "Sluiten"))));
   const importUitzendFile = (file) => {
     if (!file) return;
     var lower = (file.name || '').toLowerCase();
@@ -6376,7 +6411,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-14 · v160 · week-acties als knoppen i.p.v. popup (gate 38)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-16 · v161 · teruggave bureau: namen in planning verwerken (gate 39)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
