@@ -5493,7 +5493,7 @@ const buildMRDoc = function (opts) {
     if (!a) { setCtxMenu(null); return; }
     var e = a.empId ? employees.find(x => x.id === a.empId) : null;
     var _et = afgeleideTijd(a, key);
-    setTimeModal({ mode: 'edit', key: key, id: a.id, naam: e ? e.naam : (a.bureau || 'Uitzend'), start: _et.start || '06:00', netto: (e && e.netto) || '7:12', pauze: (e && e.pauze) || '1:03', eind: _et.eind || '', anker: _et.afgeleid ? { naam: _et.ankerNaam, eind: _et.ankerEind, overlap: _et.overlap } : null, kostplaats: a.kostplaats || '', vorigeDag: (a.vorigeDag === true) });
+    setTimeModal({ mode: 'edit', key: key, id: a.id, naam: e ? e.naam : (a.naam || a.bureau || 'Uitzend'), start: _et.start || '06:00', netto: (e && e.netto) || '7:12', pauze: (e && e.pauze) || '1:03', eind: _et.eind || '', anker: _et.afgeleid ? { naam: _et.ankerNaam, eind: _et.ankerEind, overlap: _et.overlap } : null, kostplaats: a.kostplaats || '', vorigeDag: (a.vorigeDag === true) });
     setCtxMenu(null);
   };
   const ctxVerplaats = (key, id, targetLijn) => {
@@ -5914,78 +5914,116 @@ const buildMRDoc = function (opts) {
     for (var i = 0; i < wb.SheetNames.length; i++) { if (wb.SheetNames[i] !== '_baseline') { mainName = wb.SheetNames[i]; break; } }
     if (!mainName) return null;
     var main = XU.sheet_to_json(wb.Sheets[mainName], { header: 1, raw: false, defval: '' });
-    var base = XU.sheet_to_json(wb.Sheets['_baseline'], { header: 1, raw: false, defval: '' });
-    var bHdr = (base[0] || []).map(function (x) { return String(x || '').trim(); });
-    var ci = { dept: bHdr.indexOf('Dept'), shift: bHdr.indexOf('Shift'), planDay: bHdr.indexOf('PlanDay'), prevDay: bHdr.indexOf('PrevDay'), bureau: bHdr.indexOf('Bureau') };
-    var baseById = {};
-    for (var b = 1; b < base.length; b++) { var br = base[b] || []; if (!br[0]) continue; var rec = { dag: br[1] || '', datum: br[2] || '', tijd: String(br[3] || '').trim(), uren: String(br[4] || '').trim(), lijn: String(br[5] || '').trim() }; if (ci.dept >= 0) rec.dept = String(br[ci.dept] || '').trim(); if (ci.shift >= 0) rec.shift = String(br[ci.shift] || '').trim(); if (ci.planDay >= 0) rec.planDay = String(br[ci.planDay] || '').trim(); if (ci.prevDay >= 0) rec.prevDay = String(br[ci.prevDay] || '').trim() === '1'; if (ci.bureau >= 0) rec.bureau = String(br[ci.bureau] || '').trim(); baseById[String(br[0]).trim()] = rec; }
-    var hdr = -1; for (var h = 0; h < main.length; h++) { if (String(((main[h] || [])[0]) || '').trim() === 'ID') { hdr = h; break; } }
-    var cur = {};
-    if (hdr >= 0) { for (var r = hdr + 1; r < main.length; r++) { var mr = main[r] || []; var id = String(mr[0] || '').trim(); if (!/^r\d+$/.test(id)) continue; cur[id] = { tijd: String(mr[1] || '').trim(), uren: String(mr[2] || '').trim(), lijn: String(mr[3] || '').trim(), naam: String(mr[4] || '').trim(), wijziging: String(mr[5] || '').trim(), reden: String(mr[6] || '').trim() }; } }
     var titel = String((main[0] || [])[0] || '');
     var tm = titel.match(/(?:Request|Aanvraag)\s+(.+?)\s+[—-]\s+Week\s+(\d+)\s+(\d{4})/i);
     var bureau = tm ? tm[1].trim() : '';
     var week = tm ? parseInt(tm[2], 10) : null;
     var jaar = tm ? parseInt(tm[3], 10) : null;
     var wkKey = (jaar != null && week != null) ? (jaar + 'W' + week) : null;
-    var DAYMAP = { Sunday: 'zo', Monday: 'ma', Tuesday: 'di', Wednesday: 'wo', Thursday: 'do', Friday: 'vr', Saturday: 'za', Zondag: 'zo', Maandag: 'ma', Dinsdag: 'di', Woensdag: 'wo', Donderdag: 'do', Vrijdag: 'vr', Zaterdag: 'za' };
-    var afdVanLijn = function (lj) { return Object.keys(cfg || {}).filter(function (dep) { return (cfg[dep] || []).some(function (L) { return L.lijn === lj; }); }); };
-    var VELD = { tijd: 'Start-End', uren: 'Hours', lijn: 'Line / Position' };
-    var items = [], apply = [], unresolved = 0;
-    Object.keys(baseById).forEach(function (id) {
-      var bz = baseById[id], a = cur[id];
-      var ctx = (bz.dag ? bz.dag + ' ' : '') + bz.datum + (bz.lijn ? ' · ' + bz.lijn : '');
-      if (!a) { items.push({ type: 'weg', id: id, ctx: ctx }); return; }
-      ['tijd', 'uren', 'lijn'].forEach(function (fld) { if (String(a[fld]) !== String(bz[fld])) items.push({ type: 'cel', id: id, ctx: ctx, veld: VELD[fld], van: bz[fld], naar: a[fld] }); });
-      if (a.wijziging) items.push({ type: 'verzoek', id: id, ctx: ctx, van: bz.tijd, naar: a.wijziging, reden: a.reden });
-      if (a.naam) items.push({ type: 'naam', id: id, ctx: ctx, naam: a.naam });
-      var finalName = (a.wijziging || a.naam || '').trim();
-      if (!finalName) return;
-      var lijn = bz.lijn;
-      var dept = bz.dept || afdVanLijn(lijn)[0] || null;
-      var dag = bz.planDay || DAYMAP[bz.dag] || null;
-      var sp = String(bz.tijd || '').split(/\s*[-–]\s*/);
-      var st = (sp[0] || '').trim(); var ei = (sp[1] || '').trim();
-      var shift = bz.shift || (function () { var uu = parseInt((st.match(/^(\d{1,2})/) || [])[1], 10); return (isFinite(uu) && uu < 12) ? 'O' : 'M'; })();
-      if (dept && lijn && dag) { apply.push({ id: id, dept: dept, lijn: lijn, shift: shift, dag: dag, start: st, eind: ei, vorigeDag: bz.prevDay === true, naam: finalName, ctx: ctx }); }
-      else unresolved++;
+    var DAYMAP = { sunday: 'zo', monday: 'ma', tuesday: 'di', wednesday: 'wo', thursday: 'do', friday: 'vr', saturday: 'za', zondag: 'zo', maandag: 'ma', dinsdag: 'di', woensdag: 'wo', donderdag: 'do', vrijdag: 'vr', zaterdag: 'za' };
+    var normL = function (x) { return String(x || '').trim().toLowerCase().replace(/^lijn\s+/, ''); };
+    var _nm = function (x) { return String(x || '').trim().toLowerCase().replace(/\./g, ' ').replace(/\s+/g, ' '); };
+    var resolveLine = function (lj) { var t = normL(lj); var deps = Object.keys(cfg || {}); for (var di = 0; di < deps.length; di++) { var L = (cfg[deps[di]] || []).find(function (x) { return normL(x.lijn) === t; }); if (L) return { dept: deps[di], lijn: L.lijn }; } return null; };
+    var empByName = function (name) { var t = _nm(name); if (!t) return null; var ex = (employees || []).find(function (e) { return _nm(e.naam) === t; }); if (ex) return ex; var pre = (employees || []).filter(function (e) { var en = _nm(e.naam); return en && (en.indexOf(t) === 0 || t.indexOf(en) === 0); }); return pre.length === 1 ? pre[0] : null; };
+    var hdr = -1; for (var h = 0; h < main.length; h++) { if (String(((main[h] || [])[0]) || '').trim() === 'ID') { hdr = h; break; } }
+    var curDay = null, rows = [];
+    for (var r = (hdr >= 0 ? hdr + 1 : 3); r < main.length; r++) {
+      var mr = main[r] || [];
+      var c0 = String(mr[0] || '').trim();
+      var rest = (String(mr[1] || '') + String(mr[3] || '') + String(mr[4] || '')).trim();
+      if (!c0 && !rest) continue;
+      if (!/^r\d+$/i.test(c0)) { var dmm = c0.toLowerCase().match(/^([a-z]+)/); if (dmm && DAYMAP[dmm[1]]) curDay = DAYMAP[dmm[1]]; continue; }
+      rows.push({ dag: curDay, lijn: String(mr[3] || '').trim(), tijd: String(mr[1] || '').trim(), full: String(mr[4] || '').trim(), requested: String(mr[5] || '').trim(), reden: String(mr[6] || '').trim() });
+    }
+    var items = [], apply = [], unresolvedRows = [], nVerzoek = 0, nNaam = 0, nNieuw = 0, nNoEmp = 0;
+    rows.forEach(function (row) {
+      var sp = String(row.tijd || '').split(/\s*[-–]\s*/); var st = (sp[0] || '').trim(), ei = (sp[1] || '').trim();
+      var rl = resolveLine(row.lijn); var dept = rl ? rl.dept : null; var lijn = rl ? rl.lijn : row.lijn; var lineObj = (dept ? (cfg[dept] || []).find(function (x) { return x.lijn === lijn; }) : null);
+      var _stMin = (function () { var mm = String(row.tijd || '').match(/^(\d{1,2}):(\d{2})/); return mm ? (parseInt(mm[1], 10) * 60 + parseInt(mm[2], 10)) : 0; })();
+      var shift = (function () { var shs = lineObj ? lijnShifts(lineObj) : []; var best = null, bd = 1e9; shs.forEach(function (sx) { var sm = hhmmMin(sx.start || '0:00'); var dd = Math.abs(sm - _stMin); if (dd < bd) { bd = dd; best = sx.id; } }); return best || (_stMin < 720 ? 'O' : 'M'); })();
+      var ctx = (row.dag ? row.dag.toUpperCase() + ' ' : '') + (row.tijd ? row.tijd + ' ' : '') + '· ' + (row.lijn || '');
+      var isNieuw = (!row.full || /^nieuw/i.test(row.full));
+      var isChange = row.requested && _nm(row.requested) !== _nm(row.full);
+      if (isChange) {
+        nVerzoek++;
+        var vanEmp = empByName(row.full); var naarEmp = empByName(row.requested); if (!naarEmp) nNoEmp++;
+        if (dept && row.dag) apply.push({ dept: dept, lijn: lijn, shift: shift, dag: row.dag, start: st, eind: ei, full: row.full, requested: row.requested, reden: row.reden, ctx: ctx, vanId: vanEmp ? vanEmp.id : '', naarId: naarEmp ? naarEmp.id : '' });
+        else unresolvedRows.push({ naam: row.requested, van: row.full, ctx: ctx, reason: (!dept ? ("lijn '" + row.lijn + "' niet in configuratie") : ("dag niet herkend")) });
+      } else if (isNieuw) { nNieuw++; items.push({ type: 'nieuw', ctx: ctx }); }
+      else { nNaam++; }
     });
-    return { items: items, titel: titel, fileName: fileName || '', bureau: bureau, week: week, jaar: jaar, wkKey: wkKey, apply: apply, unresolved: unresolved, nCel: items.filter(function (x) { return x.type === 'cel'; }).length, nWeg: items.filter(function (x) { return x.type === 'weg'; }).length, nVerzoek: items.filter(function (x) { return x.type === 'verzoek'; }).length, nNaam: items.filter(function (x) { return x.type === 'naam'; }).length };
+    return { items: items, titel: titel, fileName: fileName || '', bureau: bureau, week: week, jaar: jaar, wkKey: wkKey, apply: apply, nChange: apply.length, nVerzoek: nVerzoek, nNaam: nNaam, nNieuw: nNieuw, nNoEmp: nNoEmp, unresolved: unresolvedRows.length, unresolvedRows: unresolvedRows };
   };
   const commitUzDiff = function () {
     var d = uzDiff;
     if (!d || !d.wkKey || !(d.apply && d.apply.length)) { setUzDiff(null); return; }
     var bureau = d.bureau, wk = d.wkKey;
+    var nm = function (x) { return String(x || '').trim().toLowerCase().replace(/\./g, ' ').replace(/\s+/g, ' '); };
+    var empById = function (id) { return id ? (employees || []).find(function (e) { return e.id === id; }) : null; };
+    var matchId = function (a, id) { return !!id && a.empId === id; };
+    var matchNm = function (a, name) { return a.type === 'uitzend' && a.naam && nm(a.naam) === nm(name); };
+    var swaps = 0, asUitzend = 0, origNotFound = 0;
     setPlan(function (prev) {
-      var n = {};
-      Object.keys(prev).forEach(function (k) { var pt = k.split('|'); if (pt[3] === wk) { n[k] = (prev[k] || []).filter(function (a) { return !(a.type === 'uitzend' && (a.bureau || '') === bureau); }); } else { n[k] = prev[k]; } });
-      d.apply.forEach(function (t) { var key = [t.dept, t.lijn, t.shift, wk, t.dag].join('|'); var arr = n[key] ? n[key].slice() : []; arr.push({ id: uid(), empId: null, type: 'uitzend', bureau: bureau, functie: (uitzendCfg(bureau) || {}).functie || null, naam: t.naam, start: t.start || null, eind: t.eind || null, ziek: false, vorigeDag: t.vorigeDag === true, door: user, ts: new Date().toISOString(), hersteld: true }); n[key] = arr; });
+      var n = Object.assign({}, prev);
+      Object.keys(n).forEach(function (k) { if (k.split('|')[3] === wk) { var f = (n[k] || []).filter(function (a) { return a.uzSwap !== bureau; }); if (f.length !== (n[k] || []).length) n[k] = f; } });
+      d.apply.forEach(function (t) {
+        var repEmp = empById(t.naarId);
+        var targetKey = [t.dept, t.lijn, (t.shift || 'M'), wk, t.dag].join('|');
+        var cur = (n[targetKey] || []);
+        if (!cur.some(function (a) { return matchId(a, t.vanId) || matchNm(a, t.full); })) origNotFound++;
+        var list = cur.filter(function (a) { return !(matchId(a, t.vanId) || matchNm(a, t.full) || matchId(a, t.naarId) || matchNm(a, t.requested)); });
+        var di;
+        if (repEmp) { di = { id: uid(), empId: repEmp.id, type: 'vast', start: t.start || null, eind: t.eind || null, tijdVast: true, ziek: false, vorigeDag: false, uzSwap: bureau, door: user, ts: new Date().toISOString() }; swaps++; }
+        else { di = { id: uid(), empId: null, type: 'uitzend', bureau: bureau, functie: (uitzendCfg(bureau) || {}).functie || null, naam: t.requested, start: t.start || null, eind: t.eind || null, tijdVast: true, ziek: false, vorigeDag: false, uzSwap: bureau, door: user, ts: new Date().toISOString(), hersteld: true }; asUitzend++; }
+        list.push(di); n[targetKey] = list;
+      });
       return n;
     });
-    try { logAction('UZ_TERUGGAVE_VERWERKT', { bureau: bureau, week: d.week, geplaatst: d.apply.length, unresolved: d.unresolved }); } catch (e) {}
-    ping(d.apply.length + ' uitzendkracht(en) in week ' + d.week + ' geplaatst' + (d.unresolved ? ' — ' + d.unresolved + ' niet te koppelen' : ''), 'ok');
+    try { logAction('UZ_TERUGGAVE_VERWERKT', { bureau: bureau, week: d.week, swaps: swaps, alsUitzend: asUitzend, origNietGevonden: origNotFound }); } catch (e) {}
+    ping(swaps + ' ruil(en) verwerkt in week ' + d.week + (asUitzend ? (' — ' + asUitzend + ' als uitzend (geen nummer)') : '') + (d.unresolved ? (' — ' + d.unresolved + ' niet te koppelen') : ''), 'ok');
     setUzDiff(null);
   };
-  const uzDiffModal = () => React.createElement("div", { onClick: () => setUzDiff(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1320, padding: 16 } },
-    React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 20, width: 620, maxWidth: '96vw', maxHeight: '88vh', overflowY: 'auto' } },
-      React.createElement("h3", { style: { margin: '0 0 2px' } }, "Terug van bureau — afwijkingen"),
-      React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 12 } }, (uzDiff.titel || uzDiff.fileName || '') + " · vergeleken met de verborgen basislijn"),
-      React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' } },
-        React.createElement("div", { style: { flex: 1, minWidth: 110, background: '#fff', border: '1px solid #e6e8ee', borderRadius: 10, padding: '8px 10px' } }, React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: '#e11d48' } }, (uzDiff.nCel + uzDiff.nWeg)), React.createElement("div", { style: { fontSize: 10, color: '#5b6070', textTransform: 'uppercase', letterSpacing: '.4px' } }, "Cel gewijzigd")),
-        React.createElement("div", { style: { flex: 1, minWidth: 110, background: '#fff', border: '1px solid #e6e8ee', borderRadius: 10, padding: '8px 10px' } }, React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: '#b45309' } }, uzDiff.nVerzoek), React.createElement("div", { style: { fontSize: 10, color: '#5b6070', textTransform: 'uppercase', letterSpacing: '.4px' } }, "Wijzigingsverzoek")),
-        React.createElement("div", { style: { flex: 1, minWidth: 110, background: '#fff', border: '1px solid #e6e8ee', borderRadius: 10, padding: '8px 10px' } }, React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: '#059669' } }, uzDiff.nNaam), React.createElement("div", { style: { fontSize: 10, color: '#5b6070', textTransform: 'uppercase', letterSpacing: '.4px' } }, "Naam ingevuld"))),
-      (uzDiff.items.length ? uzDiff.items.map(function (it, ix) {
-        var col = (it.type === 'verzoek') ? '#b45309' : (it.type === 'naam') ? '#059669' : '#e11d48';
-        var tag = (it.type === 'cel') ? '⚠ Aangeleverde cel gewijzigd' : (it.type === 'verzoek') ? '✎ Wijzigingsverzoek' : (it.type === 'naam') ? '✓ Naam ingevuld' : '✖ Regel verdwenen';
-        var body = (it.type === 'naam') ? React.createElement("div", { style: { fontSize: 15, fontWeight: 700, color: '#19203b' } }, it.naam)
-          : (it.type === 'weg') ? React.createElement("div", { style: { fontSize: 13, color: '#5b6070' } }, "Regel niet meer aanwezig in de teruggave")
-          : React.createElement("div", { style: { fontSize: 15 } }, (it.type === 'verzoek' ? 'Start-End' : it.veld) + ': ', React.createElement("span", { style: { color: '#9aa0ac', textDecoration: 'line-through' } }, it.van || '—'), ' ', React.createElement("b", { style: { color: '#19203b' } }, "→ " + (it.naar || '—')));
-        return React.createElement("div", { key: 'uzd' + ix, style: { background: '#fff', border: '1px solid #e6e8ee', borderLeft: '4px solid ' + col, borderRadius: 10, padding: '10px 12px', marginBottom: 8 } },
-          React.createElement("div", { style: { display: 'inline-block', fontSize: 11, fontWeight: 800, color: col, marginBottom: 4 } }, tag),
-          React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginBottom: 2 } }, it.ctx), body,
-          (it.reden ? React.createElement("div", { style: { fontSize: 13, color: '#5b6070', fontStyle: 'italic', marginTop: 4 } }, "“" + it.reden + "”") : null));
-      }) : React.createElement("div", { style: { fontSize: 13, color: '#059669', padding: '8px 0' } }, "✓ Geen afwijkingen — het bureau heeft niets gewijzigd.")),
-      React.createElement("div", { style: { display: 'flex', justifyContent: 'flex-end', marginTop: 12 } }, (uzDiff.apply && uzDiff.apply.length ? React.createElement("button", { className: "btn gold", style: { marginRight: 8 }, onClick: commitUzDiff }, "In planning verwerken (week " + (uzDiff.week != null ? uzDiff.week : "?") + ")") : null), React.createElement("button", { className: "btn", onClick: () => setUzDiff(null) }, "Sluiten"))));
+  const uzDiffModal = () => {
+    var d = uzDiff;
+    var canApply = !!(d.apply && d.apply.length);
+    var empOpts = (employees || []).slice().sort(function (a, b) { return String(a.naam || '').localeCompare(String(b.naam || '')); });
+    var opt = function () { return [React.createElement("option", { key: '_none', value: '' }, "— kies / geen —")].concat(empOpts.map(function (e) { return React.createElement("option", { key: e.id, value: e.id }, (e.naam || '(zonder naam)') + (e.id ? (' · ' + String(e.id).replace(/^e/, '')) : '')); })); };
+    var setRow = function (ix, field, val) { setUzDiff(function (p) { if (!p || !p.apply) return p; var na = p.apply.map(function (x, j) { if (j !== ix) return x; var o = Object.assign({}, x); o[field] = val; return o; }); return Object.assign({}, p, { apply: na }); }); };
+    var selStyle = { width: '100%', padding: '5px 6px', borderRadius: 7, border: '1px solid #d7dae2', fontSize: 13, background: '#fff' };
+    var hint = function (txt, warn) { return React.createElement("div", { style: { fontSize: 10.5, color: warn ? '#b45309' : '#9aa0ac', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }, title: txt }, (warn ? '⚠ ' : 'excel: ') + txt); };
+    var kpi = function (n, lbl, col) { return React.createElement("div", { style: { flex: 1, minWidth: 100, background: '#fff', border: '1px solid #e6e8ee', borderRadius: 10, padding: '8px 10px' } }, React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: col } }, n), React.createElement("div", { style: { fontSize: 10, color: '#5b6070', textTransform: 'uppercase', letterSpacing: '.4px' } }, lbl)); };
+    return React.createElement("div", { onClick: () => setUzDiff(null), style: { position: 'fixed', inset: 0, background: 'rgba(15,20,40,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1320, padding: 16 } },
+      React.createElement("div", { className: "card", onClick: ev => ev.stopPropagation(), style: { padding: 0, width: 820, maxWidth: '97vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' } },
+        React.createElement("div", { style: { padding: '18px 20px 10px', flexShrink: 0 } },
+          React.createElement("h3", { style: { margin: '0 0 2px' } }, "Terug van bureau — controleren & toepassen"),
+          React.createElement("div", { style: { fontSize: 12, color: '#5b6070' } }, (d.titel || d.fileName || '')),
+          React.createElement("div", { style: { fontSize: 12, color: '#5b6070', marginTop: 4 } }, "Kies per regel de juiste medewerker uit de lijst (spelling corrigeren), daarna Toepassen.")),
+        React.createElement("div", { style: { padding: '0 20px 12px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', borderBottom: '1px solid #eef0f4' } },
+          React.createElement("button", { className: "btn gold", disabled: !canApply, style: { padding: '8px 14px', fontWeight: 700, opacity: canApply ? 1 : .5, cursor: canApply ? 'pointer' : 'not-allowed' }, onClick: function () { if (canApply) commitUzDiff(); } }, "Toepassen" + (d.week != null ? " (week " + d.week + ")" : "")),
+          React.createElement("span", { style: { fontSize: 12, color: canApply ? '#059669' : '#b02a37', fontWeight: 600 } }, canApply ? (d.apply.length + " ruil(en)") : "Geen ruilen te verwerken")),
+        React.createElement("div", { style: { padding: '12px 20px', overflowY: 'auto', flex: '1 1 auto', minHeight: 0 } },
+          React.createElement("div", { style: { display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' } }, kpi(d.nVerzoek, "Ruilen", '#e11d48'), kpi(d.nNaam, "Blijft staan", '#059669'), kpi(d.nNieuw, "Nieuw / open", '#b45309')),
+          (canApply ? React.createElement("div", { style: { border: '1px solid #e6e8ee', borderRadius: 10, overflow: 'hidden', marginBottom: 12 } },
+            React.createElement("div", { style: { display: 'flex', background: '#f6f7fb', borderBottom: '1px solid #e6e8ee', fontSize: 10, fontWeight: 700, color: '#5b6070', textTransform: 'uppercase', letterSpacing: '.4px' } },
+              React.createElement("div", { style: { width: 132, padding: '7px 10px' } }, "Wanneer"),
+              React.createElement("div", { style: { width: 150, padding: '7px 10px' } }, "Origineel"),
+              React.createElement("div", { style: { width: 18, padding: '7px 0' } }, ""),
+              React.createElement("div", { style: { flex: 1, padding: '7px 10px' } }, "Aangepast (Excel)"),
+              React.createElement("div", { style: { flex: 1, padding: '7px 10px' } }, "Kies medewerker (personeel)")),
+            d.apply.map(function (t, ix) {
+              var reqEmpTxt = t.requested || '—';
+              return React.createElement("div", { key: 'ap' + ix, style: { display: 'flex', alignItems: 'flex-start', borderBottom: ix < d.apply.length - 1 ? '1px solid #eef0f4' : 'none', background: '#fff' } },
+                React.createElement("div", { style: { width: 132, padding: '8px 10px' } }, React.createElement("div", { style: { fontSize: 12, fontWeight: 600, color: '#19203b' } }, t.ctx), (t.reden ? React.createElement("div", { style: { fontSize: 11, color: '#5b6070', fontStyle: 'italic', marginTop: 2 } }, "“" + t.reden + "”") : null)),
+                React.createElement("div", { style: { width: 150, padding: '8px 10px', minWidth: 0 } }, React.createElement("select", { value: t.vanId || '', style: selStyle, onChange: function (ev) { setRow(ix, 'vanId', ev.target.value); } }, opt()), hint(t.full || '—', !t.vanId)),
+                React.createElement("div", { style: { width: 18, padding: '12px 0 0', textAlign: 'center', color: '#9aa0ac', fontWeight: 700 } }, "→"),
+                React.createElement("div", { style: { flex: 1, padding: '8px 10px', minWidth: 0 } }, React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: '#19203b', wordBreak: 'break-word' } }, reqEmpTxt), React.createElement("div", { style: { fontSize: 10, color: '#9aa0ac', marginTop: 2 } }, "uit bureau-bestand")),
+                React.createElement("div", { style: { flex: 1, padding: '8px 10px', minWidth: 0 } }, React.createElement("select", { value: t.naarId || '', style: selStyle, onChange: function (ev) { setRow(ix, 'naarId', ev.target.value); } }, opt()), (t.naarId ? React.createElement("div", { style: { fontSize: 10, color: '#059669', marginTop: 2 } }, "✓ gekoppeld aan personeel") : React.createElement("div", { style: { fontSize: 10, color: '#b45309', marginTop: 2 } }, "⚠ kies medewerker (anders uitzend zonder nummer)"))));
+            })) : React.createElement("div", { style: { fontSize: 13, color: '#059669', padding: '8px 0' } }, "✓ Geen ruilen — het bureau heeft niets gewijzigd.")),
+          (d.items && d.items.length ? React.createElement("div", { style: { marginBottom: 6 } }, d.items.filter(function (it) { return it.type === 'nieuw'; }).map(function (it, ix) { return React.createElement("div", { key: 'uzn' + ix, style: { background: '#fff', border: '1px solid #e6e8ee', borderLeft: '4px solid #b45309', borderRadius: 10, padding: '8px 12px', marginBottom: 8 } }, React.createElement("div", { style: { fontSize: 11, fontWeight: 800, color: '#b45309', marginBottom: 2 } }, "➕ Nieuwe / open plek"), React.createElement("div", { style: { fontSize: 12, color: '#5b6070' } }, it.ctx + " — nog in te vullen (niet automatisch geplaatst)")); })) : null),
+          (d.unresolvedRows && d.unresolvedRows.length ? React.createElement("div", { style: { marginTop: 10, borderTop: '1px dashed #e6e8ee', paddingTop: 10 } }, React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#b02a37', marginBottom: 6 } }, "Niet te koppelen (" + d.unresolvedRows.length + ")"), d.unresolvedRows.map(function (u, ix) { return React.createElement("div", { key: 'ur' + ix, style: { fontSize: 12, color: '#5b6070', marginBottom: 3 } }, (u.ctx ? u.ctx + " — " : "") + (u.naam ? u.naam + " — " : "") + u.reason); })) : null)),
+        React.createElement("div", { style: { padding: '10px 20px', flexShrink: 0, borderTop: '1px solid #e6e8ee', display: 'flex', justifyContent: 'flex-end' } },
+          React.createElement("button", { className: "btn", onClick: () => setUzDiff(null) }, "Sluiten"))));
+  };
   const importUitzendFile = (file) => {
     if (!file) return;
     var lower = (file.name || '').toLowerCase();
@@ -6411,7 +6449,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-16 · v161 · teruggave bureau: namen in planning verwerken (gate 39)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-17 · v170 · import-knop verplaatst naar Aanvraagrapport-scherm (gate 43)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -6849,7 +6887,7 @@ const buildMRDoc = function (opts) {
         const e = a.empId ? employees.find(x => x.id === a.empId) : null;
         const _buro = a.bureau || (e && e.bureau) || '';
         const _bAfk = _buro ? (bureauAfk[_buro] || _buro.slice(0, 3).toUpperCase()) : '';
-        const lbl = e ? e.naam : (_bAfk || 'Uitzend');
+        const lbl = e ? e.naam : (a.naam || _bAfk || 'Uitzend');
         const _et = afgeleideTijd(a, c.key);
         return React.createElement("div", {
           key: a.id,
@@ -6859,7 +6897,7 @@ const buildMRDoc = function (opts) {
           onTouchStart: ev => { var t = ev.touches && ev.touches[0]; var px = t ? t.clientX : 0, py = t ? t.clientY : 0; if (_lpTimer.current) clearTimeout(_lpTimer.current); _lpTimer.current = setTimeout(function () { setCtxMenu({ x: px, y: py, key: c.key, id: a.id, empId: a.empId, type: a.type }); }, 500); },
           onTouchEnd: () => { if (_lpTimer.current) clearTimeout(_lpTimer.current); },
           onTouchMove: () => { if (_lpTimer.current) clearTimeout(_lpTimer.current); },
-          title: (e ? e.naam : a.bureau || '') + (_et.afgeleid && _et.ankerNaam ? ' — start aangepast: overdracht van ' + _et.ankerNaam + ' (eind ' + _et.ankerEind + ')' : '')
+          title: (e ? e.naam : (a.naam || a.bureau || '')) + (_et.afgeleid && _et.ankerNaam ? ' — start aangepast: overdracht van ' + _et.ankerNaam + ' (eind ' + _et.ankerEind + ')' : '')
         }, React.createElement("span", {
           className: "h"
         }, "⠿"), React.createElement("span", {
@@ -7577,7 +7615,7 @@ const buildMRDoc = function (opts) {
     });
     var bureaus = Object.keys(perBureau).sort();
     var totOpen = bureaus.reduce(function (s, b) { return s + perBureau[b].open.length; }, 0);
-    return React.createElement("div", { className: "stack" }, React.createElement("div", { className: "topbar" }, React.createElement("h2", null, "Uitzend \u2014 Aanvraagrapport week " + week), React.createElement("div", { style: { display: 'flex', gap: 8, alignItems: 'center' } }, React.createElement("span", { className: "pill" }, totOpen + " open aanvragen"), React.createElement("button", { className: "btn gold", onClick: downloadAanvraag }, React.createElement(I, { n: "download" }), "Exporteer aanvragen (alle bureaus)"))), bureaus.length === 0 ? React.createElement("div", { className: "card", style: { padding: 16 } }, "Geen uitzend-aanvragen of ingeplande uitzendkrachten in week " + week + ".") : bureaus.map(function (b) {
+    return React.createElement("div", { className: "stack" }, React.createElement("div", { className: "topbar" }, React.createElement("h2", null, "Uitzend \u2014 Aanvraagrapport week " + week), React.createElement("div", { style: { display: 'flex', gap: 8, alignItems: 'center' } }, React.createElement("span", { className: "pill" }, totOpen + " open aanvragen"), React.createElement("button", { className: "btn", title: "Importeer het ingevulde/geruilde Excel-bestand terug van het bureau", onClick: function () { var el = (typeof document !== 'undefined') && document.getElementById('uzImportInput'); if (el) el.click(); } }, React.createElement(I, { n: "upload_file" }), "Importeer teruggave"), React.createElement("button", { className: "btn gold", onClick: downloadAanvraag }, React.createElement(I, { n: "download" }), "Exporteer aanvragen (alle bureaus)"))), bureaus.length === 0 ? React.createElement("div", { className: "card", style: { padding: 16 } }, "Geen uitzend-aanvragen of ingeplande uitzendkrachten in week " + week + ".") : bureaus.map(function (b) {
       var grp = perBureau[b];
       return React.createElement("div", { key: b, className: "card", style: { padding: 16, marginBottom: 12 } }, React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 } }, React.createElement("div", { className: "av agv" }, b.slice(0, 2).toUpperCase()), React.createElement("h3", { style: { margin: 0 } }, b), React.createElement("span", { className: "pill", style: { marginLeft: 'auto' } }, grp.open.length + " aanvraag \u00b7 " + grp.planned.length + " ingepland"), React.createElement("button", { className: "btn", style: { padding: '4px 10px' }, onClick: () => downloadAanvraagBureau(b) }, React.createElement(I, { n: "download" }), "Excel")), React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#b02a37', margin: '6px 0 4px' } }, "Aan te vragen bij bureau (niet in UKG)"), grp.open.length === 0 ? React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c' } }, "\u2014") : grp.open.map(function (o, i) { return React.createElement("div", { key: 'o' + i, style: { fontSize: 13, padding: '2px 0' } }, dagLbl(o.dag) + " \u00b7 " + (tijd(o) ? tijd(o) + " \u00b7 " : "") + o.dept + " " + o.lijn + " \u00b7 " + shiftNaam(o.shift) + (o.reden ? " \u00b7 " + o.reden : "")); }), React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: '#2e7d32', margin: '10px 0 4px' } }, "Ingepland (gaat mee in UKG-export)"), grp.planned.length === 0 ? React.createElement("div", { style: { fontSize: 12, color: '#8a8f9c' } }, "\u2014") : grp.planned.map(function (p, i) { return React.createElement("div", { key: 'p' + i, style: { fontSize: 13, padding: '2px 0' } }, dagLbl(p.dag) + " \u00b7 " + (tijd(p) ? tijd(p) + " \u00b7 " : "") + p.naam + " \u00b7 " + p.dept + " " + p.lijn + " \u00b7 " + shiftNaam(p.shift)); }));
     }));
@@ -8154,7 +8192,7 @@ const buildMRDoc = function (opts) {
       onClick: exportJSON
     }, React.createElement(I, {
       n: "download"
-    }), "Exporteer"), React.createElement("button", { className: "btn", title: "Herstel uitzenddiensten uit een aanvraag-Excel (per bureau)", onClick: function () { var el = (typeof document !== 'undefined') && document.getElementById('uzImportInput'); if (el) el.click(); } }, React.createElement(I, { n: "upload_file" }), "Uitzend-Excel"))), React.createElement("div", {
+    }), "Exporteer"))), React.createElement("div", {
       className: "hint",
       style: {
         marginTop: 8
