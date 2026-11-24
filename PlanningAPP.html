@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&display=swap" rel="stylesheet"/>
 <style>
-  :root{--navy:#19203b;--gold:#C9A45C;--page:#f8fafc;--card:#fff;--line:#e2e8f0;--ink:#0f172a;--muted:#64748b;--ok:#059669;--ok-bg:#ecfdf5;--warn:#f59e0b;--warn-bg:#fffbeb;--bad:#e11d48;--bad-bg:#fff1f3;--r-sm:8px;--r:12px;--r-lg:16px;--r-pill:999px;--sh-1:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05);--sh-2:0 8px 24px rgba(15,23,42,.08);--sh-pop:0 10px 28px rgba(15,23,42,.14);--surface:#f8fafc;--sub:#eef2f8;--cream:#fffdf7;--line-soft:#eef0f4;--nav-section:#8a93ad;--live:#059669;--ring:rgba(25,32,59,.30);--cell-ok:#f0fdf4;--cell-warn:#fffbeb;--cell-bad:#fff1f3;}
+  :root{--navy:#19203b;--gold:#C79C3E;--page:#f8fafc;--card:#fff;--line:#e2e8f0;--ink:#0f172a;--muted:#64748b;--ok:#059669;--ok-bg:#ecfdf5;--warn:#f59e0b;--warn-bg:#fffbeb;--bad:#e11d48;--bad-bg:#fff1f3;--r-sm:8px;--r:12px;--r-lg:16px;--r-pill:999px;--sh-1:0 1px 2px rgba(15,23,42,.04),0 4px 14px rgba(15,23,42,.05);--sh-2:0 8px 24px rgba(15,23,42,.08);--sh-pop:0 10px 28px rgba(15,23,42,.14);--surface:#f8fafc;--sub:#eef2f8;--cream:#fffdf7;--line-soft:#eef0f4;--nav-section:#8a93ad;--live:#059669;--ring:rgba(25,32,59,.30);--cell-ok:#f0fdf4;--cell-warn:#fffbeb;--cell-bad:#fff1f3;}
   *{box-sizing:border-box;}
   body{margin:0;font-family:'IBM Plex Sans','Hanken Grotesk','Segoe UI',Arial,sans-serif;background:var(--page);color:var(--ink);padding-top:env(safe-area-inset-top);}
   .mono,.cap,.dt,.d,.t,.hint,.rol,.cnt,.oncall{font-family:'JetBrains Mono',monospace;}
@@ -2297,7 +2297,7 @@ function seed() {
 }
 const NAV = [['view_column', 'Planning', 'planning'], ['group', 'Personeel', 'personeel'], ['beach_access', 'Vakantie', 'vakantie'], ['storage', 'SAP MR', 'sapmr'], ['upload_file', 'UKG Export', 'ukg'], ['apartment', 'Uitzendkrachten', 'uitzend'], ['insights', 'Dashboard', 'dashboard'], ['settings', 'Configuratie', 'config']];
 const NAV_GROUPS = [['WERKPLEK', ['planning','personeel','vakantie','uitzend','dashboard']], ['BEHEER', ['sapmr','ukg','config']]];
-const PALETTE = ['#3C3BA9', '#0FC4B1', '#71B8AE', '#E8A045', '#B8D4B4', '#165E59', '#B686DB', '#C9A45C'];
+const PALETTE = ['#3C3BA9', '#0FC4B1', '#71B8AE', '#E8A045', '#B8D4B4', '#165E59', '#B686DB', '#C79C3E'];
 const UKG_HEADERS = ['Schedule Name', 'Date', 'Start Time', 'End Time', 'Schedule Setting Name', 'Employee Id', 'EIN Tax Id', 'EIN Name', 'Cost Center 1', 'Cost Center 2', 'Cost Center 3', 'Cost Center 4', 'Cost Center 5', 'Cost Center 6', 'Cost Center 7', 'Cost Center 8', 'Cost Center 9', 'Time Off', 'Average Rate', 'Lunch Start Time', 'Lunch End Time', 'Standard Total Hours', 'Shift Premium', 'Skill', 'Day Type', 'Workday Breakdown', 'Note', 'Start Day', 'Credential Type 1', 'Credential Type 2', 'Credential Type 3', 'Credential Type 4', 'Credential Type 5', 'Credential Type 6', 'Credential Type 7', 'Credential Type 8', 'Credential Type 9', 'Credential Type 10', 'Certification 1', 'Certification 2', 'Certification 3', 'Certification 4', 'Certification 5', 'Certification 6', 'Certification 7', 'Certification 8', 'Certification 9', 'Certification 10'];
 const SHIFT_TIMES = {
   O: {
@@ -2895,6 +2895,7 @@ function App() {
   const heeftMR = dep => (mrAfd[dep] !== undefined ? !!mrAfd[dep] : ((cfg[dep] || []).length > 0));
   const [agencies, setAgencies] = useState(() => lsGet(LS_AG, DEFAULT_AGENCIES));
   const [bureauAfk, setBureauAfk] = useState(() => lsGet('bl_bureau_afk', {}));
+  const [ukgSched, setUkgSched] = useState(() => lsGet('bl_ukg_sched', {}));
   const [printCfg, setPrintCfg] = useState(() => Object.assign({ pageSize: 'A3', lijnFont: 26, shiftFont: 24, prodFont: 17, mrFont: 20, rowPad: 9, titelFont: 20, opmFont: 25, dagFont: 21, totaalFont: 15, conceptFont: 12, wkFont: 13, logoW: 120, celopmFont: 20, pgmrFont: 18, nmWidth: 15, dagWidth: 17, fillPage: false, bold: {}, colors: {}, pos: {}, rawCss: '' }, lsGet('bl_printcfg', {})));
   useEffect(function () { try { localStorage.setItem('bl_printcfg', JSON.stringify(printCfg)); } catch (e) {} }, [printCfg]);
   const [pdRealHtml, setPdRealHtml] = useState('');
@@ -2915,6 +2916,7 @@ function App() {
   const [fltVolVrij, setFltVolVrij] = useState(false);
   const [fltVerbergZiek, setFltVerbergZiek] = useState(false);
   useEffect(function () { try { localStorage.setItem('bl_bureau_afk', JSON.stringify(bureauAfk)); } catch (e) {} }, [bureauAfk]);
+  useEffect(function () { try { localStorage.setItem('bl_ukg_sched', JSON.stringify(ukgSched)); } catch (e) {} }, [ukgSched]);
   const [redenen, setRedenen] = useState(() => lsGet(LS_RED, DEFAULT_REDENEN));
   const [kostplaatsen, setKostplaatsen] = useState(() => lsGet(LS_KP, DEFAULT_KP));
   const [verlofTypes, setVerlofTypes] = useState(() => lsGet(LS_VT, VERLOF_TYPES));
@@ -3368,7 +3370,7 @@ function App() {
     data: {
       plan: plan,
       cfg: cfg,
-      agencies: agencies, bureauAfk: bureauAfk, printCfg: printCfg,
+      agencies: agencies, bureauAfk: bureauAfk, ukgSched: ukgSched, printCfg: printCfg,
       redenen: redenen,
       kostplaatsen: kostplaatsen,
       verlofTypes: verlofTypes,
@@ -3407,7 +3409,7 @@ function App() {
     savedBy: user,
     partition: 'config',
     data: {
-      cfg: cfg, mrAfd: mrAfd, productgroepen: productgroepen, agencies: agencies, bureauAfk: bureauAfk, printCfg: printCfg,
+      cfg: cfg, mrAfd: mrAfd, productgroepen: productgroepen, agencies: agencies, bureauAfk: bureauAfk, ukgSched: ukgSched, printCfg: printCfg,
       redenen: redenen, kostplaatsen: kostplaatsen, verlofTypes: verlofTypes,
       skills: skills, templates: templates, mgrMails: mgrMails, mailAfd: mailAfd,
       weekOpm: weekOpm, employees: employees, pubMR: pubMR
@@ -3548,7 +3550,7 @@ function App() {
       }
       if (dat.plan) setPlan(dat.plan);
       if (dat.cfg) setCfg(normCfg(dat.cfg));
-      if (dat.agencies) setAgencies(dat.agencies); if (dat.bureauAfk) setBureauAfk(dat.bureauAfk); if (dat.printCfg) setPrintCfg(dat.printCfg);
+      if (dat.agencies) setAgencies(dat.agencies); if (dat.bureauAfk) setBureauAfk(dat.bureauAfk); if (dat.ukgSched) setUkgSched(dat.ukgSched); if (dat.printCfg) setPrintCfg(dat.printCfg);
       if (dat.redenen) setRedenen(dat.redenen);
       if (dat.kostplaatsen) setKostplaatsen(dat.kostplaatsen);
       if (dat.verlofTypes) setVerlofTypes(dat.verlofTypes);
@@ -3606,7 +3608,7 @@ function App() {
     if (dat.cfg) setCfg(normCfg(dat.cfg));
     if (dat.mrAfd) setMrAfd(dat.mrAfd);
     if (dat.productgroepen) setProductgroepen(dedupePgIds(Array.isArray(dat.productgroepen) ? dat.productgroepen : []));
-    if (dat.agencies) setAgencies(dat.agencies); if (dat.bureauAfk) setBureauAfk(dat.bureauAfk); if (dat.printCfg) setPrintCfg(dat.printCfg);
+    if (dat.agencies) setAgencies(dat.agencies); if (dat.bureauAfk) setBureauAfk(dat.bureauAfk); if (dat.ukgSched) setUkgSched(dat.ukgSched); if (dat.printCfg) setPrintCfg(dat.printCfg);
     if (dat.redenen) setRedenen(dat.redenen);
     if (dat.kostplaatsen) setKostplaatsen(dat.kostplaatsen);
     if (dat.verlofTypes) setVerlofTypes(dat.verlofTypes);
@@ -4720,7 +4722,7 @@ function App() {
       '<span><i class="sw" style="background:#eef0f4"></i>Vrij / verlof</span>' +
       '<span><i class="sw" style="background:#fdecec;border-color:#c0392b"></i>Vakantie</span>' +
       '<span><i class="sw" style="background:#2f6db0"></i>Afwijkende kostenplaats</span>' +
-      '<span><i class="sw" style="background:#fffdf6;border-color:#c9a45c"></i>Uitzendkracht</span></div>' +
+      '<span><i class="sw" style="background:#fffdf6;border-color:#C79C3E"></i>Uitzendkracht</span></div>' +
       blokHtml +
       '<div class="ft"><span>' + esc(dept) + '  \u00b7  Week ' + week + ' / ' + jaar + '</span><span>Niet voor extern gebruik</span></div>' +
       '</body></html>';
@@ -5265,7 +5267,7 @@ const buildMRDoc = function (opts) {
         weekOpm: weekOpm,
         plan: plan,
         cfg: cfg,
-        agencies: agencies, bureauAfk: bureauAfk, printCfg: printCfg,
+        agencies: agencies, bureauAfk: bureauAfk, ukgSched: ukgSched, printCfg: printCfg,
         redenen: redenen,
       kostplaatsen: kostplaatsen,
       verlofTypes: verlofTypes,
@@ -5307,7 +5309,7 @@ const buildMRDoc = function (opts) {
         try { exportJSON(); } catch (e) {}
         if (dat.plan) setPlan(dat.plan);
         if (dat.cfg) setCfg(normCfg(dat.cfg));
-        if (dat.agencies) setAgencies(dat.agencies); if (dat.bureauAfk) setBureauAfk(dat.bureauAfk); if (dat.printCfg) setPrintCfg(dat.printCfg);
+        if (dat.agencies) setAgencies(dat.agencies); if (dat.bureauAfk) setBureauAfk(dat.bureauAfk); if (dat.ukgSched) setUkgSched(dat.ukgSched); if (dat.printCfg) setPrintCfg(dat.printCfg);
       if (dat.redenen) setRedenen(dat.redenen);
       if (dat.kostplaatsen) setKostplaatsen(dat.kostplaatsen);
       if (dat.verlofTypes) setVerlofTypes(dat.verlofTypes);
@@ -5480,7 +5482,7 @@ const buildMRDoc = function (opts) {
     _cfgTimer.current = setTimeout(function () { savePartition(buildConfigBlob(), true); }, 2500);
     return function () { if (_cfgTimer.current) clearTimeout(_cfgTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cfg, mrAfd, productgroepen, agencies, redenen, kostplaatsen, verlofTypes, skills, templates, mgrMails, mailAfd, weekOpm, employees, printCfg, bureauAfk, pubMR, autoSave, partitieAan]);
+  }, [cfg, mrAfd, productgroepen, agencies, redenen, kostplaatsen, verlofTypes, skills, templates, mgrMails, mailAfd, weekOpm, employees, printCfg, bureauAfk, ukgSched, pubMR, autoSave, partitieAan]);
 
   const ctxKopieer = (key, id) => {
     var a = (plan[key] || []).find(x => x.id === id);
@@ -5524,6 +5526,7 @@ const buildMRDoc = function (opts) {
     });
     ping('Week leeggemaakt');
   };
+  const ukgNm = function (dep) { return (ukgSched && ukgSched[dep]) ? ukgSched[dep] : ('BL ' + dep); };
   const ukgRows = useMemo(() => {
     const rows = [];
     const mon = isoMonday(jaar, week);
@@ -5577,7 +5580,9 @@ const buildMRDoc = function (opts) {
               planned[(e.id || '') + '|' + iso] = 1;
               var _lw = lunchWindow(start, eind, e.pauze || '1:03');
               rows.push(mkRow({
-                'Schedule Name': 'BL  ' + d,
+                'Schedule Name': ukgNm(d),
+                'Schedule Setting Name': ukgNm(d),
+                '__dept': d,
                 'Date': iso,
                 'Start Time': start,
                 'End Time': eind,
@@ -5609,7 +5614,9 @@ const buildMRDoc = function (opts) {
         if (!wt) return;
         var _lw2 = lunchWindow(wt.start, wt.eind, wt.pauze || '1:03');
         rows.push(mkRow({
-          'Schedule Name': 'BL  ' + (e.afd || dept),
+          'Schedule Name': ukgNm(e.afd || dept),
+          'Schedule Setting Name': ukgNm(e.afd || dept),
+          '__dept': (e.afd || dept),
           'Date': iso,
           'Start Time': wt.start,
           'End Time': wt.eind,
@@ -5627,10 +5634,10 @@ const buildMRDoc = function (opts) {
       });
     });
     return rows;
-  }, [plan, cfg, days, wkKey, jaar, week, employees, verlof, templates, verlofTypes]);
+  }, [plan, cfg, days, wkKey, jaar, week, employees, verlof, templates, verlofTypes, ukgSched]);
   const downloadUKGDept = dep => {
     var rows = ukgRows.filter(function (r) {
-      return (String(r['Schedule Name'] || '').replace(/^BL\s+/, '').trim() || 'Overig') === dep;
+      return ((r['__dept'] || String(r['Schedule Name'] || '').replace(/^BL\s+/, '').trim() || 'Overig')) === dep;
     });
     if (!rows.length) {
       ping('Geen regels voor ' + dep, 'warn');
@@ -5653,7 +5660,7 @@ const buildMRDoc = function (opts) {
   };
   const downloadUKG = () => {
     var deps = Array.from(new Set(ukgRows.map(function (r) {
-      return String(r['Schedule Name'] || '').replace(/^BL\s+/, '').trim() || 'Overig';
+      return (r['__dept'] || String(r['Schedule Name'] || '').replace(/^BL\s+/, '').trim() || 'Overig');
     })));
     if (!deps.length) {
       ping('Geen regels om te exporteren', 'warn');
@@ -5693,8 +5700,8 @@ const buildMRDoc = function (opts) {
     var groups = {}, order = [];
     rows.forEach(function (r) { var dt = effDate(r); var key = fmtD(dt); if (!groups[key]) { groups[key] = { dt: dt, rows: [] }; order.push(key); } groups[key].rows.push(r); });
     order.sort(function (a, b) { return groups[a].dt - groups[b].dt; });
-    var HEAD = ['ID', 'Start-End', 'Hours', 'Line / Position', 'Full name', 'Requested change', 'Reason'];
-    var aoa = [['Request ' + bureau + ' — Week ' + week + ' ' + jaar], ['', 'DELIVERED BY BL — please do not change', '', '', 'TO BE FILLED BY AGENCY', '', ''], HEAD.slice()];
+    var HEAD = ['ID', 'Start-End', 'Hours', 'Line / Position', 'Current name', 'New name (fill in)', 'Reason (fill in)'];
+    var aoa = [['Request ' + bureau + ' — Week ' + week + ' ' + jaar], ['', 'DELIVERED BY BL — do not change', '', '', '', 'TO BE FILLED BY AGENCY — only gold cells', ''], HEAD.slice()];
     var baseAoa = [['ID', 'Day', 'Date', 'Start-End', 'Hours', 'Line / Position', 'Dept', 'Shift', 'PlanDay', 'PrevDay', 'Bureau']];
     var bandRows = [], dataRows = [], idn = 0;
     order.forEach(function (key) {
@@ -5703,7 +5710,7 @@ const buildMRDoc = function (opts) {
       g.rows.forEach(function (r) {
         idn += 1; var id = 'r' + idn;
         var tijd = (r.start || '?') + ' - ' + (r.eind || '?');
-        var nm = (r.naam && r.naam !== 'EXTRA') ? r.naam : '';
+        var nm = r.naam || '';
         dataRows.push(aoa.length); aoa.push([id, tijd, r.netto || '7:12', r.lijn, nm, '', '']);
         baseAoa.push([id, DAY_EN[g.dt.getUTCDay()], fmtD(g.dt), tijd, r.netto || '7:12', r.lijn, r.dept || '', r.shift || '', r.dag || '', (r.vorigeDag ? '1' : ''), bureau]);
       });
@@ -5711,26 +5718,26 @@ const buildMRDoc = function (opts) {
     });
     var XL = ensureXLSX();
     var ws = XL.utils.aoa_to_sheet(aoa);
-    var merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, { s: { r: 1, c: 1 }, e: { r: 1, c: 3 } }, { s: { r: 1, c: 4 }, e: { r: 1, c: 6 } }];
+    var merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, { s: { r: 1, c: 1 }, e: { r: 1, c: 4 } }, { s: { r: 1, c: 5 }, e: { r: 1, c: 6 } }];
     bandRows.forEach(function (r) { merges.push({ s: { r: r, c: 0 }, e: { r: r, c: 6 } }); });
     ws['!merges'] = merges;
     ws['!cols'] = [{ hidden: true, wch: 5 }, { wch: 16 }, { wch: 7 }, { wch: 20 }, { wch: 22 }, { wch: 26 }, { wch: 26 }];
-    var NAVY = { patternType: 'solid', fgColor: { rgb: '19203B' } }, GOLD = { patternType: 'solid', fgColor: { rgb: 'C9A45C' } };
+    var NAVY = { patternType: 'solid', fgColor: { rgb: '19203B' } }, GOLD = { patternType: 'solid', fgColor: { rgb: 'C79C3E' } };
     var SLATE = { patternType: 'solid', fgColor: { rgb: '475569' } };
     var GREYZ = { patternType: 'solid', fgColor: { rgb: 'EEF1F5' } }, GOLDZ = { patternType: 'solid', fgColor: { rgb: 'FFF7DE' } };
     var THIN = { style: 'thin', color: { rgb: 'C9CED8' } }, BRD = { top: THIN, bottom: THIN, left: THIN, right: THIN };
     var setS = function (r, c, st) { var a = XL.utils.encode_cell({ r: r, c: c }); if (!ws[a]) ws[a] = { t: 's', v: '' }; ws[a].s = st; };
     setS(0, 0, { font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } }, fill: NAVY, alignment: { horizontal: 'left', vertical: 'center' } });
     setS(1, 1, { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { patternType: 'solid', fgColor: { rgb: '5B6070' } }, alignment: { horizontal: 'center' } });
-    setS(1, 4, { font: { bold: true, sz: 11, color: { rgb: '7A5B00' } }, fill: GOLD, alignment: { horizontal: 'center' } });
-    for (var c = 0; c < 7; c++) { var op = c >= 4; setS(2, c, { font: { bold: true, color: { rgb: op ? '7A5B00' : 'FFFFFF' } }, fill: op ? GOLD : NAVY, alignment: { horizontal: 'center' }, border: BRD }); }
+    setS(1, 5, { font: { bold: true, sz: 11, color: { rgb: '7A5B00' } }, fill: GOLD, alignment: { horizontal: 'center' } });
+    for (var c = 0; c < 7; c++) { var op = c >= 5; setS(2, c, { font: { bold: true, color: { rgb: op ? '7A5B00' : 'FFFFFF' } }, fill: op ? GOLD : NAVY, alignment: { horizontal: 'center' }, border: BRD }); }
     bandRows.forEach(function (r) { setS(r, 0, { font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: SLATE, alignment: { horizontal: 'left', vertical: 'center' } }); for (var c = 1; c < 7; c++) setS(r, c, { fill: SLATE }); });
     dataRows.forEach(function (r) {
       setS(r, 0, { font: { color: { rgb: 'BBBBBB' }, sz: 9 }, border: BRD });
       setS(r, 1, { fill: GREYZ, font: { bold: true, color: { rgb: '1F4E79' } }, border: BRD });
       setS(r, 2, { fill: GREYZ, alignment: { horizontal: 'center' }, border: BRD });
       setS(r, 3, { fill: GREYZ, font: { color: { rgb: '1F4E79' } }, border: BRD });
-      setS(r, 4, { fill: GOLDZ, border: BRD });
+      var _isExtra = (aoa[r] && aoa[r][4] === 'EXTRA'); setS(r, 4, _isExtra ? { fill: { patternType: 'solid', fgColor: { rgb: 'FDE8EA' } }, font: { bold: true, color: { rgb: 'B02A37' } }, alignment: { horizontal: 'center' }, border: BRD } : { fill: GREYZ, font: { color: { rgb: '1F4E79' } }, border: BRD });
       setS(r, 5, { fill: GOLDZ, border: BRD });
       setS(r, 6, { fill: GOLDZ, border: BRD });
     });
@@ -6449,7 +6456,7 @@ const buildMRDoc = function (opts) {
     className: "logo"
   }, React.createElement("img", { src: BL_LOGO, alt: "Biscuit International", style: { width: "100%", height: "auto", objectFit: "contain", display: "block" } })), React.createElement("h1", null, "Personeel planning "), React.createElement("div", {
     className: "cap"
-  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-10-17 · v170 · import-knop verplaatst naar Aanvraagrapport-scherm (gate 43)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
+  }, "RobesonCconstantine"), React.createElement("div", { style: { fontSize: 9, color: "#8a8f9c", marginTop: 2, letterSpacing: ".3px" } }, "build 2026-11-24 · v174 · UKG roosternaam instelbaar per afdeling (kolom A+E), dubbele spatie weg (gate 47)")), React.createElement("nav", null, NAV_GROUPS.map(function (g) {
     return React.createElement(React.Fragment, { key: g[0] },
       React.createElement("div", { className: "nav-sec" }, g[0]),
       g[1].map(function (k) {
@@ -6540,7 +6547,7 @@ const buildMRDoc = function (opts) {
       var cx = padL + gW * i + gW / 2;
       var x1 = cx - bW - gap / 2, x2 = cx + gap / 2;
       els.push(React.createElement("rect", { key: "bi" + i, x: x1, y: y(r.ing), width: bW, height: Math.max(0, plotH - (y(r.ing) - padT)), rx: 3, fill: "#19203b" }, React.createElement("title", null, r.label + " — ingepland " + r.ing)));
-      els.push(React.createElement("rect", { key: "bb" + i, x: x2, y: y(r.ben), width: bW, height: Math.max(0, plotH - (y(r.ben) - padT)), rx: 3, fill: "#C9A45C", stroke: "#a9863f", strokeWidth: 1 }, React.createElement("title", null, r.label + " — benodigd " + r.ben)));
+      els.push(React.createElement("rect", { key: "bb" + i, x: x2, y: y(r.ben), width: bW, height: Math.max(0, plotH - (y(r.ben) - padT)), rx: 3, fill: "#C79C3E", stroke: "#a9863f", strokeWidth: 1 }, React.createElement("title", null, r.label + " — benodigd " + r.ben)));
       els.push(React.createElement("text", { key: "li" + i, x: x1 + bW / 2, y: y(r.ing) - 4, textAnchor: "middle", fontSize: 10, fontWeight: 700, fill: "#19203b", fontFamily: "JetBrains Mono, monospace" }, r.ing));
       els.push(React.createElement("text", { key: "lb" + i, x: x2 + bW / 2, y: y(r.ben) - 4, textAnchor: "middle", fontSize: 10, fontWeight: 700, fill: "#8a6d1f", fontFamily: "JetBrains Mono, monospace" }, r.ben));
       els.push(React.createElement("text", { key: "xl" + i, x: cx, y: H - padB + 16, textAnchor: "middle", fontSize: 11, fill: "#475569", fontWeight: 600 }, r.label));
@@ -6550,7 +6557,7 @@ const buildMRDoc = function (opts) {
         React.createElement("h3", { style: { margin: 0 } }, title),
         React.createElement("div", { style: { display: "flex", gap: 14, fontSize: 12, color: "var(--muted)" } },
           React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 5 } }, React.createElement("span", { style: { width: 11, height: 11, borderRadius: 3, background: "#19203b", display: "inline-block" } }), (pf === 'indirect' ? "Indirect ingepland" : "Ingepland")),
-          (pf === 'indirect' ? null : React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 5 } }, React.createElement("span", { style: { width: 11, height: 11, borderRadius: 3, background: "#C9A45C", display: "inline-block" } }), "Benodigd"))
+          (pf === 'indirect' ? null : React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 5 } }, React.createElement("span", { style: { width: 11, height: 11, borderRadius: 3, background: "#C79C3E", display: "inline-block" } }), "Benodigd"))
         )
       ),
       React.createElement("svg", { viewBox: "0 0 " + W + " " + H, style: { width: "100%", height: "auto", display: "block" }, role: "img", "aria-label": title }, els)
@@ -8204,7 +8211,7 @@ const buildMRDoc = function (opts) {
   function ukgView() {
     var groups = {};
     ukgRows.forEach(function (r) {
-      var dep = String(r['Schedule Name'] || '').replace(/^BL\s+/, '').trim() || 'Overig';
+      var dep = (r['__dept'] || String(r['Schedule Name'] || '').replace(/^BL\s+/, '').trim() || 'Overig');
       (groups[dep] = groups[dep] || []).push(r);
     });
     var deps = Object.keys(groups);
@@ -8244,7 +8251,7 @@ const buildMRDoc = function (opts) {
         }
       }, dep), React.createElement("span", {
         className: "pill"
-      }, rows.length + " regels"), React.createElement("button", {
+      }, rows.length + " regels"), React.createElement("label", { style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#5b6070' } }, "Roosternaam:", React.createElement("input", { type: "text", value: ukgNm(dep), title: "Schedule Name + Schedule Setting Name (kolom A en E)", onChange: function (ev) { var v = ev.target.value; setUkgSched(function (m) { var n = Object.assign({}, m); n[dep] = v; return n; }); }, style: { marginLeft: 6, padding: "5px 8px", border: "1px solid #d7dae2", borderRadius: 7, fontSize: 12, minWidth: 160 } })), React.createElement("button", {
         className: "btn",
         style: {
           marginLeft: 'auto'
